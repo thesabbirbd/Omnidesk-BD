@@ -3,17 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { 
   GitFork, 
   Calendar, 
-  Timer as TimerIcon, 
   Library, 
   Bot, 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Plus, 
   ExternalLink, 
   ArrowRight, 
   CheckCircle2, 
-  Circle, 
   Send, 
   Target, 
   ChevronRight, 
@@ -35,6 +29,9 @@ import {
   Video
 } from 'lucide-react';
 import { getTopics, getSessions } from '../services/api';
+import DashboardStudyTimer from '../components/dashboard/DashboardStudyTimer';
+import DashboardTodaysStudy from '../components/dashboard/DashboardTodaysStudy';
+import DashboardProgressOverview from '../components/dashboard/DashboardProgressOverview';
 
 function YoutubeIcon({ size = 16, className = '' }) {
   return (
@@ -61,19 +58,6 @@ export default function Dashboard() {
   // Filter state for Mind Map preview
   const [mindMapFilter, setMindMapFilter] = useState('all');
 
-  // Today's goals state
-  const [goals, setGoals] = useState([
-    { id: 1, text: 'Learn Python OOP', completed: true },
-    { id: 2, text: 'Build mini project', completed: false },
-    { id: 3, text: 'Update notes', completed: false },
-    { id: 4, text: '1 hour study session', completed: false },
-  ]);
-
-  // Bottom Timer state
-  const [timerMode, setTimerMode] = useState('pomodoro');
-  const [timerSeconds, setTimerSeconds] = useState(25 * 60);
-  const [timerRunning, setTimerRunning] = useState(false);
-
   // Materials filter
   const [materialFilter, setMaterialFilter] = useState('all');
 
@@ -98,46 +82,6 @@ export default function Dashboard() {
     };
     fetchData();
   }, []);
-
-  // Timer interval
-  useEffect(() => {
-    let interval = null;
-    if (timerRunning && timerSeconds > 0) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev - 1);
-      }, 1000);
-    } else if (timerSeconds === 0) {
-      setTimerRunning(false);
-    }
-    return () => clearInterval(interval);
-  }, [timerRunning, timerSeconds]);
-
-  const toggleGoal = (id) => {
-    setGoals((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, completed: !g.completed } : g))
-    );
-  };
-
-  const handleTimerToggle = () => {
-    setTimerRunning(!timerRunning);
-  };
-
-  const handleTimerReset = () => {
-    setTimerRunning(false);
-    if (timerMode === 'pomodoro') setTimerSeconds(25 * 60);
-    else if (timerMode === 'focus') setTimerSeconds(50 * 60);
-    else setTimerSeconds(15 * 60);
-  };
-
-  const handleTimerAdd5 = () => {
-    setTimerSeconds((prev) => prev + 5 * 60);
-  };
-
-  const formatTimer = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
 
   const handleAiSubmit = (e) => {
     e?.preventDefault();
@@ -464,238 +408,15 @@ export default function Dashboard() {
 
         {/* Right Column: Activity & Control Stack (approx 35% width / col-span-4) */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-          
-          {/* Card 1: Today's Study */}
-          <div className="p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col gap-5">
-            
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
-              <div className="flex items-center gap-2.5">
-                <Calendar size={18} className="text-cyan-400" />
-                <h3 className="text-sm font-black tracking-wide text-[color:var(--text-main)]">
-                  Today's Study
-                </h3>
-              </div>
-              <span className="text-[11px] font-bold text-[color:var(--text-muted)]">
-                Sep 7, 2026
-              </span>
-            </div>
-
-            {/* Circular Timer dial + Today's Goals checklist */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-              
-              {/* Left: Circular Focus Dial */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] relative">
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                    <path
-                      className="text-slate-700/30"
-                      strokeWidth="3"
-                      stroke="currentColor"
-                      fill="none"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path
-                      className="text-emerald-400"
-                      strokeDasharray="75, 100"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      stroke="currentColor"
-                      fill="none"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                  </svg>
-                  <div className="absolute flex flex-col items-center">
-                    <span className="text-xs font-black tracking-tight text-[color:var(--text-main)]">03:00:00</span>
-                    <span className="text-[8px] font-bold text-[color:var(--text-muted)]">Focus Session</span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => navigate('/os/timer')}
-                  className="mt-3 w-8 h-8 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center shadow-[0_0_10px_rgba(34,211,238,0.6)] hover:scale-110 active:scale-95 transition-transform cursor-pointer"
-                  title="Open Focus Timer"
-                >
-                  <Play size={14} className="ml-0.5" />
-                </button>
-              </div>
-
-              {/* Right: Today's Goals checklist */}
-              <div className="flex flex-col gap-2">
-                <span className="text-[11px] font-bold text-[color:var(--text-muted)] uppercase tracking-wider">
-                  Today's Goals
-                </span>
-                {goals.map((g) => (
-                  <div
-                    key={g.id}
-                    onClick={() => toggleGoal(g.id)}
-                    className="flex items-center gap-2 text-xs font-medium cursor-pointer select-none group"
-                  >
-                    <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
-                      g.completed 
-                        ? 'bg-cyan-500 border-cyan-500 text-slate-950' 
-                        : 'border-[var(--border-color)] bg-[var(--bg-input)] group-hover:border-cyan-400'
-                    }`}>
-                      {g.completed && <Check size={11} strokeWidth={3} />}
-                    </div>
-                    <span className={`text-[11px] transition-all truncate ${
-                      g.completed ? 'line-through text-[color:var(--text-muted)]' : 'text-[color:var(--text-main)]'
-                    }`}>
-                      {g.text}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-            </div>
-
-            {/* Bottom 3 Pills Stats */}
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--border-color)]">
-              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)]">
-                <Clock size={14} className="text-cyan-400 mb-1" />
-                <span className="text-[9px] text-[color:var(--text-muted)] font-semibold">Study Time</span>
-                <span className="text-xs font-black text-[color:var(--text-main)]">2h 15m</span>
-              </div>
-              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)]">
-                <Flame size={14} className="text-amber-400 mb-1" />
-                <span className="text-[9px] text-[color:var(--text-muted)] font-semibold">Streak</span>
-                <span className="text-xs font-black text-amber-400">5 days</span>
-              </div>
-              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)]">
-                <CheckCircle2 size={14} className="text-emerald-400 mb-1" />
-                <span className="text-[9px] text-[color:var(--text-muted)] font-semibold">Topics Done</span>
-                <span className="text-xs font-black text-[color:var(--text-main)]">12/48</span>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Card 2: Progress Overview Donut & Weekly Activity */}
-          <div className="p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col gap-5">
-            
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
-              <div className="flex items-center gap-2.5">
-                <Activity size={18} className="text-indigo-400" />
-                <h3 className="text-sm font-black tracking-wide text-[color:var(--text-main)]">
-                  Progress Overview
-                </h3>
-              </div>
-              <button 
-                onClick={() => navigate('/os/analytics')}
-                className="text-[color:var(--text-muted)] hover:text-cyan-400 transition-colors cursor-pointer"
-                title="View Analytics"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-
-            {/* Donut chart + Legend */}
-            <div className="flex items-center justify-between gap-4">
-              {/* SVG Donut */}
-              <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  {/* Segment: Not started */}
-                  <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#334155" strokeWidth="4" />
-                  {/* Segment: Learning (yellow) */}
-                  <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#fbbf24" strokeWidth="4" strokeDasharray="18 100" strokeDashoffset="0" />
-                  {/* Segment: Completed (cyan/green) */}
-                  <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#34d399" strokeWidth="4" strokeDasharray="28 100" strokeDashoffset="-18" />
-                </svg>
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-sm font-black text-[color:var(--text-main)]">28%</span>
-                  <span className="text-[8px] font-bold text-[color:var(--text-muted)]">Completed</span>
-                </div>
-              </div>
-
-              {/* Legend List */}
-              <div className="flex flex-col gap-1.5 flex-1">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="flex items-center gap-1.5 text-emerald-400">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" /> Completed
-                  </span>
-                  <span className="text-[color:var(--text-main)]">46</span>
-                </div>
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="flex items-center gap-1.5 text-amber-400">
-                    <span className="w-2 h-2 rounded-full bg-amber-400" /> Learning
-                  </span>
-                  <span className="text-[color:var(--text-main)]">18</span>
-                </div>
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="flex items-center gap-1.5 text-slate-400">
-                    <span className="w-2 h-2 rounded-full bg-slate-500" /> Not Started
-                  </span>
-                  <span className="text-[color:var(--text-main)]">112</span>
-                </div>
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="flex items-center gap-1.5 text-rose-400">
-                    <span className="w-2 h-2 rounded-full bg-rose-500" /> Blocked
-                  </span>
-                  <span className="text-[color:var(--text-main)]">2</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Weekly Activity Heatmap Grid */}
-            <div className="flex flex-col gap-2 pt-2 border-t border-[var(--border-color)]">
-              <div className="flex items-center justify-between text-[11px] font-bold">
-                <span className="text-[color:var(--text-muted)]">Weekly Activity</span>
-                <span className="text-cyan-400 flex items-center gap-1 cursor-pointer" onClick={() => navigate('/os/analytics')}>
-                  Sep 2026 <ChevronRight size={12} />
-                </span>
-              </div>
-
-              {/* Mon-Sun Heatmap matrix */}
-              <div className="flex flex-col gap-1 font-mono text-[9px] text-[color:var(--text-muted)]">
-                <div className="flex gap-1 justify-between px-1 font-sans text-[8px]">
-                  <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-                </div>
-                {/* 3 weeks of activity */}
-                <div className="grid grid-cols-7 gap-1">
-                  {[3, 2, 4, 3, 4, 1, 0].map((v, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-4 rounded-sm transition-all ${
-                        v === 4 ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' :
-                        v === 3 ? 'bg-emerald-500/80' :
-                        v === 2 ? 'bg-amber-400/80' :
-                        v === 1 ? 'bg-emerald-500/40' :
-                        'bg-[var(--bg-input)]'
-                      }`} 
-                    />
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {[4, 4, 4, 2, 4, 3, 1].map((v, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-4 rounded-sm transition-all ${
-                        v === 4 ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' :
-                        v === 3 ? 'bg-emerald-500/80' :
-                        v === 2 ? 'bg-amber-400/80' :
-                        v === 1 ? 'bg-emerald-500/40' :
-                        'bg-[var(--bg-input)]'
-                      }`} 
-                    />
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {[3, 4, 2, 0, 0, 0, 0].map((v, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-4 rounded-sm transition-all ${
-                        v === 4 ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' :
-                        v === 3 ? 'bg-emerald-500/80' :
-                        v === 2 ? 'bg-amber-400/80' :
-                        'bg-[var(--bg-input)] opacity-50'
-                      }`} 
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          </div>
-
+          <DashboardTodaysStudy />
+          <DashboardProgressOverview 
+            topicsCount={{ 
+              completed: completedTopicsCount, 
+              learning: learningTopicsCount, 
+              notStarted: notStartedTopicsCount, 
+              blocked: 2 
+            }} 
+          />
         </div>
 
       </div>
@@ -856,122 +577,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Card 3: Study Timer */}
-        <div className="p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col justify-between gap-4 h-full min-h-[480px]">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
-              <div className="flex items-center gap-2">
-                <TimerIcon size={18} className="text-orange-400" />
-                <h3 className="text-xs font-black tracking-wide text-[color:var(--text-main)] uppercase">
-                  Study Timer
-                </h3>
-              </div>
-              <button 
-                onClick={() => navigate('/os/timer')}
-                className="text-[color:var(--text-muted)] hover:text-orange-400 cursor-pointer"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-
-            {/* Mode Selector Tabs */}
-            <div className="flex items-center justify-center gap-1.5 p-1 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)]">
-              {[
-                { id: 'pomodoro', label: 'Pomodoro', secs: 25 * 60 },
-                { id: 'focus', label: 'Focus', secs: 50 * 60 },
-                { id: 'custom', label: 'Custom', secs: 15 * 60 },
-              ].map((mode) => (
-                <button
-                  key={mode.id}
-                  onClick={() => {
-                    setTimerMode(mode.id);
-                    setTimerSeconds(mode.secs);
-                    setTimerRunning(false);
-                  }}
-                  className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                    timerMode === mode.id
-                      ? 'bg-[var(--bg-card)] text-orange-400 shadow-[2px_2px_4px_var(--shadow-dark)]'
-                      : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Circular Countdown Ring */}
-            <div className="flex flex-col items-center justify-center gap-2.5 py-1">
-              <div className="relative w-28 h-28 flex items-center justify-center">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#334155" strokeWidth="2.5" />
-                  <circle 
-                    cx="18" 
-                    cy="18" 
-                    r="15.9155" 
-                    fill="transparent" 
-                    stroke="#fb923c" 
-                    strokeWidth="2.5" 
-                    strokeDasharray="100 100" 
-                    strokeDashoffset={100 - (timerSeconds / (timerMode === 'focus' ? 3000 : 1500)) * 100}
-                    strokeLinecap="round" 
-                    className="transition-all duration-1000"
-                  />
-                </svg>
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
-                    {formatTimer(timerSeconds)}
-                  </span>
-                  <span className="text-[8px] font-bold text-[color:var(--text-muted)] uppercase">Focus Time</span>
-                </div>
-              </div>
-
-              {/* Timer Controls: Play/Pause, Reset, +5m */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleTimerToggle}
-                  className="w-9 h-9 rounded-xl bg-orange-500 text-slate-950 flex items-center justify-center shadow-[0_0_10px_rgba(249,115,22,0.6)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                  title={timerRunning ? 'Pause' : 'Start'}
-                >
-                  {timerRunning ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
-                </button>
-
-                <button
-                  onClick={handleTimerReset}
-                  className="w-9 h-9 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] flex items-center justify-center shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 transition-all cursor-pointer"
-                  title="Reset Timer"
-                >
-                  <RotateCcw size={15} />
-                </button>
-
-                <button
-                  onClick={handleTimerAdd5}
-                  className="px-2.5 py-1.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[10px] font-bold text-orange-400 hover:text-orange-300 shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 transition-all cursor-pointer"
-                  title="Add 5 minutes"
-                >
-                  +5m
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Session History */}
-          <div className="pt-3 border-t border-[var(--border-color)] flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--text-muted)]">Session History</span>
-              <span className="text-[10px] font-bold text-cyan-400 cursor-pointer" onClick={() => navigate('/os/timer')}>View All</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-emerald-400 font-bold">• Focus 25m</span>
-              <span className="text-[color:var(--text-main)] truncate max-w-[100px]">Python OOP</span>
-              <span className="text-[9px] text-[color:var(--text-muted)]">10:24 AM</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-cyan-400 font-bold">• Study 45m</span>
-              <span className="text-[color:var(--text-main)] truncate max-w-[100px]">FastAPI</span>
-              <span className="text-[9px] text-[color:var(--text-muted)]">09:30 AM</span>
-            </div>
-          </div>
-        </div>
+        {/* Card 3: Study Timer (State Isolated) */}
+        <DashboardStudyTimer />
 
         {/* Card 4: AI Assistant & Quick Links */}
         <div className="p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col justify-between gap-4 h-full min-h-[480px]">

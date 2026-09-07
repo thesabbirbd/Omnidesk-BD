@@ -23,17 +23,29 @@ import {
   BookOpen, 
   Check,
   Target,
-  Sparkles
+  Sparkles,
+  AlertCircle,
+  RotateCw,
+  Layers
 } from 'lucide-react';
 import { getTopics, updateTopic } from '../services/api';
 
+export const statusConfig = {
+  normal: { color: '#64748b', label: 'Normal', bg: 'rgba(100, 116, 139, 0.14)', border: 'rgba(100, 116, 139, 0.45)', glow: 'rgba(100, 116, 139, 0.3)', icon: Circle },
+  learning: { color: '#eab308', label: 'Learning', bg: 'rgba(234, 179, 8, 0.16)', border: 'rgba(234, 179, 8, 0.7)', glow: 'rgba(234, 179, 8, 0.45)', icon: BookOpen },
+  complete: { color: '#22c55e', label: 'Complete', bg: 'rgba(34, 197, 94, 0.16)', border: 'rgba(34, 197, 94, 0.7)', glow: 'rgba(34, 197, 94, 0.45)', icon: Check },
+  blocked: { color: '#ef4444', label: 'Blocked', bg: 'rgba(239, 68, 68, 0.16)', border: 'rgba(239, 68, 68, 0.7)', glow: 'rgba(239, 68, 68, 0.45)', icon: AlertCircle },
+  review: { color: '#3b82f6', label: 'Review', bg: 'rgba(59, 130, 246, 0.16)', border: 'rgba(59, 130, 246, 0.7)', glow: 'rgba(59, 130, 246, 0.45)', icon: RotateCw },
+  mastered: { color: '#a855f7', label: 'Mastered', bg: 'rgba(168, 85, 247, 0.18)', border: 'rgba(168, 85, 247, 0.75)', glow: 'rgba(168, 85, 247, 0.5)', icon: Sparkles },
+};
+
 const statusColors = {
-  normal: '#64748b',   // slate-500
-  learning: '#eab308', // yellow-500
-  complete: '#22c55e', // green-500
-  blocked: '#ef4444',  // red-500
-  review: '#06b6d4',   // cyan-500
-  mastered: '#a855f7', // purple-500
+  normal: statusConfig.normal.color,
+  learning: statusConfig.learning.color,
+  complete: statusConfig.complete.color,
+  blocked: statusConfig.blocked.color,
+  review: statusConfig.review.color,
+  mastered: statusConfig.mastered.color,
 };
 
 // Fallback curriculum nodes when API is offline or database is empty
@@ -44,9 +56,9 @@ const DEFAULT_TOPICS = [
   { id: '3', title: '3. Frontend Support (React)', status: 'normal', progress: 20, x: 780, y: 180 },
   { id: '4', title: '4. DevOps & Linux Foundation', status: 'normal', progress: 10, x: 100, y: 420 },
   { id: '5', title: '5. Containers & CI/CD (Docker)', status: 'learning', progress: 40, x: 800, y: 420 },
-  { id: '6', title: '6. Cloud & Infra (AWS & Terraform)', status: 'normal', progress: 0, x: 220, y: 560 },
+  { id: '6', title: '6. Cloud & Infra (AWS & Terraform)', status: 'blocked', progress: 5, x: 220, y: 560 },
   { id: '7', title: '7. Production & Monitoring', status: 'normal', progress: 0, x: 450, y: 580 },
-  { id: '8', title: '8. Project Ladder & Capstone', status: 'normal', progress: 0, x: 680, y: 560 },
+  { id: '8', title: '8. Project Ladder & Capstone', status: 'mastered', progress: 100, x: 680, y: 560 },
 ];
 
 const DEFAULT_EDGES = [
@@ -55,20 +67,22 @@ const DEFAULT_EDGES = [
   { id: 'e-root-3', source: 'root', target: '3', style: { stroke: statusColors.normal, strokeWidth: 1.5 } },
   { id: 'e-root-4', source: 'root', target: '4', style: { stroke: statusColors.normal, strokeWidth: 1.5 } },
   { id: 'e-root-5', source: 'root', target: '5', animated: true, style: { stroke: statusColors.learning, strokeWidth: 2.5 } },
-  { id: 'e-root-6', source: 'root', target: '6', style: { stroke: statusColors.normal, strokeWidth: 1.5 } },
+  { id: 'e-root-6', source: 'root', target: '6', style: { stroke: statusColors.blocked, strokeWidth: 1.5 } },
   { id: 'e-root-7', source: 'root', target: '7', style: { stroke: statusColors.normal, strokeWidth: 1.5 } },
-  { id: 'e-root-8', source: 'root', target: '8', style: { stroke: statusColors.normal, strokeWidth: 1.5 } },
+  { id: 'e-root-8', source: 'root', target: '8', animated: true, style: { stroke: statusColors.mastered, strokeWidth: 2.5 } },
 ];
 
-// Custom Mind Map Node with Neumorphic Styling & Hover Actions
-const CustomNode = ({ id, data }) => {
-  const color = statusColors[data.status] || statusColors.normal;
+// Floating, Premium Mind Map Node with Micro-Animations (150ms)
+const CustomNode = ({ id, data, selected }) => {
+  const currentStatus = statusConfig[data.status] || statusConfig.normal;
   const [isHovered, setIsHovered] = useState(false);
   const { setNodes } = useReactFlow();
 
   const handleStatusChange = async (e, newStatus) => {
     e.stopPropagation();
-    const newProgress = newStatus === 'complete' ? 100 : newStatus === 'learning' ? 50 : 0;
+    const newProgress = 
+      newStatus === 'complete' || newStatus === 'mastered' ? 100 :
+      newStatus === 'learning' || newStatus === 'review' ? 50 : 0;
     
     // Immediate optimistic local update
     setNodes((nds) =>
@@ -96,28 +110,25 @@ const CustomNode = ({ id, data }) => {
         study_space_id: null 
       });
     } catch {
-      // Offline fallback: already updated in UI state
+      // Offline fallback: already reflected in UI state
     }
   };
 
-  // Full segment background glow based on status
-  let bgStyle = 'var(--bg-card)';
-  let borderColor = 'var(--border-color)';
-  if (data.status === 'learning') {
-    bgStyle = 'rgba(234, 179, 8, 0.15)';
-    borderColor = 'rgba(234, 179, 8, 0.6)';
-  } else if (data.status === 'complete') {
-    bgStyle = 'rgba(34, 197, 94, 0.18)';
-    borderColor = 'rgba(34, 197, 94, 0.6)';
-  }
+  const StatusIcon = currentStatus.icon;
 
   return (
     <div 
-      className="relative rounded-2xl px-5 py-3.5 font-bold text-xs text-[color:var(--text-main)] text-center min-w-[170px] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] transition-all duration-300 hover:scale-105 active:scale-95 border"
+      className={`relative rounded-2xl px-5 py-3.5 font-bold text-xs text-[color:var(--text-main)] text-center min-w-[180px] transition-all duration-150 ease-out border backdrop-blur-md cursor-pointer ${
+        selected 
+          ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-[var(--bg-canvas)] scale-105 shadow-[0_0_24px_rgba(34,211,238,0.6)]' 
+          : 'hover:-translate-y-1 hover:scale-[1.02]'
+      }`}
       style={{ 
-        backgroundColor: bgStyle, 
-        borderColor: borderColor,
-        boxShadow: `6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light), 0 0 12px ${color}30` 
+        backgroundColor: currentStatus.bg, 
+        borderColor: currentStatus.border,
+        boxShadow: selected 
+          ? `0 0 25px ${currentStatus.glow}, 6px 6px 14px var(--shadow-dark)`
+          : `6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light), 0 0 14px ${currentStatus.glow}` 
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -127,62 +138,54 @@ const CustomNode = ({ id, data }) => {
       <div className="flex flex-col items-center gap-1.5 relative">
         <div className="flex items-center gap-2">
           <div 
-            className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]" 
-            style={{ backgroundColor: color, color: color }}
+            className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] shrink-0" 
+            style={{ backgroundColor: currentStatus.color, color: currentStatus.color }}
           />
-          <span className="tracking-wide text-xs font-bold leading-tight px-1">{data.label}</span>
+          <span className="tracking-wide text-xs font-bold leading-tight px-0.5 truncate max-w-[160px]">{data.label}</span>
           {data.status === 'complete' && <Check size={13} className="text-emerald-400 shrink-0" />}
+          {data.status === 'mastered' && <Sparkles size={13} className="text-purple-400 shrink-0" />}
         </div>
-        <span className="text-[10px] font-semibold text-[color:var(--text-muted)] capitalize">
-          {data.status} • {data.progress}%
-        </span>
+        
+        <div className="flex items-center gap-2 text-[10px] font-semibold text-[color:var(--text-muted)]">
+          <span 
+            className="px-1.5 py-0.2 rounded font-bold uppercase tracking-wider text-[9px]"
+            style={{ color: currentStatus.color }}
+          >
+            {currentStatus.label}
+          </span>
+          <span>•</span>
+          <span>{data.progress}%</span>
+        </div>
       </div>
 
       <Handle type="source" position={Position.Bottom} className="opacity-0" />
 
-      {/* Hover Action Menu */}
+      {/* Floating 6-Status Contextual Action Menu on Hover */}
       {isHovered && (
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[var(--bg-panel)] p-1.5 rounded-2xl shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] z-50 animate-in fade-in zoom-in-95 duration-150">
-          
-          <div className="group relative">
-            <button 
-              onClick={(e) => handleStatusChange(e, 'normal')} 
-              className="p-1.5 rounded-xl hover:bg-[var(--bg-input)] text-slate-400 hover:text-slate-200 transition-colors"
-              title="Reset to Normal"
-            >
-              <Circle size={15} />
-            </button>
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-[var(--bg-input)] text-[10px] font-bold text-[color:var(--text-main)] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-center whitespace-nowrap border border-[var(--border-color)]">
-              Normal (Not Started)
-            </div>
-          </div>
-
-          <div className="group relative">
-            <button 
-              onClick={(e) => handleStatusChange(e, 'learning')} 
-              className="p-1.5 rounded-xl hover:bg-[var(--bg-input)] text-amber-400 hover:text-amber-300 transition-colors"
-              title="Mark as Studying (Yellow)"
-            >
-              <BookOpen size={15} />
-            </button>
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-[var(--bg-input)] text-[10px] font-bold text-amber-400 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-center whitespace-nowrap border border-[var(--border-color)]">
-              Studying (Learning)
-            </div>
-          </div>
-
-          <div className="group relative">
-            <button 
-              onClick={(e) => handleStatusChange(e, 'complete')} 
-              className="p-1.5 rounded-xl hover:bg-[var(--bg-input)] text-emerald-400 hover:text-emerald-300 transition-colors"
-              title="Mark as Done (Green)"
-            >
-              <Check size={15} />
-            </button>
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-[var(--bg-input)] text-[10px] font-bold text-emerald-400 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-center whitespace-nowrap border border-[var(--border-color)]">
-              Done (Completed)
-            </div>
-          </div>
-
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-[var(--bg-card)]/95 backdrop-blur-xl p-1.5 rounded-2xl shadow-[0_10px_25px_rgba(0,0,0,0.4),inset_1px_1px_2px_rgba(255,255,255,0.1)] border border-[var(--border-color)] z-50 animate-in fade-in zoom-in-95 duration-150 whitespace-nowrap">
+          {Object.entries(statusConfig).map(([statusKey, cfg]) => {
+            const Icon = cfg.icon;
+            const isActive = data.status === statusKey;
+            return (
+              <div key={statusKey} className="group/item relative">
+                <button 
+                  onClick={(e) => handleStatusChange(e, statusKey)} 
+                  className={`p-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center ${
+                    isActive 
+                      ? 'bg-[var(--bg-input)] ring-1 ring-cyan-400 scale-110' 
+                      : 'hover:bg-[var(--bg-input)] hover:scale-105'
+                  }`}
+                  style={{ color: cfg.color }}
+                  title={`Mark as ${cfg.label}`}
+                >
+                  <Icon size={14} />
+                </button>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 bg-[var(--bg-input)] text-[9px] font-bold rounded-lg shadow-lg opacity-0 group-hover/item:opacity-100 pointer-events-none transition-opacity text-center whitespace-nowrap border border-[var(--border-color)]" style={{ color: cfg.color }}>
+                  {cfg.label}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -196,7 +199,7 @@ function MindMapFlow() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isFilterActive, setIsFilterActive] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all'); // all, normal, learning, complete
   const { zoomIn, zoomOut, fitView } = useReactFlow();
 
   useEffect(() => {
@@ -223,9 +226,9 @@ function MindMapFlow() {
             id: `edge-${topics[0].id}-${t.id}`,
             source: topics[0].id.toString(),
             target: t.id.toString(),
-            animated: t.status === 'learning',
+            animated: t.status === 'learning' || t.status === 'review',
             style: { 
-              stroke: statusColors[t.status] || statusColors.normal, 
+              stroke: (statusConfig[t.status] && statusConfig[t.status].color) || statusColors.normal, 
               strokeWidth: 2 
             }
           }));
@@ -261,15 +264,15 @@ function MindMapFlow() {
     setIsDrawerOpen(true);
   }, []);
 
-  const toggleFilter = () => {
-    setIsFilterActive(!isFilterActive);
+  const handleFilterChange = (filter) => {
+    setActiveFilter(filter);
     setNodes((nds) =>
       nds.map((n) => ({
         ...n,
-        hidden: !isFilterActive ? n.data.status === 'complete' : false
+        hidden: filter === 'all' ? false : n.data.status !== filter
       }))
     );
-    setTimeout(() => fitView({ duration: 600 }), 100);
+    setTimeout(() => fitView({ duration: 600, padding: 0.2 }), 100);
   };
 
   const autoArrange = () => {
@@ -288,64 +291,75 @@ function MindMapFlow() {
   return (
     <div className="w-full h-[calc(100vh-8rem)] min-h-[650px] flex flex-col relative rounded-3xl overflow-hidden border border-[var(--border-color)] bg-[var(--bg-canvas)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)]">
       
-      {/* Neumorphic Toolbar */}
-      <div className="absolute top-5 left-6 z-10 flex items-center gap-3 bg-[var(--bg-card)] p-2.5 rounded-2xl shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)]">
-        <button 
-          onClick={() => zoomIn()} 
-          className="p-2 rounded-xl text-[color:var(--text-muted)] hover:text-cyan-400 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] active:scale-95 transition-all cursor-pointer"
-          title="Zoom In"
-        >
-          <ZoomIn size={16} />
-        </button>
-        <button 
-          onClick={() => zoomOut()} 
-          className="p-2 rounded-xl text-[color:var(--text-muted)] hover:text-cyan-400 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] active:scale-95 transition-all cursor-pointer"
-          title="Zoom Out"
-        >
-          <ZoomOut size={16} />
-        </button>
-        <button 
-          onClick={() => fitView({ duration: 600, padding: 0.2 })} 
-          className="p-2 rounded-xl text-[color:var(--text-muted)] hover:text-cyan-400 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] active:scale-95 transition-all cursor-pointer"
-          title="Fit to Screen"
-        >
-          <Maximize size={16} />
-        </button>
+      {/* Compact Floating Glass/Clay Toolbar */}
+      <div className="absolute top-5 left-6 z-10 flex flex-wrap items-center gap-2 bg-[var(--bg-card)]/90 backdrop-blur-xl p-2 rounded-2xl shadow-[6px_6px_16px_var(--shadow-dark),-6px_-6px_16px_var(--shadow-light)] border border-[var(--border-color)]">
         
-        <div className="w-px h-5 bg-[var(--border-color)] mx-1" />
+        {/* Filter Pills: All, Normal, Learning, Complete */}
+        <div className="flex items-center gap-1 bg-[var(--bg-input)] p-1 rounded-xl shadow-[inset_1px_1px_3px_var(--shadow-dark)]">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'normal', label: 'Normal', color: 'text-slate-400' },
+            { id: 'learning', label: 'Learning', color: 'text-amber-400' },
+            { id: 'complete', label: 'Complete', color: 'text-emerald-400' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleFilterChange(item.id)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeFilter === item.id
+                  ? 'bg-[var(--bg-card)] text-cyan-400 shadow-[2px_2px_6px_var(--shadow-dark)]'
+                  : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
 
-        <button 
-          onClick={toggleFilter} 
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-            isFilterActive 
-              ? 'text-cyan-400 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]' 
-              : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] bg-[var(--bg-input)]'
-          }`}
-        >
-          <Filter size={14} /> 
-          <span>{isFilterActive ? 'Show All' : 'Hide Done'}</span>
-        </button>
+        <div className="w-px h-5 bg-[var(--border-color)] mx-0.5" />
 
-        <button 
-          onClick={autoArrange} 
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-[color:var(--text-muted)] hover:text-cyan-400 bg-[var(--bg-input)] active:scale-95 transition-all cursor-pointer shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]"
-        >
-          <GitMerge size={14} /> 
-          <span>Auto Arrange</span>
-        </button>
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={() => zoomIn()} 
+            className="p-1.5 rounded-lg text-[color:var(--text-muted)] hover:text-cyan-400 hover:bg-[var(--bg-input)] active:scale-95 transition-all cursor-pointer"
+            title="Zoom In"
+          >
+            <ZoomIn size={16} />
+          </button>
+          <button 
+            onClick={() => zoomOut()} 
+            className="p-1.5 rounded-lg text-[color:var(--text-muted)] hover:text-cyan-400 hover:bg-[var(--bg-input)] active:scale-95 transition-all cursor-pointer"
+            title="Zoom Out"
+          >
+            <ZoomOut size={16} />
+          </button>
+          <button 
+            onClick={() => fitView({ duration: 600, padding: 0.2 })} 
+            className="p-1.5 rounded-lg text-[color:var(--text-muted)] hover:text-cyan-400 hover:bg-[var(--bg-input)] active:scale-95 transition-all cursor-pointer"
+            title="Fit to Screen"
+          >
+            <Maximize size={16} />
+          </button>
+          <button 
+            onClick={autoArrange} 
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-[color:var(--text-muted)] hover:text-cyan-400 hover:bg-[var(--bg-input)] active:scale-95 transition-all cursor-pointer"
+            title="Auto Arrange Layout"
+          >
+            <GitMerge size={14} /> 
+            <span className="hidden md:inline">Arrange</span>
+          </button>
+        </div>
       </div>
 
-      {/* Legend Top-Right */}
-      <div className="absolute top-5 right-6 z-10 hidden sm:flex items-center gap-3 bg-[var(--bg-card)] px-4 py-2 rounded-2xl shadow-[4px_4px_10px_var(--shadow-dark),-4px_-4px_10px_var(--shadow-light)] border border-[var(--border-color)] text-xs font-bold">
-        <span className="flex items-center gap-1.5 text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-slate-400" /> Normal
-        </span>
-        <span className="flex items-center gap-1.5 text-amber-400">
-          <span className="w-2 h-2 rounded-full bg-amber-400" /> Studying
-        </span>
-        <span className="flex items-center gap-1.5 text-emerald-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" /> Done
-        </span>
+      {/* 6-Status Visual Legend Top-Right */}
+      <div className="absolute top-5 right-6 z-10 hidden xl:flex items-center gap-3 bg-[var(--bg-card)]/90 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-[4px_4px_12px_var(--shadow-dark),-4px_-4px_12px_var(--shadow-light)] border border-[var(--border-color)] text-[11px] font-bold">
+        {Object.entries(statusConfig).map(([key, cfg]) => (
+          <span key={key} className="flex items-center gap-1.5" style={{ color: cfg.color }}>
+            <span className="w-2 h-2 rounded-full shadow-[0_0_6px_currentColor]" style={{ backgroundColor: cfg.color }} />
+            {cfg.label}
+          </span>
+        ))}
       </div>
       
       {/* ReactFlow Canvas */}
