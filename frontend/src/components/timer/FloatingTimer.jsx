@@ -42,19 +42,18 @@ export default function FloatingTimer() {
   } = useTimer();
 
   // Dragging state
-  const [position, setPosition] = useState({ x: null, y: null });
+  const [position, setPosition] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return {
+        x: Math.max(16, window.innerWidth - 340),
+        y: Math.max(16, window.innerHeight - 240)
+      };
+    }
+    return { x: 100, y: 100 };
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 });
   const containerRef = useRef(null);
-
-  // Initialize position at bottom right
-  useEffect(() => {
-    if (typeof window !== 'undefined' && position.x === null) {
-      const defaultX = Math.max(16, window.innerWidth - 340);
-      const defaultY = Math.max(16, window.innerHeight - 240);
-      setPosition({ x: defaultX, y: defaultY });
-    }
-  }, [position.x]);
 
   // Handle window resize bounds
   useEffect(() => {

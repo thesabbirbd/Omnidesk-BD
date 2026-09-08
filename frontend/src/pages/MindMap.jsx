@@ -25,6 +25,7 @@ import {
   Target,
   Sparkles,
   AlertCircle,
+  RotateCw,
   Layers,
   Play,
   FolderOpen,
