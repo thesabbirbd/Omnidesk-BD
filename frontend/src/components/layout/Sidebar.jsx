@@ -59,9 +59,11 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         {/* Brand Header */}
         <div className="pt-6 pb-5 px-6 flex items-center justify-between border-b border-[var(--border-color)]">
           <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-[var(--bg-card)] shadow-[3px_3px_8px_var(--shadow-dark),-3px_-3px_8px_var(--shadow-light)] flex items-center justify-center text-cyan-400 shrink-0">
-              <Brain size={26} className="drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-            </div>
+            <img 
+              src="/omnidesk-logo.png" 
+              alt="Omnidesk BD" 
+              className="w-11 h-11 rounded-2xl object-cover shadow-[0_0_12px_rgba(34,211,238,0.4)] shrink-0 border border-cyan-500/20" 
+            />
             <div className="flex flex-col">
               <span className="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 uppercase leading-none">
                 Omnidesk BD

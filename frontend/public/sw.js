@@ -1,15 +1,16 @@
 // ==============================================================================
-// Omnidesk BD Service Worker (v1.2.4)
+// Omnidesk BD Service Worker (v1.2.5)
 // App Shell Pre-caching, Stale-While-Revalidate & Offline Navigation Fallback
 // ==============================================================================
 
-const CACHE_NAME = 'omnidesk-bd-shell-v1.2.4';
+const CACHE_NAME = 'omnidesk-bd-shell-v1.2.5';
 
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.svg',
+  '/omnidesk-logo.png',
   '/icon-192.svg',
   '/icon-512.svg'
 ];

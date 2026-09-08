@@ -33,8 +33,8 @@ def test_phases_4_5_6_suite():
     assert resp.status_code == 200, f"Health check failed: {resp.text}"
     health_data = resp.json()
     assert health_data["status"] == "healthy"
-    assert health_data["version"] == "1.2.4"
-    print("✓ Phase 4: /health liveness probe verified (v1.2.4)")
+    assert health_data["version"] == "1.2.5"
+    print("✓ Phase 4: /health liveness probe verified (v1.2.5)")
 
     # 2. Readiness Deep Probe (Postgres + Redis check)
     resp = client.get("/ready")
@@ -183,7 +183,7 @@ def test_phases_4_5_6_suite():
     with client.websocket_connect("/api/v1/lab/ws") as websocket:
         # Receive welcome banner
         banner = websocket.receive_text()
-        assert "Omnidesk BD v1.2.4" in banner
+        assert "Omnidesk BD v1.2.5" in banner
         assert "DevOps Lab Shell" in banner
 
         # Send resize geometry

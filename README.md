@@ -1,10 +1,12 @@
 <div align="center">
 
+  <img src="docs/images/omnidesk-logo.png" alt="Omnidesk BD Logo" width="160" height="160" style="border-radius: 50%; box-shadow: 0 0 45px rgba(0, 240, 255, 0.45); margin-bottom: 12px;" />
+
 # 🌌 Omnidesk BD
 ### *The Universal Autonomous Learning & Engineering Operating System*
 
 <p align="center">
-  <a href="https://github.com/thesabbirbd/Omnidesk-BD"><img src="https://img.shields.io/badge/Release-v1.2.4-00F0FF?style=for-the-badge&logo=git&logoColor=black" alt="Release v1.2.4"></a>
+  <a href="https://github.com/thesabbirbd/Omnidesk-BD"><img src="https://img.shields.io/badge/Release-v1.2.5-00F0FF?style=for-the-badge&logo=git&logoColor=black" alt="Release v1.2.5"></a>
   <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"></a>
   <a href="https://react.dev"><img src="https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React"></a>
   <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS-v4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a>
@@ -390,7 +392,7 @@ Omnidesk-BD/
 ├── docker-compose.yml          # Production multi-container orchestration
 ├── CHANGELOG.md                # Release milestone history
 ├── PROJECT_AUDIT.md            # Comprehensive codebase audit
-├── VERSION                     # Semantic version baseline (1.2.4)
+├── VERSION                     # Semantic version baseline (1.2.5)
 └── README.md                   # Project documentation
 ```
 

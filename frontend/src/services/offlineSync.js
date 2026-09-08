@@ -1,5 +1,5 @@
 // ==============================================================================
-// Omnidesk BD Offline State Queue & IndexedDB Synchronization Service (v1.2.4)
+// Omnidesk BD Offline State Queue & IndexedDB Synchronization Service (v1.2.5)
 // Guaranteed Data Integrity for Tasks, Timer Sessions, & Topic Progressions
 // ==============================================================================
 
