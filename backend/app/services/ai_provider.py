@@ -34,6 +34,20 @@ class AIProvider(ABC):
         pass
 
     @abstractmethod
+    def generate_study_topics(
+        self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Generate structured curriculum roadmap from raw text or raw topic name."""
+        pass
+
+    @abstractmethod
+    def chat_assistant(
+        self, message: str, mode: str = "explain", context_topic: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Pedagogical interactive assistant adhering to modes: explain, hint, or debug."""
+        pass
+
+    @abstractmethod
     def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
         """Generate a 4-option conceptual verification quiz in JSON format."""
         pass
@@ -172,6 +186,101 @@ class LocalOfflineAIProvider(AIProvider):
             "provider_used": "offline_heuristic"
         }
 
+    def generate_study_topics(
+        self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
+    ) -> Dict[str, Any]:
+        effective_title = title or (input_text.strip() if is_topic_name else "Curriculum Track")
+        if is_topic_name:
+            goal_clean = input_text.strip()
+            topics_list = [
+                {
+                    "title": f"{goal_clean}: Foundations & Core Concepts",
+                    "description": f"Master fundamental principles, syntax, and foundational mental models of {goal_clean}.",
+                    "subtopics": [f"{goal_clean} Basics", f"{goal_clean} Core Primitives", f"{goal_clean} Tooling & Environment"],
+                    "dependencies": [],
+                    "prerequisites": [],
+                    "estimated_minutes": 60,
+                    "difficulty": "BEGINNER",
+                    "source_reference": f"Directive: {goal_clean}"
+                },
+                {
+                    "title": f"{goal_clean}: Intermediate Architecture & Patterns",
+                    "description": f"Design resilient structures, modular abstractions, and standard workflows in {goal_clean}.",
+                    "subtopics": [f"{goal_clean} Best Practices", f"{goal_clean} Common Design Patterns", f"{goal_clean} Error Handling"],
+                    "dependencies": [f"{goal_clean}: Foundations & Core Concepts"],
+                    "prerequisites": [f"{goal_clean}: Foundations & Core Concepts"],
+                    "estimated_minutes": 75,
+                    "difficulty": "INTERMEDIATE",
+                    "source_reference": f"Directive: {goal_clean}"
+                },
+                {
+                    "title": f"{goal_clean}: Advanced Systems & Optimization",
+                    "description": f"Deep dive into high-performance tuning, scalability, and internal mechanisms of {goal_clean}.",
+                    "subtopics": [f"{goal_clean} Internals", f"{goal_clean} Performance Profiling", f"{goal_clean} Production Hardening"],
+                    "dependencies": [f"{goal_clean}: Intermediate Architecture & Patterns"],
+                    "prerequisites": [f"{goal_clean}: Intermediate Architecture & Patterns"],
+                    "estimated_minutes": 90,
+                    "difficulty": "ADVANCED",
+                    "source_reference": f"Directive: {goal_clean}"
+                },
+                {
+                    "title": f"{goal_clean}: Real-World Capstone & Debug Lab",
+                    "description": f"Synthesize end-to-end knowledge through hands-on laboratory exercises and failure analysis in {goal_clean}.",
+                    "subtopics": [f"{goal_clean} Capstone Project", f"{goal_clean} Incident Debugging", f"{goal_clean} Production Readiness Review"],
+                    "dependencies": [f"{goal_clean}: Advanced Systems & Optimization"],
+                    "prerequisites": [f"{goal_clean}: Advanced Systems & Optimization"],
+                    "estimated_minutes": 90,
+                    "difficulty": "ADVANCED",
+                    "source_reference": f"Directive: {goal_clean}"
+                }
+            ]
+            return {
+                "title": effective_title,
+                "category": "Technology & Engineering",
+                "summary": f"Comprehensive roadmap generated for topic goal '{goal_clean}' ({len(topics_list)} progressive modules).",
+                "topics": topics_list,
+                "provider_used": "offline_heuristic"
+            }
+        return self.extract_curriculum(input_text, title=effective_title)
+
+    def chat_assistant(
+        self, message: str, mode: str = "explain", context_topic: Optional[str] = None
+    ) -> Dict[str, Any]:
+        mode_lower = (mode or "explain").lower()
+        ctx_str = f" for '{context_topic}'" if context_topic else ""
+
+        if mode_lower == "hint":
+            reply = (
+                f"💡 Guiding Hint{ctx_str}:\n"
+                f"Consider what fundamental invariant is being challenged here. "
+                f"Instead of jumping to the final syntax, ask yourself: "
+                f"How does data flow across this boundary, and what state changes occur? "
+                f"Try isolating the single step where expectations diverge from actual runtime behavior."
+            )
+        elif mode_lower == "debug":
+            diag = self.suggest_debug_hypothesis(message, symptom=context_topic)
+            reply = (
+                f"🛠️ Debug Lab Analysis{ctx_str}:\n\n"
+                f"• Root Cause Hypothesis: {diag['hypothesis']}\n\n"
+                f"• Diagnostic Action: `{diag['investigation_command']}`\n\n"
+                f"• Recommended Fix: {diag['recommended_fix']}"
+            )
+        else:
+            reply = (
+                f"🧠 Feynman Concept Breakdown{ctx_str}:\n\n"
+                f"Let's explain '{context_topic or message}' using simple, intuitive intuition:\n\n"
+                f"1. Core Intuition: Think of this system like a highway interchange where traffic must merge smoothly based on priority signals rather than brute-forcing intersections.\n"
+                f"2. Decoupled Role: Each component focuses strictly on its single invariant, minimizing cascading blast radiuses.\n"
+                f"3. Practical Takeaway: Build around invariants first; the implementation details naturally align once the boundary is clear."
+            )
+
+        return {
+            "reply": reply,
+            "mode": mode_lower,
+            "context_topic": context_topic,
+            "provider": "offline_heuristic"
+        }
+
     def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
         return {
             "question": f"In {subtopic_name}, which architectural strategy best prevents latency degradation and thread exhaustion under high concurrency?",
@@ -221,24 +330,34 @@ class GeminiProvider(AIProvider):
     def is_available(self) -> bool:
         return bool(self.api_key and self.api_key.strip() and self._model is not None)
 
-    def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
+    def generate_study_topics(
+        self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        Analyze study text (first 10,000 characters) and return structured JSON curriculum.
+        Generate study topics using Gemini 1.5 Flash Free Tier.
+        If is_topic_name is True, prefixes:
+        'Create a comprehensive study roadmap for the following topic/goal: [TEXT]'
         """
         if not self.is_available():
             if self._ollama_fallback.is_available():
-                return self._ollama_fallback.extract_curriculum(text, title=title)
-            return self._offline_fallback.extract_curriculum(text, title=title)
+                return self._ollama_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
+            return self._offline_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
 
-        truncated_text = text[:10000] if len(text) > 10000 else text
+        if is_topic_name:
+            effective_input = f"Create a comprehensive study roadmap for the following topic/goal: {input_text.strip()}"
+            effective_title = title or input_text.strip()
+        else:
+            effective_input = input_text[:10000]
+            effective_title = title or "Curriculum Track"
+
         prompt = (
             "You are an expert curriculum architect and senior software engineer. "
-            "Analyze the provided syllabus / educational text and extract a comprehensive, production-grade learning roadmap.\n\n"
-            f"Input Material:\n{truncated_text}\n\n"
+            f"{effective_input}\n\n"
+            "Analyze and extract a comprehensive, production-grade learning roadmap.\n\n"
             "You MUST return a JSON object with this exact structure:\n"
             "{\n"
-            '  "title": "Course Title",\n'
-            '  "category": "Backend / DevOps",\n'
+            f'  "title": "{effective_title}",\n'
+            '  "category": "Technology & Engineering",\n'
             '  "summary": "Concise course overview",\n'
             '  "topics": [\n'
             "    {\n"
@@ -270,15 +389,83 @@ class GeminiProvider(AIProvider):
             err_str = str(err).lower()
             if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
                 if self._ollama_fallback.is_available():
-                    return self._ollama_fallback.extract_curriculum(text, title=title)
+                    return self._ollama_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
                 from fastapi import HTTPException, status
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly or configure local Ollama."
                 )
             if self._ollama_fallback.is_available():
-                return self._ollama_fallback.extract_curriculum(text, title=title)
-            return self._offline_fallback.extract_curriculum(text, title=title)
+                return self._ollama_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
+            return self._offline_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
+
+    def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
+        """Backwards compatible wrapper around generate_study_topics."""
+        return self.generate_study_topics(text, is_topic_name=False, title=title)
+
+    def chat_assistant(
+        self, message: str, mode: str = "explain", context_topic: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Interactive AI Assistant adhering strictly to teaching modes:
+        - explain: Feynman technique breakdown
+        - hint: Socratic guiding clues (AI IS NOT A KEYBOARD - never dumps full solutions)
+        - debug: Root-cause diagnosis for Engineering Lab
+        """
+        if not self.is_available():
+            if self._ollama_fallback.is_available():
+                return self._ollama_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+            return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+
+        mode_lower = (mode or "explain").lower()
+
+        if mode_lower == "hint":
+            system_instruction = (
+                "You are an inspiring Socratic AI mentor for Omnidesk BD. "
+                "CRITICAL RULE: AI IS NOT A KEYBOARD. DO NOT give the direct answer or dump full code solutions. "
+                "Prioritize teaching, giving targeted hints, and guiding the learner with thought-provoking questions "
+                "so they arrive at the solution themselves."
+            )
+        elif mode_lower == "debug":
+            system_instruction = (
+                "You are a Senior Site Reliability & Debugging Specialist in the Omnidesk BD Engineering Lab. "
+                "Analyze errors, stack traces, and symptoms systematically. Identify the most probable root cause hypothesis, "
+                "suggest exact diagnostic commands, and outline the fix conceptually rather than blindly dumping copy-paste code."
+            )
+        else:
+            system_instruction = (
+                "You are an expert AI tutor for Omnidesk BD. Your teaching style is grounded in the Feynman technique: "
+                "break down complex concepts simply, use relatable real-world analogies, explain why things work under the hood, "
+                "and verify understanding with a quick conceptual check. Prioritize clarity over jargon."
+            )
+
+        topic_ctx = f"Context Topic: {context_topic}\n" if context_topic else ""
+        prompt = f"{system_instruction}\n\n{topic_ctx}Learner Message: {message}\n\nResponse:"
+
+        try:
+            import google.generativeai as genai
+            text_model = genai.GenerativeModel(model_name=self.model_name)
+            response = text_model.generate_content(prompt)
+            reply = (response.text or "").strip()
+            return {
+                "reply": reply,
+                "mode": mode_lower,
+                "context_topic": context_topic,
+                "provider": "gemini-1.5-flash"
+            }
+        except Exception as err:
+            err_str = str(err).lower()
+            if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
+                if self._ollama_fallback.is_available():
+                    return self._ollama_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+                from fastapi import HTTPException, status
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Falling back to offline guidance."
+                )
+            if self._ollama_fallback.is_available():
+                return self._ollama_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+            return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
 
     def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
         """
@@ -417,15 +604,18 @@ class OllamaAIProvider(AIProvider):
         except Exception:
             return False
 
-    def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
+    def generate_study_topics(
+        self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
+    ) -> Dict[str, Any]:
         if not self.is_available():
-            return self._offline_fallback.extract_curriculum(text, title=title)
+            return self._offline_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
         try:
             import httpx
+            prefix = f"Create a comprehensive study roadmap for the following topic/goal: {input_text}" if is_topic_name else input_text[:6000]
             prompt = (
                 "You are an expert technical curriculum designer. Analyze this text and return a JSON object:\n"
-                f"{text[:6000]}\n\n"
-                "Schema: {\"title\": string, \"category\": string, \"summary\": string, \"topics\": [{\"title\": string, \"description\": string, \"subtopics\": [string], \"prerequisites\": [string], \"estimated_minutes\": int, \"difficulty\": string}]}"
+                f"{prefix}\n\n"
+                "Schema: {\"title\": string, \"category\": string, \"summary\": string, \"topics\": [{\"title\": string, \"description\": string, \"subtopics\": [string], \"prerequisites\": [string], \"dependencies\": [string], \"estimated_minutes\": int, \"difficulty\": string}]}"
             )
             resp = httpx.post(
                 f"{self.base_url}/api/generate",
@@ -439,7 +629,36 @@ class OllamaAIProvider(AIProvider):
                 return data
         except Exception:
             pass
-        return self._offline_fallback.extract_curriculum(text, title=title)
+        return self._offline_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
+
+    def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
+        return self.generate_study_topics(text, is_topic_name=False, title=title)
+
+    def chat_assistant(
+        self, message: str, mode: str = "explain", context_topic: Optional[str] = None
+    ) -> Dict[str, Any]:
+        if not self.is_available():
+            return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+        try:
+            import httpx
+            topic_ctx = f"Context Topic: {context_topic}\n" if context_topic else ""
+            prompt = f"Mode: {mode}\n{topic_ctx}User: {message}\nAssistant:"
+            resp = httpx.post(
+                f"{self.base_url}/api/generate",
+                json={"model": self.model, "prompt": prompt, "stream": False},
+                timeout=20.0
+            )
+            if resp.status_code == 200:
+                reply = resp.json().get("response", "").strip()
+                return {
+                    "reply": reply,
+                    "mode": mode,
+                    "context_topic": context_topic,
+                    "provider": f"ollama_{self.model}"
+                }
+        except Exception:
+            pass
+        return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
 
     def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
         if not self.is_available():
@@ -573,4 +792,24 @@ def generate_verification_quiz(subtopic_name: str) -> Dict[str, Any]:
     if hasattr(provider, "generate_verification_quiz"):
         return provider.generate_verification_quiz(subtopic_name)
     return LocalOfflineAIProvider().generate_verification_quiz(subtopic_name)
+
+
+def generate_study_topics(input_text: str, is_topic_name: bool = False, title: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Top-level helper function to generate curriculum topics using active provider.
+    """
+    provider = get_ai_provider()
+    if hasattr(provider, "generate_study_topics"):
+        return provider.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
+    return LocalOfflineAIProvider().generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
+
+
+def chat_assistant(message: str, mode: str = "explain", context_topic: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Top-level helper function for interactive AI chat assistant.
+    """
+    provider = get_ai_provider()
+    if hasattr(provider, "chat_assistant"):
+        return provider.chat_assistant(message, mode=mode, context_topic=context_topic)
+    return LocalOfflineAIProvider().chat_assistant(message, mode=mode, context_topic=context_topic)
 

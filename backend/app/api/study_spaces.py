@@ -169,21 +169,34 @@ async def generate_study_space_preview(
             except (ValueError, TypeError):
                 daily_target_minutes = 60
 
+        is_topic_name = False
         if uploaded_file and hasattr(uploaded_file, "read"):
             file_bytes = await uploaded_file.read()
             source_filename = getattr(uploaded_file, "filename", "uploaded_document.pdf")
             if not form.get("title"):
                 source_title = os.path.splitext(source_filename)[0].replace("_", " ").title()
 
-            from app.ingestion.parsers import PDFParser
-            raw_source_text = await PDFParser.extract_text_async(file_bytes, max_chars=10000)
+            ext = os.path.splitext(source_filename)[1].lower()
+            if ext in (".md", ".markdown"):
+                from app.ingestion.parsers import MarkdownParser
+                raw_source_text = await MarkdownParser.extract_text_async(file_bytes, max_chars=10000)
+            elif ext in (".txt", ".text"):
+                from app.ingestion.parsers import TXTParser
+                raw_source_text = await TXTParser.extract_text_async(file_bytes, max_chars=10000)
+            else:
+                from app.ingestion.parsers import PDFParser
+                raw_source_text = await PDFParser.extract_text_async(file_bytes, max_chars=10000)
+
             source_type_tag = "SOURCE_EXTRACTED"
         else:
-            raw_source_text = str(form.get("text") or form.get("goal") or "")
+            raw_source_text = str(form.get("topic_name") or form.get("text") or form.get("goal") or "")
+            if form.get("topic_name"):
+                is_topic_name = True
+                source_title = form.get("title") or form.get("topic_name")
             if not raw_source_text.strip():
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Must provide an uploaded PDF file or text in multipart form."
+                    detail="Must provide an uploaded file (PDF, TXT, MD) or topic_name/text/goal in form."
                 )
     else:
         # JSON body
@@ -195,7 +208,7 @@ async def generate_study_space_preview(
                 detail="Invalid JSON payload."
             )
         payload = StudySpaceGenerateRequest(**body)
-        source_title = payload.title or payload.goal or "Curriculum Track"
+        source_title = payload.title or payload.topic_name or payload.goal or "Curriculum Track"
         category = payload.category
         interface_language = payload.interface_language
         learning_language = payload.learning_language
@@ -204,8 +217,14 @@ async def generate_study_space_preview(
         daily_target_minutes = payload.daily_target_minutes
         preferred_provider = payload.preferred_provider
         material_id = payload.material_id
+        is_topic_name = False
 
-        if payload.material_id:
+        if payload.topic_name and payload.topic_name.strip():
+            raw_source_text = payload.topic_name.strip()
+            source_title = payload.title or raw_source_text
+            is_topic_name = True
+            source_type_tag = "USER_CREATED"
+        elif payload.material_id:
             material_record = (
                 db.query(Material)
                 .filter(Material.id == payload.material_id, Material.user_id == current_user.id)
@@ -222,28 +241,39 @@ async def generate_study_space_preview(
                     detail="Material physical file is not available on disk."
                 )
 
-            from app.ingestion.parsers import PDFParser
-            raw_source_text = await PDFParser.extract_text_async(material_record.storage_path, max_chars=10000)
+            ext = os.path.splitext(material_record.storage_path)[1].lower()
+            if ext in (".md", ".markdown"):
+                from app.ingestion.parsers import MarkdownParser
+                raw_source_text = await MarkdownParser.extract_text_async(material_record.storage_path, max_chars=10000)
+            elif ext in (".txt", ".text"):
+                from app.ingestion.parsers import TXTParser
+                raw_source_text = await TXTParser.extract_text_async(material_record.storage_path, max_chars=10000)
+            else:
+                from app.ingestion.parsers import PDFParser
+                raw_source_text = await PDFParser.extract_text_async(material_record.storage_path, max_chars=10000)
+
             source_title = material_record.title
             source_filename = material_record.original_filename
             source_type_tag = "SOURCE_EXTRACTED"
         elif payload.text and payload.text.strip():
             raw_source_text = payload.text.strip()
+            is_topic_name = len(raw_source_text) < 100 and "\n" not in raw_source_text
             source_type_tag = "AI_INFERRED"
         elif payload.goal and payload.goal.strip():
             raw_source_text = payload.goal.strip()
+            is_topic_name = True
             source_type_tag = "AI_INFERRED"
         else:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Must provide either 'text', 'goal', or a valid 'material_id'."
+                detail="Must provide either 'topic_name', 'text', 'goal', or a valid 'material_id'."
             )
 
     # First 10,000 characters limit
     analysis_text = raw_source_text[:10000]
 
     # AI Curriculum Synthesis (Gemini 1.5 Flash Free Tier -> Ollama -> Heuristics)
-    from app.services.ai_provider import GeminiProvider
+    from app.services.ai_provider import GeminiProvider, LocalOfflineAIProvider
     gemini_provider = GeminiProvider()
 
     topic_items: List[TopicPreviewItem] = []
@@ -252,7 +282,7 @@ async def generate_study_space_preview(
 
     try:
         if gemini_provider.is_available() and (not preferred_provider or preferred_provider == "gemini"):
-            gemini_data = gemini_provider.extract_curriculum(analysis_text, title=source_title)
+            gemini_data = gemini_provider.generate_study_topics(analysis_text, is_topic_name=is_topic_name, title=source_title)
             curriculum_summary = gemini_data.get("summary", f"Curriculum synthesized by Gemini 1.5 Flash.")
             provider_used = gemini_data.get("provider_used", "gemini-1.5-flash")
             for t in gemini_data.get("topics", []):
@@ -270,27 +300,46 @@ async def generate_study_space_preview(
                     )
                 )
         else:
-            curriculum = ai_service.analyze_curriculum(
-                text=analysis_text,
-                title=source_title,
-                preferred_provider=preferred_provider
-            )
-            curriculum_summary = curriculum.summary
-            provider_used = curriculum.provider_used
-            for item in curriculum.topics:
-                topic_items.append(
-                    TopicPreviewItem(
-                        title=item.title,
-                        description=item.description,
-                        subtopics=item.subtopics,
-                        dependencies=item.dependencies,
-                        estimated_minutes=item.estimated_minutes,
-                        difficulty=item.difficulty,
-                        source_reference=item.source_reference or (source_filename or "Document"),
-                        confidence_score=item.confidence_score,
-                        source_type=source_type_tag
+            if is_topic_name:
+                offline_data = LocalOfflineAIProvider().generate_study_topics(analysis_text, is_topic_name=True, title=source_title)
+                curriculum_summary = offline_data.get("summary", "")
+                provider_used = "offline_heuristic"
+                for t in offline_data.get("topics", []):
+                    topic_items.append(
+                        TopicPreviewItem(
+                            title=t.get("title", "Core Topic"),
+                            description=t.get("description", ""),
+                            subtopics=t.get("subtopics", []),
+                            dependencies=t.get("dependencies", []),
+                            estimated_minutes=t.get("estimated_minutes", 60),
+                            difficulty=t.get("difficulty", "INTERMEDIATE"),
+                            source_reference=t.get("source_reference", "Topic Goal"),
+                            confidence_score=0.95,
+                            source_type=source_type_tag
+                        )
                     )
+            else:
+                curriculum = ai_service.analyze_curriculum(
+                    text=analysis_text,
+                    title=source_title,
+                    preferred_provider=preferred_provider
                 )
+                curriculum_summary = curriculum.summary
+                provider_used = curriculum.provider_used
+                for item in curriculum.topics:
+                    topic_items.append(
+                        TopicPreviewItem(
+                            title=item.title,
+                            description=item.description,
+                            subtopics=item.subtopics,
+                            dependencies=item.dependencies,
+                            estimated_minutes=item.estimated_minutes,
+                            difficulty=item.difficulty,
+                            source_reference=item.source_reference or (source_filename or "Document"),
+                            confidence_score=item.confidence_score,
+                            source_type=source_type_tag
+                        )
+                    )
     except HTTPException:
         raise
     except Exception as ai_err:

@@ -93,8 +93,9 @@ class StudySpacePreviewResponse(BaseModel):
 class StudySpaceGenerateRequest(BaseModel):
     """
     Input payload for POST /api/v1/study-spaces/generate.
-    Accepts goals, raw text, uploaded material reference, or time limits.
+    Accepts topic name, goals, raw text, uploaded material reference, or time limits.
     """
+    topic_name: Optional[str] = None
     goal: Optional[str] = None
     text: Optional[str] = None
     material_id: Optional[uuid.UUID] = None

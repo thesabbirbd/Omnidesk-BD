@@ -12,6 +12,27 @@ class TXTParser(BaseParser):
     Segments paragraphs, detects numbered modules or syllabus points, and calculates checksums.
     """
 
+    @classmethod
+    def extract_text(cls, source: Union[str, Path, bytes], max_chars: Optional[int] = None) -> str:
+        """
+        Extract plain text securely from a .txt source.
+        Safely truncates to max_chars if specified.
+        """
+        parser = cls()
+        doc = parser.parse(source)
+        text = doc.full_text or ""
+        if max_chars is not None and max_chars > 0:
+            return text[:max_chars]
+        return text
+
+    @classmethod
+    async def extract_text_async(cls, source: Union[str, Path, bytes], max_chars: Optional[int] = None) -> str:
+        """
+        Asynchronously extract plain text without blocking the main FastAPI event loop.
+        """
+        import asyncio
+        return await asyncio.to_thread(cls.extract_text, source, max_chars)
+
     def parse(self, source: Union[str, Path, bytes], title: Optional[str] = None, **kwargs: Any) -> ParsedDocument:
         file_bytes = self.read_bytes(source)
         checksum = self.compute_sha256(file_bytes)

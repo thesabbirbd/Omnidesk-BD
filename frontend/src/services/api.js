@@ -74,6 +74,19 @@ export const generateStudySpaceFromMaterial = async (materialId, title) => {
   return response.data;
 };
 
+// Universal Generation API (Phase 2 & 1H/1J)
+export const generateStudySpace = async (payloadOrFormData) => {
+  const isFormData = payloadOrFormData instanceof FormData;
+  const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+  const response = await api.post('/study-spaces/generate', payloadOrFormData, config);
+  return response.data;
+};
+
+export const approveStudySpace = async (approvalData) => {
+  const response = await api.post('/study-spaces/approve', approvalData);
+  return response.data;
+};
+
 // Mind Map APIs (React Flow synchronization)
 export const getMindMap = async (studySpaceId) => {
   const params = studySpaceId ? { study_space_id: studySpaceId } : {};
@@ -128,6 +141,12 @@ export const updateTopicStatus = async (topicId, status, progress) => {
 
 export const toggleCompetency = async (topicId, competencyId) => {
   const response = await api.patch(`/topics/${topicId}/competencies/${competencyId}/toggle`);
+  return response.data;
+};
+
+// Anti-Fake-Progress Topic Verification Quiz (Phase 4 / v1.2.8)
+export const getTopicVerificationQuiz = async (topicId) => {
+  const response = await api.get(`/topics/${topicId}/verify`);
   return response.data;
 };
 
@@ -188,6 +207,16 @@ export const createDebugJournal = async (payload) => {
 
 export const getDebugHypothesis = async (payload) => {
   const response = await api.post('/debug-journals/ai-hypothesis', payload);
+  return response.data;
+};
+
+// Omni-AI Assistant Chat API (Phase 3 / v1.2.7)
+export const sendAiChat = async ({ message, mode = 'explain', context_topic = null }) => {
+  const response = await api.post('/ai/chat', {
+    message,
+    mode,
+    context_topic
+  });
   return response.data;
 };
 

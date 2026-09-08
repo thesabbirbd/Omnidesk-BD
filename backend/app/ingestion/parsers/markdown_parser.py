@@ -12,6 +12,27 @@ class MarkdownParser(BaseParser):
     Extracts YAML frontmatter, header hierarchies, code blocks, and structured section chunks.
     """
 
+    @classmethod
+    def extract_text(cls, source: Union[str, Path, bytes], max_chars: Optional[int] = None) -> str:
+        """
+        Extract raw plain/markdown text securely from a markdown source.
+        Safely truncates to max_chars if specified.
+        """
+        parser = cls()
+        doc = parser.parse(source)
+        text = doc.full_text or ""
+        if max_chars is not None and max_chars > 0:
+            return text[:max_chars]
+        return text
+
+    @classmethod
+    async def extract_text_async(cls, source: Union[str, Path, bytes], max_chars: Optional[int] = None) -> str:
+        """
+        Asynchronously extract markdown text without blocking the main event loop.
+        """
+        import asyncio
+        return await asyncio.to_thread(cls.extract_text, source, max_chars)
+
     def parse(self, source: Union[str, Path, bytes], title: Optional[str] = None, **kwargs: Any) -> ParsedDocument:
         file_bytes = self.read_bytes(source)
         checksum = self.compute_sha256(file_bytes)
