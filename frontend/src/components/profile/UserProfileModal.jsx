@@ -91,7 +91,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
         className="w-full max-w-xl rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_20px_50px_rgba(0,0,0,0.7),inset_1px_1px_2px_rgba(255,255,255,0.1)] p-6 md:p-8 relative flex flex-col gap-6 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}

@@ -46,7 +46,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
   const metrics = data?.metrics;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm animate-fadeIn">
       <div 
         className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
         style={{

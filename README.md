@@ -150,6 +150,11 @@ Omnidesk BD adheres to the strict safety invariant: **NEVER silently write AI-ge
   - `🟣 REVIEW` — Spaced repetition interval trigger reached
   - `⭐ MASTERED` — Long-term retention established
 
+<div align="center">
+  <img src="docs/images/omnidesk-dag-mindmap.png" alt="Omnidesk BD Visual DAG MindMap and Node Detail Drawer" width="96%" style="border-radius: 24px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.15);" />
+  <p><i>Figure 5: Visual DAG MindMap with interactive nodes, dependency bezier curves, auto-arrange controls, and topic milestone detail drawer.</i></p>
+</div>
+
 ### 4. Time-Aware Scheduling & Deep-Work Engine
 - **Kahn's Topological Sort**: Automatically sequences topics so fundamental concepts are mastered before dependent skills.
 - **Session Chunking**: Automatically breaks large topics into focused 30–60 minute deep-work sessions.
@@ -162,6 +167,11 @@ Omnidesk BD adheres to the strict safety invariant: **NEVER silently write AI-ge
 - **Draggable Glass Pill**: Shrinks into a sleek circular timer with smooth blur physics on mouse hover.
 - **Local Optical Presence Detection**: Uses client-side browser `FaceDetector` API snapshots (zero video or frames saved to disk) to pause the timer automatically if you step away from your desk.
 
+<div align="center">
+  <img src="docs/images/omnidesk-focus-timer-presence.png" alt="Omnidesk BD Focus Timer and Local Camera Presence Detection" width="96%" style="border-radius: 24px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.15);" />
+  <p><i>Figure 6: Route-Persistent Focus Timer with Pomodoro modes, Emerald Nebula spheres, and privacy-first local optical presence detection.</i></p>
+</div>
+
 ### 6. Embedded Sandboxed DevOps Lab (Xterm.js + PTY)
 - **Live Terminal**: Native interactive bash shell embedded directly into the browser.
 - **WebSocket Streaming**: Run Docker commands, inspect Kubernetes pods, execute Python scripts, and test shell syntax without leaving your study dashboard.
@@ -169,6 +179,11 @@ Omnidesk BD adheres to the strict safety invariant: **NEVER silently write AI-ge
 ### 7. Engineering Debug Lab (*"I'm Stuck"*)
 - **Structured Debug Journals**: Systematic incident troubleshooting workflow (Symptoms → Logs → Hypotheses → Root Cause).
 - **Local Hypothesis Generator**: 100% offline advisory heuristics suggest systematic troubleshooting angles.
+
+<div align="center">
+  <img src="docs/images/omnidesk-debug-lab-modal.png" alt="Omnidesk BD I'm Stuck Debug Lab Journal Modal" width="96%" style="border-radius: 24px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.15);" />
+  <p><i>Figure 7: Engineering Debug Lab ("I'm Stuck") — structured root-cause isolation dialog with auto-diagnose hypothesis engine and translucent glass backdrop.</i></p>
+</div>
 
 ### 8. Predefined Curriculum Template Registry
 - Production-grade curricula stored as version-controlled JSON templates in [`backend/templates/registry/`](file:///home/thesabbir/Documents/Project%20Backend%20-%20DevOps/universal-study-os/backend/templates/registry):
