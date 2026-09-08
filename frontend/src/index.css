@@ -72,19 +72,19 @@ html[data-theme-mode="dark"] {
    True translucency, crystal backdrop blur, and luminous highlights
    ========================================================================== */
 html[data-theme-style="glass"] {
-  --bg-canvas: #f1f5f9;
-  --bg-panel: rgba(255, 255, 255, 0.72);
-  --bg-card: rgba(255, 255, 255, 0.65);
-  --bg-input: rgba(248, 250, 252, 0.75);
+  --bg-canvas: #edf2f7;
+  --bg-panel: rgba(255, 255, 255, 0.45);
+  --bg-card: rgba(255, 255, 255, 0.4);
+  --bg-input: rgba(255, 255, 255, 0.45);
   
-  --border-color: rgba(255, 255, 255, 0.85);
+  --border-color: rgba(255, 255, 255, 0.65);
   --text-main: #0f172a;
   --text-muted: #475569;
   
-  --shadow-dark: rgba(148, 163, 184, 0.2);
-  --shadow-light: rgba(255, 255, 255, 0.95);
-  --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  --input-shadow: inset 1px 1px 3px rgba(148, 163, 184, 0.25), inset -1px -1px 3px rgba(255, 255, 255, 0.8);
+  --shadow-dark: rgba(148, 163, 184, 0.18);
+  --shadow-light: rgba(255, 255, 255, 0.9);
+  --card-shadow: 0 10px 35px 0 rgba(31, 38, 135, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+  --input-shadow: inset 1px 1px 3px rgba(148, 163, 184, 0.2), inset -1px -1px 3px rgba(255, 255, 255, 0.7);
   --card-radius: 24px;
 }
 
@@ -93,38 +93,42 @@ html[data-theme-style="glass"] {
    Deep cosmic translucency, neon accent refractions, radiant frosted borders
    ========================================================================== */
 html[data-theme-mode="dark"][data-theme-style="glass"] {
-  --bg-canvas: #030712;
-  --bg-panel: rgba(15, 23, 42, 0.7);
-  --bg-card: rgba(15, 23, 42, 0.45);
-  --bg-input: rgba(15, 23, 42, 0.55);
+  --bg-canvas: #060913;
+  --bg-panel: rgba(15, 23, 42, 0.4);
+  --bg-card: rgba(15, 23, 42, 0.32);
+  --bg-input: rgba(15, 23, 42, 0.4);
   
   --border-color: rgba(255, 255, 255, 0.14);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   
-  --shadow-dark: rgba(0, 0, 0, 0.6);
-  --shadow-light: rgba(255, 255, 255, 0.08);
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  --input-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.6), inset -1px -1px 3px rgba(255, 255, 255, 0.05);
+  --shadow-dark: rgba(0, 0, 0, 0.5);
+  --shadow-light: rgba(255, 255, 255, 0.06);
+  --card-shadow: 0 10px 35px 0 rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.16);
+  --input-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.5), inset -1px -1px 3px rgba(255, 255, 255, 0.05);
 }
 
 /* Glassmorphism Structural Overrides */
 html[data-theme-style="glass"] .bg-\[var\(--bg-card\)\],
 html[data-theme-style="glass"] .bg-\[var\(--bg-panel\)\],
 html[data-theme-style="glass"] aside {
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
 }
 
 html[data-theme-mode="dark"][data-theme-style="glass"] .bg-\[var\(--bg-card\)\] {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.01) 100%), rgba(15, 23, 42, 0.5) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: rgba(15, 23, 42, 0.35) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   box-shadow: var(--card-shadow) !important;
 }
 
 html[data-theme-mode="light"][data-theme-style="glass"] .bg-\[var\(--bg-card\)\] {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.45) 100%), rgba(255, 255, 255, 0.65) !important;
-  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.42) !important;
+  backdrop-filter: blur(24px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
   box-shadow: var(--card-shadow) !important;
 }
 

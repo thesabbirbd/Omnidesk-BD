@@ -58,6 +58,7 @@ export function TimerProvider({ children }) {
       totalPausedDurationMs: 0,
       presenceEnabled: false,
       presenceStatus: 'inactive',
+      presenceIntervalSecs: 5,
       isFloatingMinimized: false,
       isFloatingVisible: true,
     };
@@ -213,7 +214,7 @@ export function TimerProvider({ children }) {
             timestamp: Date.now()
           });
         }
-      }, 60000);
+      }, (state.presenceIntervalSecs || 5) * 1000);
     } else {
       stopPresenceDetection();
       if (!state.presenceEnabled) {
@@ -224,7 +225,7 @@ export function TimerProvider({ children }) {
     return () => {
       stopPresenceDetection();
     };
-  }, [state.presenceEnabled, state.isRunning, state.isPaused]);
+  }, [state.presenceEnabled, state.isRunning, state.isPaused, state.presenceIntervalSecs]);
 
   // Actions
   const startTimer = useCallback((options = {}) => {
@@ -282,22 +283,65 @@ export function TimerProvider({ children }) {
   }, []);
 
   const stopTimer = useCallback(() => {
-    if (state.isRunning) {
-      completeSession(state);
-    } else {
-      const modeConfig = DEFAULT_MODES[state.mode] || DEFAULT_MODES.pomodoro;
-      setState((prev) => ({
-        ...prev,
-        isRunning: false,
-        isPaused: false,
-        timeLeft: modeConfig.defaultMinutes * 60,
-        startTime: null,
-        targetEndTime: null,
-        totalPausedDurationMs: 0,
-        lastPauseTimestamp: null
-      }));
+    if (state.isRunning || state.isPaused) {
+      const plannedSecs = (state.durationMinutes || 25) * 60;
+      const elapsedSecs = state.mode === 'stopwatch'
+        ? (state.timeLeft || 0)
+        : Math.max(0, plannedSecs - (state.timeLeft || 0));
+      const elapsedMinutes = Math.floor(elapsedSecs / 60);
+
+      if (elapsedMinutes >= 1) {
+        const sessionRecord = {
+          id: Date.now(),
+          topic: state.activeTopic || 'General Focus',
+          mode: state.mode,
+          durationMinutes: elapsedMinutes,
+          startTime: state.startTime ? new Date(state.startTime).toISOString() : new Date().toISOString(),
+          endTime: new Date().toISOString(),
+          pauseDurationMs: state.totalPausedDurationMs || 0,
+          presenceChecked: state.presenceEnabled,
+          completedAt: new Date().toISOString()
+        };
+
+        setHistory((prev) => [sessionRecord, ...prev]);
+
+        createSession({
+          topic_id: null,
+          duration_minutes: elapsedMinutes,
+          mode: state.mode
+        }).catch(() => {});
+
+        setLastNotification({
+          type: 'complete',
+          message: `Session saved: "${sessionRecord.topic}" (${elapsedMinutes}m focused)`,
+          timestamp: Date.now()
+        });
+      } else {
+        setLastNotification({
+          type: 'info',
+          message: 'Timer stopped (sessions under 1 minute are not saved).',
+          timestamp: Date.now()
+        });
+      }
     }
-  }, [state, completeSession]);
+
+    const modeConfig = DEFAULT_MODES[state.mode] || DEFAULT_MODES.pomodoro;
+    setState((prev) => ({
+      ...prev,
+      isRunning: false,
+      isPaused: false,
+      timeLeft: modeConfig.defaultMinutes * 60,
+      startTime: null,
+      targetEndTime: null,
+      totalPausedDurationMs: 0,
+      lastPauseTimestamp: null,
+      presenceStatus: prev.presenceEnabled ? 'inactive' : prev.presenceStatus
+    }));
+  }, [state]);
+
+  const setPresenceInterval = useCallback((secs) => {
+    setState((prev) => ({ ...prev, presenceIntervalSecs: Number(secs) }));
+  }, []);
 
   const resetTimer = useCallback(() => {
     const modeConfig = DEFAULT_MODES[state.mode] || DEFAULT_MODES.pomodoro;
@@ -380,6 +424,7 @@ export function TimerProvider({ children }) {
     setTimerMode,
     setTopic,
     togglePresence,
+    setPresenceInterval,
     toggleFloatingMinimized,
     hideFloatingTimer,
     showFloatingTimer,

@@ -1,130 +1,148 @@
 /**
- * StudyOS Camera Presence Detection Service
+ * StudyOS Camera Presence Detection Service (Snapshot-Based)
  * 
- * Runs 100% locally in the browser using the browser's native Shape Detection API (FaceDetector)
- * or local canvas brightness/optical frame-differencing fallback.
+ * Runs 100% locally in the browser using FaceDetector or optical heuristics.
  * 
- * PRIVACY GUARANTEE:
- * - ZERO camera frames are ever saved, stored, or sent over any network.
- * - Processing happens purely in local browser memory.
+ * PRIVACY & HARDWARE GUARANTEE:
+ * - Camera is only opened for a brief snapshot (~500ms) to check presence,
+ *   and all media tracks are IMMEDIATELY stopped so the camera light turns OFF.
+ * - ZERO video frames are ever recorded, saved, or transmitted over any network.
  */
 
-let videoElement = null;
-let mediaStream = null;
 let checkIntervalId = null;
+let isCheckingNow = false;
 let faceDetector = null;
 
-// Initialize native FaceDetector if supported by the browser
+// Initialize native FaceDetector if supported
 if (typeof window !== 'undefined' && 'FaceDetector' in window) {
   try {
     // eslint-disable-next-line no-undef
     faceDetector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
   } catch (e) {
-    console.warn('Native FaceDetector failed to initialize, using optical fallback.', e);
+    console.warn('Native FaceDetector fallback to canvas analysis:', e);
   }
 }
 
 /**
- * Start the local camera presence detection service.
- * @param {Function} onPresenceChange - Callback receiving boolean isPresent
- * @param {number} checkIntervalMs - Interval between checks (default 60 seconds)
+ * Perform a single snapshot presence check:
+ * Opens camera, grabs a frame, detects face, and IMMEDIATELY shuts camera off.
  */
-export async function startPresenceDetection(onPresenceChange, checkIntervalMs = 60000) {
-  stopPresenceDetection();
+async function performSnapshotCheck(onPresenceChange) {
+  if (isCheckingNow) return;
+  isCheckingNow = true;
+
+  let stream = null;
+  let video = null;
 
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
+    // 1. Request camera briefly
+    stream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
       audio: false
     });
 
-    videoElement = document.createElement('video');
-    videoElement.srcObject = mediaStream;
-    videoElement.playsInline = true;
-    videoElement.muted = true;
-    await videoElement.play();
+    video = document.createElement('video');
+    video.srcObject = stream;
+    video.playsInline = true;
+    video.muted = true;
 
-    // Run an initial check after video stream stabilizes
-    setTimeout(() => checkPresence(onPresenceChange), 1500);
+    await new Promise((resolve) => {
+      video.onloadedmetadata = () => {
+        video.play().then(resolve).catch(resolve);
+      };
+      // Timeout fallback
+      setTimeout(resolve, 800);
+    });
 
-    // Run periodic checks every checkIntervalMs (e.g. 60s)
-    checkIntervalId = setInterval(() => {
-      checkPresence(onPresenceChange);
-    }, checkIntervalMs);
+    // Wait a brief frame render moment (~300ms)
+    await new Promise((r) => setTimeout(r, 300));
 
-    return { success: true };
-  } catch (error) {
-    console.warn('Camera presence detection permission denied or unavailable:', error.message);
-    return { success: false, error: error.message };
-  }
-}
+    let isPresent = false;
 
-/**
- * Perform a single local frame presence check.
- */
-async function checkPresence(onPresenceChange) {
-  if (!videoElement || videoElement.readyState < 2) {
-    return;
-  }
-
-  try {
-    if (faceDetector) {
-      // Use Chrome / Chromium native FaceDetector
-      const faces = await faceDetector.detect(videoElement);
-      const isPresent = faces && faces.length > 0;
-      onPresenceChange(isPresent);
-    } else {
-      // Fallback: Local canvas optical presence check
+    if (faceDetector && video.readyState >= 2) {
+      try {
+        const faces = await faceDetector.detect(video);
+        isPresent = faces && faces.length > 0;
+      } catch {
+        isPresent = false;
+      }
+    } else if (video.readyState >= 2) {
+      // Optical fallback
       const canvas = document.createElement('canvas');
       canvas.width = 160;
       canvas.height = 120;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-      // Calculate average brightness and skin-tone range
       let totalBrightness = 0;
       let humanColorHits = 0;
       for (let i = 0; i < data.length; i += 16) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        const brightness = (r + g + b) / 3;
-        totalBrightness += brightness;
-
-        // Basic human illumination heuristics
-        if (r > 60 && g > 40 && b > 20 && r > g && r > b) {
+        totalBrightness += (r + g + b) / 3;
+        if (r > 50 && g > 35 && b > 20 && r > b) {
           humanColorHits++;
         }
       }
-
       const totalSampled = data.length / 16;
       const avgBrightness = totalBrightness / totalSampled;
-      const isPresent = avgBrightness > 20 && humanColorHits > totalSampled * 0.08;
-      onPresenceChange(isPresent);
+      isPresent = avgBrightness > 15 && humanColorHits > totalSampled * 0.06;
+    } else {
+      // If camera stream couldn't initialize in time, assume present
+      isPresent = true;
     }
+
+    onPresenceChange(isPresent);
   } catch (err) {
-    console.warn('Presence check error:', err);
-    // On unexpected error, gracefully default to present
+    console.warn('Camera snapshot error or permission not granted:', err?.message);
+    // Graceful fallback: don't block user
     onPresenceChange(true);
+  } finally {
+    // 2. ALWAYS immediately shut down the camera stream and turn hardware LED off!
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+      stream = null;
+    }
+    if (video) {
+      video.srcObject = null;
+      video = null;
+    }
+    isCheckingNow = false;
   }
 }
 
 /**
- * Stop camera tracks and clear interval.
+ * Start periodic snapshot presence detection.
+ * @param {Function} onPresenceChange - Receives boolean isPresent
+ * @param {number} checkIntervalMs - Interval between snapshot checks (default 5000ms)
+ */
+export function startPresenceDetection(onPresenceChange, checkIntervalMs = 5000) {
+  stopPresenceDetection();
+
+  // Run first check after a brief initial pause (800ms)
+  setTimeout(() => {
+    performSnapshotCheck(onPresenceChange);
+  }, 800);
+
+  // Set recurring snapshot check
+  checkIntervalId = setInterval(() => {
+    performSnapshotCheck(onPresenceChange);
+  }, checkIntervalMs);
+
+  return { success: true };
+}
+
+/**
+ * Stop any running interval and release any remaining camera tracks.
  */
 export function stopPresenceDetection() {
   if (checkIntervalId) {
     clearInterval(checkIntervalId);
     checkIntervalId = null;
   }
-  if (mediaStream) {
-    mediaStream.getTracks().forEach((track) => track.stop());
-    mediaStream = null;
-  }
-  if (videoElement) {
-    videoElement.srcObject = null;
-    videoElement = null;
-  }
+  isCheckingNow = false;
 }

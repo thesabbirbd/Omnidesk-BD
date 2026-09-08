@@ -22,6 +22,8 @@ export default function Timer() {
     resetTimer,
     setTimerMode,
     togglePresence,
+    presenceIntervalSecs,
+    setPresenceInterval,
     modes
   } = useTimer();
 
@@ -171,7 +173,7 @@ export default function Timer() {
         </div>
         
         <p className="text-xs md:text-sm font-medium text-[color:var(--text-muted)] max-w-[320px]">
-          Checks locally every 60s. Auto-pauses if you step away. Zero video frames are saved or transmitted.
+          Quick snapshot check every {presenceIntervalSecs}s. Camera immediately turns off after each check.
         </p>
         
         <button 
@@ -186,6 +188,33 @@ export default function Timer() {
             presenceEnabled ? 'translate-x-8' : 'translate-x-0'
           }`} />
         </button>
+
+        {/* System Settings: Check Timer Intervals */}
+        <div className="flex flex-col gap-2 w-full pt-2 border-t border-[var(--border-color)]">
+          <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--text-muted)]">
+            Check Frequency Setting
+          </span>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { secs: 5, label: '5s (Def)' },
+              { secs: 30, label: '30s' },
+              { secs: 60, label: '60s' },
+              { secs: 300, label: '5m' },
+            ].map((option) => (
+              <button
+                key={option.secs}
+                onClick={() => setPresenceInterval(option.secs)}
+                className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  presenceIntervalSecs === option.secs
+                    ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_rgba(6,182,212,0.5)] scale-105'
+                    : 'bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] border border-[var(--border-color)]'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {presenceEnabled && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-bold">
