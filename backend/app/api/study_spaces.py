@@ -2,7 +2,7 @@ import os
 import uuid
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
@@ -113,148 +113,229 @@ def get_curriculum_template_preview(
 # =========================================================================
 
 @router.post("/generate", response_model=StudySpacePreviewResponse)
-def generate_study_space_preview(
-    payload: StudySpaceGenerateRequest,
+async def generate_study_space_preview(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Generate a complete, structured StudySpace preview (Packet 1H).
+    Generate a complete, structured StudySpace preview (Directive 5 / Packet 1H).
     CRITICAL: Does NOT save to PostgreSQL. Strictly enforces Analyze -> Preview -> Approve -> Persist.
     
     Accepts:
-    - Raw syllabus / prompt text or user goal.
-    - Reference to an already uploaded Material ID.
-    - Daily target capacity or overall time limit (e.g. 180 min sprint).
+    1. Uploaded PDF file (multipart/form-data): extracts text using PDFParser (up to 10,000 chars),
+       sends to GeminiProvider (gemini-1.5-flash Free Tier with Ollama fallback), and returns parsed JSON.
+    2. JSON payload (application/json): accepts goal, text, material_id, time limits.
     """
-    raw_source_text = ""
-    source_title = payload.title or payload.goal or "Curriculum Track"
-    material_record: Optional[Material] = None
-    source_type_tag = "AI_INFERRED"
+    content_type = request.headers.get("content-type", "").lower()
+    
+    source_title: str = "Curriculum Track"
+    category: str = "Backend / DevOps"
+    time_limit_minutes: Optional[int] = None
+    daily_target_minutes: int = 60
+    preferred_provider: Optional[str] = None
+    material_id: Optional[uuid.UUID] = None
+    raw_source_text: str = ""
+    source_type_tag: str = "AI_INFERRED"
+    source_filename: Optional[str] = None
 
-    # 1. Ingestion routing: Material or Text
-    if payload.material_id:
-        material_record = (
-            db.query(Material)
-            .filter(Material.id == payload.material_id, Material.user_id == current_user.id)
-            .first()
-        )
-        if not material_record:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Material '{payload.material_id}' not found for current user."
-            )
-        if not material_record.storage_path or not os.path.exists(material_record.storage_path):
+    interface_language: str = "en"
+    learning_language: str = "en"
+    source_language: str = "en"
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        uploaded_file = form.get("file")
+        if form.get("title"):
+            source_title = str(form.get("title"))
+        if form.get("category"):
+            category = str(form.get("category"))
+        if form.get("preferred_provider"):
+            preferred_provider = str(form.get("preferred_provider"))
+        if form.get("interface_language"):
+            interface_language = str(form.get("interface_language"))
+        if form.get("learning_language"):
+            learning_language = str(form.get("learning_language"))
+        if form.get("source_language"):
+            source_language = str(form.get("source_language"))
+        if form.get("time_limit_minutes"):
+            try:
+                time_limit_minutes = int(form.get("time_limit_minutes"))
+            except (ValueError, TypeError):
+                time_limit_minutes = None
+        if form.get("daily_target_minutes"):
+            try:
+                daily_target_minutes = int(form.get("daily_target_minutes"))
+            except (ValueError, TypeError):
+                daily_target_minutes = 60
+
+        if uploaded_file and hasattr(uploaded_file, "read"):
+            file_bytes = await uploaded_file.read()
+            source_filename = getattr(uploaded_file, "filename", "uploaded_document.pdf")
+            if not form.get("title"):
+                source_title = os.path.splitext(source_filename)[0].replace("_", " ").title()
+
+            from app.ingestion.parsers import PDFParser
+            raw_source_text = await PDFParser.extract_text_async(file_bytes, max_chars=10000)
+            source_type_tag = "SOURCE_EXTRACTED"
+        else:
+            raw_source_text = str(form.get("text") or form.get("goal") or "")
+            if not raw_source_text.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Must provide an uploaded PDF file or text in multipart form."
+                )
+    else:
+        # JSON body
+        try:
+            body = await request.json()
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Material physical file is not available on disk."
+                detail="Invalid JSON payload."
+            )
+        payload = StudySpaceGenerateRequest(**body)
+        source_title = payload.title or payload.goal or "Curriculum Track"
+        category = payload.category
+        interface_language = payload.interface_language
+        learning_language = payload.learning_language
+        source_language = payload.source_language
+        time_limit_minutes = payload.time_limit_minutes
+        daily_target_minutes = payload.daily_target_minutes
+        preferred_provider = payload.preferred_provider
+        material_id = payload.material_id
+
+        if payload.material_id:
+            material_record = (
+                db.query(Material)
+                .filter(Material.id == payload.material_id, Material.user_id == current_user.id)
+                .first()
+            )
+            if not material_record:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Material '{payload.material_id}' not found for current user."
+                )
+            if not material_record.storage_path or not os.path.exists(material_record.storage_path):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Material physical file is not available on disk."
+                )
+
+            from app.ingestion.parsers import PDFParser
+            raw_source_text = await PDFParser.extract_text_async(material_record.storage_path, max_chars=10000)
+            source_title = material_record.title
+            source_filename = material_record.original_filename
+            source_type_tag = "SOURCE_EXTRACTED"
+        elif payload.text and payload.text.strip():
+            raw_source_text = payload.text.strip()
+            source_type_tag = "AI_INFERRED"
+        elif payload.goal and payload.goal.strip():
+            raw_source_text = payload.goal.strip()
+            source_type_tag = "AI_INFERRED"
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Must provide either 'text', 'goal', or a valid 'material_id'."
             )
 
-        parsed_doc = ingestion_engine.parse_source(
-            material_record.storage_path,
-            title=material_record.title or payload.title
-        )
-        raw_source_text = parsed_doc.full_text
-        source_title = material_record.title
-        source_type_tag = "SOURCE_EXTRACTED"
+    # First 10,000 characters limit
+    analysis_text = raw_source_text[:10000]
 
-    elif payload.text and payload.text.strip():
-        parsed_doc = ingestion_engine.parse_source(
-            payload.text,
-            title=source_title
-        )
-        raw_source_text = parsed_doc.full_text
-        source_type_tag = "AI_INFERRED"
+    # AI Curriculum Synthesis (Gemini 1.5 Flash Free Tier -> Ollama -> Heuristics)
+    from app.services.ai_provider import GeminiProvider
+    gemini_provider = GeminiProvider()
 
-    elif payload.goal and payload.goal.strip():
-        parsed_doc = ingestion_engine.parse_source(
-            payload.goal,
-            title=source_title
-        )
-        raw_source_text = parsed_doc.full_text
-        source_type_tag = "AI_INFERRED"
+    topic_items: List[TopicPreviewItem] = []
+    curriculum_summary = ""
+    provider_used = "offline_heuristic"
 
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Must provide either 'text', 'goal', or a valid 'material_id'."
-        )
-
-    # 2. AI Abstraction Extraction (Gemini -> Ollama -> Offline Heuristic)
     try:
-        curriculum = ai_service.analyze_curriculum(
-            text=raw_source_text,
-            title=source_title,
-            preferred_provider=payload.preferred_provider
-        )
+        if gemini_provider.is_available() and (not preferred_provider or preferred_provider == "gemini"):
+            gemini_data = gemini_provider.extract_curriculum(analysis_text, title=source_title)
+            curriculum_summary = gemini_data.get("summary", f"Curriculum synthesized by Gemini 1.5 Flash.")
+            provider_used = gemini_data.get("provider_used", "gemini-1.5-flash")
+            for t in gemini_data.get("topics", []):
+                topic_items.append(
+                    TopicPreviewItem(
+                        title=t.get("title", "Core Topic"),
+                        description=t.get("description", ""),
+                        subtopics=t.get("subtopics", []),
+                        dependencies=t.get("dependencies", t.get("prerequisites", [])),
+                        estimated_minutes=t.get("estimated_minutes", 60),
+                        difficulty=t.get("difficulty", "INTERMEDIATE"),
+                        source_reference=t.get("source_reference", source_filename or "Uploaded Material"),
+                        confidence_score=0.95,
+                        source_type=source_type_tag
+                    )
+                )
+        else:
+            curriculum = ai_service.analyze_curriculum(
+                text=analysis_text,
+                title=source_title,
+                preferred_provider=preferred_provider
+            )
+            curriculum_summary = curriculum.summary
+            provider_used = curriculum.provider_used
+            for item in curriculum.topics:
+                topic_items.append(
+                    TopicPreviewItem(
+                        title=item.title,
+                        description=item.description,
+                        subtopics=item.subtopics,
+                        dependencies=item.dependencies,
+                        estimated_minutes=item.estimated_minutes,
+                        difficulty=item.difficulty,
+                        source_reference=item.source_reference or (source_filename or "Document"),
+                        confidence_score=item.confidence_score,
+                        source_type=source_type_tag
+                    )
+                )
+    except HTTPException:
+        raise
     except Exception as ai_err:
-        logger.warning("AI service failed (%s). Falling back to course generator parser.", ai_err)
-        # Emergency fallback to local parser
-        fallback_topics = course_generator.parse_topics_from_text(raw_source_text)
-        from app.ai.schemas import CurriculumAnalysisResult, TopicAnalysisItem
-        curriculum = CurriculumAnalysisResult(
-            title=source_title,
-            category=payload.category,
-            summary=f"Curriculum extracted from input source ({len(fallback_topics)} topics).",
-            topics=[
-                TopicAnalysisItem(
+        logger.warning("AI generation failed (%s). Falling back to course generator parser.", ai_err)
+        fallback_topics = course_generator.parse_topics_from_text(analysis_text)
+        curriculum_summary = f"Curriculum extracted from input source ({len(fallback_topics)} topics)."
+        provider_used = "offline_heuristic"
+        for t in fallback_topics:
+            topic_items.append(
+                TopicPreviewItem(
                     title=t["title"],
                     description=t["description"],
                     subtopics=[],
                     dependencies=[],
                     estimated_minutes=60,
                     difficulty="INTERMEDIATE",
-                    source_reference="Emergency Local Fallback",
-                    confidence_score=0.85
+                    source_reference=source_filename or "Emergency Local Fallback",
+                    confidence_score=0.85,
+                    source_type=source_type_tag
                 )
-                for t in fallback_topics
-            ],
-            total_estimated_minutes=sum(60 for _ in fallback_topics),
-            provider_used="offline_heuristic"
-        )
-
-    # 3. Format topic items for preview
-    topic_items: List[TopicPreviewItem] = []
-    for item in curriculum.topics:
-        topic_items.append(
-            TopicPreviewItem(
-                title=item.title,
-                description=item.description,
-                subtopics=item.subtopics,
-                dependencies=item.dependencies,
-                estimated_minutes=item.estimated_minutes,
-                difficulty=item.difficulty,
-                source_reference=item.source_reference or (f"Document: {material_record.original_filename}" if material_record else "User Goal"),
-                confidence_score=item.confidence_score,
-                source_type=source_type_tag
             )
-        )
 
-    # 4. Time-Aware Scheduling (Packet 1I)
+    # Time-Aware Scheduling (Packet 1I)
     plan_dict = scheduler.build_study_plan(
         topics=[t.model_dump() for t in topic_items],
-        available_time_minutes=payload.time_limit_minutes,
-        daily_target_minutes=payload.daily_target_minutes
+        available_time_minutes=time_limit_minutes,
+        daily_target_minutes=daily_target_minutes
     )
     study_plan = StudyPlanPreview(**plan_dict)
 
     preview_response = StudySpacePreviewResponse(
         preview_id=f"prev_{uuid.uuid4().hex[:12]}",
-        title=payload.title or curriculum.title,
-        description=curriculum.summary,
-        category=payload.category,
-        interface_language=payload.interface_language,
-        learning_language=payload.learning_language,
-        source_language=payload.source_language,
-        provider_used=curriculum.provider_used,
+        title=source_title,
+        description=curriculum_summary,
+        category=category,
+        interface_language=interface_language,
+        learning_language=learning_language,
+        source_language=source_language,
+        provider_used=provider_used,
         total_estimated_minutes=sum(t.estimated_minutes for t in topic_items),
         topics=topic_items,
         study_plan=study_plan,
-        material_id=payload.material_id,
+        material_id=material_id,
         is_preview=True
     )
-
-    # CRITICAL: Do NOT save to DB
     return preview_response
 
 

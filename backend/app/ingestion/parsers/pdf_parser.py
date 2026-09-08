@@ -13,6 +13,28 @@ class PDFParser(BaseParser):
     Extracts structured page text, headings from Table of Contents, and page grounding.
     """
 
+    @classmethod
+    def extract_text(cls, source: Union[str, Path, bytes], max_chars: Optional[int] = None) -> str:
+        """
+        Extract plain text securely using PyMuPDF (fitz) with automatic pypdf fallback.
+        Safely truncates to max_chars if specified without memory leakage.
+        """
+        parser = cls()
+        doc = parser.parse(source)
+        text = doc.full_text or ""
+        if max_chars is not None and max_chars > 0:
+            return text[:max_chars]
+        return text
+
+    @classmethod
+    async def extract_text_async(cls, source: Union[str, Path, bytes], max_chars: Optional[int] = None) -> str:
+        """
+        Asynchronously extract plain text without blocking the main FastAPI thread
+        by delegating CPU-bound PDF extraction to a thread pool via asyncio.to_thread.
+        """
+        import asyncio
+        return await asyncio.to_thread(cls.extract_text, source, max_chars)
+
     def parse(self, source: Union[str, Path, bytes], title: Optional[str] = None, **kwargs: Any) -> ParsedDocument:
         file_bytes = self.read_bytes(source)
         checksum = self.compute_sha256(file_bytes)
