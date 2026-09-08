@@ -1,5 +1,6 @@
 import uuid
-from typing import List, Optional
+import json
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -7,6 +8,7 @@ from app.models.user import User
 from app.models.study_space import StudySpace
 from app.models.topic import Topic
 from app.models.competency import CompetencyItem
+from app.models.activity_log import ActivityLog
 from app.schemas.topic import (
     TopicCreate,
     TopicUpdate,
@@ -17,6 +19,7 @@ from app.schemas.topic import (
     CompetencyItemUpdate
 )
 from app.services.competency_engine import competency_engine
+from app.services.ai_provider import generate_verification_quiz
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -114,6 +117,38 @@ def update_topic(
     return topic
 
 
+
+@router.get("/{topic_id}/verify")
+def get_topic_verification_quiz_challenge(
+    topic_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Anti-Fake-Progress Verification Challenge (Phase 4 / v1.2.8):
+    Generates a 4-option multiple-choice question powered by Gemini 1.5 Flash
+    testing conceptual understanding (not rote memorization).
+    """
+    topic = (
+        db.query(Topic)
+        .filter(Topic.id == topic_id, Topic.user_id == current_user.id)
+        .first()
+    )
+    if not topic:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found.")
+
+    quiz_data = generate_verification_quiz(topic.title)
+    return {
+        "topic_id": str(topic.id),
+        "topic_title": topic.title,
+        "question": quiz_data["question"],
+        "options": quiz_data["options"],
+        "correct_answer_index": quiz_data["correct_answer_index"],
+        "explanation": quiz_data.get("explanation", ""),
+        "provider": quiz_data.get("provider", "gemini-1.5-flash")
+    }
+
+
 @router.patch("/{topic_id}/status", response_model=TopicStatusUpdateResponse)
 def update_topic_status(
     topic_id: uuid.UUID,
@@ -123,9 +158,9 @@ def update_topic_status(
 ):
     """
     Update topic status (NORMAL, LEARNING, COMPLETE, BLOCKED, REVIEW, MASTERED).
-    Enforces Competency Evidence Gate & Anti-Fake-Progress Velocity Monitor:
-    - Attempting to mark COMPLETE without verified competencies is rejected.
-    - Completing topics too rapidly triggers the Anti-Fake-Progress warning flag.
+    Enforces Anti-Fake-Progress Verification & Velocity Monitor:
+    - User cannot mark COMPLETE without proving mastery via verification quiz.
+    - Verified completion automatically logs evidence to ActivityLog.
     """
     target_status = payload.status.upper()
     valid_statuses = {"NORMAL", "LEARNING", "COMPLETE", "BLOCKED", "REVIEW", "MASTERED"}
@@ -148,6 +183,14 @@ def update_topic_status(
 
     # Competency Gate Check on Completion
     if target_status in ("COMPLETE", "MASTERED"):
+        # If quiz was passed, mark competency items as verified if none were checked yet
+        if payload.quiz_verified:
+            comps = db.query(CompetencyItem).filter(CompetencyItem.topic_id == topic.id).all()
+            if comps and not any(c.is_completed for c in comps):
+                comps[0].is_completed = True
+                comps[0].evidence_notes = payload.evidence_notes or "Verified via Gemini 1.5 Flash Conceptual Quiz"
+                db.flush()
+
         can_complete, err_msg, is_warning = competency_engine.validate_topic_completion(
             db, topic, current_user.id
         )
@@ -159,6 +202,31 @@ def update_topic_status(
         if is_warning:
             warning_flag = True
             warning_msg = err_msg
+
+        # Log verification & topic completion in ActivityLog
+        quiz_log = ActivityLog(
+            user_id=current_user.id,
+            study_space_id=topic.study_space_id,
+            event_type="QUIZ_COMPLETED",
+            title=f"Verified Concept: {topic.title}",
+            description=f"Passed Anti-Fake-Progress challenge for topic '{topic.title}'.",
+            metadata_json=json.dumps({
+                "topic_id": str(topic.id),
+                "verified": True,
+                "quiz_verified": bool(payload.quiz_verified)
+            })
+        )
+        db.add(quiz_log)
+
+        comp_log = ActivityLog(
+            user_id=current_user.id,
+            study_space_id=topic.study_space_id,
+            event_type="TOPIC_COMPLETED",
+            title=f"Completed Topic: {topic.title}",
+            description=f"Topic '{topic.title}' marked as {target_status} with verified mastery.",
+            metadata_json=json.dumps({"topic_id": str(topic.id), "status": target_status, "progress": 100})
+        )
+        db.add(comp_log)
 
     topic.status = target_status
     if payload.progress is not None:

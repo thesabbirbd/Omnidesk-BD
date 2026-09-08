@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Layers, Search, Play, CheckCircle2, Clock } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
 import { useNavigate } from 'react-router-dom';
+import TopicQuizVerificationModal from '../components/quiz/TopicQuizVerificationModal';
 
 const initialTopics = [
   {
@@ -107,13 +108,31 @@ export default function Topics() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const { setTopic, startTimer } = useTimer();
   const navigate = useNavigate();
+  const [quizTopic, setQuizTopic] = useState(null);
 
   const categories = ['All', 'Backend Engineering', 'Frontend & UI Architecture', 'Databases & System Design', 'DevOps & Cloud'];
   const statuses = ['ALL', 'NORMAL', 'LEARNING', 'COMPLETE', 'BLOCKED', 'REVIEW', 'MASTERED'];
 
   const handleStatusChange = (id, newStatus) => {
+    // Intercept COMPLETE and MASTERED status updates (Anti-Fake-Progress Gate)
+    if (newStatus === 'COMPLETE' || newStatus === 'MASTERED') {
+      const target = topics.find((t) => t.id === id);
+      setQuizTopic({
+        id: id,
+        title: target?.title || 'Engineering Topic',
+        targetStatus: newStatus
+      });
+      return;
+    }
+
     setTopics((prev) =>
       prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    );
+  };
+
+  const handleTopicVerified = (id) => {
+    setTopics((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: quizTopic?.targetStatus || 'COMPLETE', mastery: 100 } : t))
     );
   };
 
@@ -309,6 +328,14 @@ export default function Topics() {
           })}
         </div>
       )}
+
+      {/* Anti-Fake-Progress Verification Modal */}
+      <TopicQuizVerificationModal 
+        topic={quizTopic}
+        isOpen={!!quizTopic}
+        onClose={() => setQuizTopic(null)}
+        onVerified={handleTopicVerified}
+      />
 
     </div>
   );

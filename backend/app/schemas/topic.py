@@ -65,6 +65,8 @@ class TopicUpdate(BaseModel):
 class TopicStatusUpdate(BaseModel):
     status: str
     progress: Optional[int] = None
+    quiz_verified: Optional[bool] = False
+    evidence_notes: Optional[str] = None
 
 
 class TopicStatusUpdateResponse(BaseModel):

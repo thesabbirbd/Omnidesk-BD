@@ -40,6 +40,7 @@ import {
 import { getTopics, updateTopic, getMindMap, updateNodePosition, updateTopicStatus } from '../services/api';
 import { useTimer } from '../context/TimerContext';
 import KnowledgeGraphModal from '../components/knowledge/KnowledgeGraphModal';
+import TopicQuizVerificationModal from '../components/quiz/TopicQuizVerificationModal';
 
 export const statusConfig = {
   normal: { color: '#64748b', label: 'Normal', bg: 'rgba(100, 116, 139, 0.14)', border: 'rgba(100, 116, 139, 0.45)', glow: 'rgba(100, 116, 139, 0.3)', icon: Circle },
@@ -114,10 +115,23 @@ const CustomNode = ({ id, data, selected }) => {
 
   const handleStatusChange = async (e, newStatus) => {
     e.stopPropagation();
+
+    // Anti-Fake-Progress Interception: trigger conceptual verification challenge
+    if (newStatus === 'complete' || newStatus === 'mastered') {
+      setShowStatusPicker(false);
+      window.dispatchEvent(new CustomEvent('studyos-verify-topic-quiz', {
+        detail: {
+          id: id,
+          title: data.label || 'Mind Map Topic',
+          targetStatus: newStatus
+        }
+      }));
+      return;
+    }
+
     const prevStatus = data.status;
     const prevProgress = data.progress;
     const newProgress = 
-      newStatus === 'complete' || newStatus === 'mastered' ? 100 :
       newStatus === 'learning' || newStatus === 'review' ? 50 : 0;
     
     // Immediate optimistic local update
@@ -497,6 +511,32 @@ function MindMapFlow() {
     }
   }, []);
 
+  // Listen for verified Anti-Fake-Progress topic completions
+  useEffect(() => {
+    const handleStatusSync = (e) => {
+      if (e.detail?.id && e.detail?.status) {
+        const targetId = e.detail.id.toString();
+        const statusLower = e.detail.status.toLowerCase();
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === targetId
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    status: statusLower,
+                    progress: e.detail.progress ?? (statusLower === 'complete' || statusLower === 'mastered' ? 100 : 50)
+                  }
+                }
+              : n
+          )
+        );
+      }
+    };
+    window.addEventListener('studyos-topic-status-updated', handleStatusSync);
+    return () => window.removeEventListener('studyos-topic-status-updated', handleStatusSync);
+  }, [setNodes]);
+
   useEffect(() => {
     const fetchTopics = async () => {
       try {
@@ -837,6 +877,9 @@ function MindMapFlow() {
         isOpen={isKnowledgeGraphOpen}
         onClose={() => setIsKnowledgeGraphOpen(false)}
       />
+
+      {/* Anti-Fake-Progress Verification Modal */}
+      <TopicQuizVerificationModal />
 
     </div>
   );
