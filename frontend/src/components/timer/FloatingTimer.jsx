@@ -37,7 +37,7 @@ export default function FloatingTimer() {
   } = useTimer();
 
   // Floating hover expansion state
-  const [isHovered, setIsHovered] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
   const collapseTimerRef = useRef(null);
 
   // Dragging state
@@ -45,7 +45,7 @@ export default function FloatingTimer() {
     if (typeof window !== 'undefined') {
       return {
         x: Math.max(16, window.innerWidth - 300),
-        y: Math.max(16, window.innerHeight - 220)
+        y: Math.max(16, window.innerHeight - 300)
       };
     }
     return { x: 100, y: 100 };
@@ -54,13 +54,8 @@ export default function FloatingTimer() {
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 });
   const containerRef = useRef(null);
 
-  // On mount / activation, display full card for 3 seconds then auto-collapse to circle
+  // Clean up collapse timer on unmount
   useEffect(() => {
-    if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-    collapseTimerRef.current = setTimeout(() => {
-      setIsHovered(false);
-    }, 3000);
-
     return () => {
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
     };
@@ -77,23 +72,23 @@ export default function FloatingTimer() {
   const handleMouseLeave = () => {
     if (isDragging) return;
     if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    // Auto-close in exactly 1 second after mouse leaves
     collapseTimerRef.current = setTimeout(() => {
       setIsHovered(false);
-    }, 3000);
+    }, 1000);
   };
 
-  // Handle window resize bounds
+  // Boundary clamping for window resize
   useEffect(() => {
     const handleResize = () => {
       setPosition((prev) => {
         if (prev.x === null) return prev;
-        const currentWidth = isHovered ? 290 : 96;
-        const currentHeight = isHovered ? 190 : 96;
-        const maxX = window.innerWidth - currentWidth - 12;
-        const maxY = window.innerHeight - currentHeight - 12;
+        const currentSize = isHovered ? 268 : 88;
+        const maxX = window.innerWidth - currentSize - 16;
+        const maxY = window.innerHeight - currentSize - 16;
         return {
-          x: Math.min(Math.max(12, prev.x), Math.max(12, maxX)),
-          y: Math.min(Math.max(12, prev.y), Math.max(12, maxY))
+          x: Math.min(Math.max(16, prev.x), Math.max(16, maxX)),
+          y: Math.min(Math.max(16, prev.y), Math.max(16, maxY))
         };
       });
     };
@@ -101,7 +96,7 @@ export default function FloatingTimer() {
     return () => window.removeEventListener('resize', handleResize);
   }, [isHovered]);
 
-  // Pointer drag listeners
+  // Pointer drag handling
   const handlePointerDown = (e) => {
     if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
     setIsDragging(true);
@@ -109,7 +104,7 @@ export default function FloatingTimer() {
       mouseX: e.clientX,
       mouseY: e.clientY,
       posX: position.x || (window.innerWidth - 300),
-      posY: position.y || (window.innerHeight - 220)
+      posY: position.y || (window.innerHeight - 300)
     };
   };
 
@@ -119,24 +114,23 @@ export default function FloatingTimer() {
       const deltaX = e.clientX - dragStartRef.current.mouseX;
       const deltaY = e.clientY - dragStartRef.current.mouseY;
 
-      const currentWidth = isHovered ? 290 : 96;
-      const currentHeight = isHovered ? 190 : 96;
-      const maxX = window.innerWidth - currentWidth - 12;
-      const maxY = window.innerHeight - currentHeight - 12;
+      const currentSize = isHovered ? 268 : 88;
+      const maxX = window.innerWidth - currentSize - 16;
+      const maxY = window.innerHeight - currentSize - 16;
 
       setPosition({
-        x: Math.min(Math.max(12, dragStartRef.current.posX + deltaX), Math.max(12, maxX)),
-        y: Math.min(Math.max(12, dragStartRef.current.posY + deltaY), Math.max(12, maxY))
+        x: Math.min(Math.max(16, dragStartRef.current.posX + deltaX), Math.max(16, maxX)),
+        y: Math.min(Math.max(16, dragStartRef.current.posY + deltaY), Math.max(16, maxY))
       });
     };
 
     const handlePointerUp = () => {
       setIsDragging(false);
-      // Restart the 3-second auto-collapse timer after dragging completes
+      // Restart the 1-second auto-collapse timer after drag release
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
       collapseTimerRef.current = setTimeout(() => {
         setIsHovered(false);
-      }, 3000);
+      }, 1000);
     };
 
     if (isDragging) {
@@ -176,189 +170,216 @@ export default function FloatingTimer() {
         bottom: position.y === null ? '24px' : 'auto',
         right: position.x === null ? '24px' : 'auto'
       }}
-      className={`fixed z-50 select-none transition-all duration-300 ease-out cursor-grab active:cursor-grabbing ${
-        !isHovered ? 'w-24 h-24' : 'w-72'
+      className={`fixed z-50 select-none cursor-grab active:cursor-grabbing rounded-full overflow-hidden transition-[width,height,transform,box-shadow,background-color] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        !isHovered 
+          ? 'w-[88px] h-[88px] bg-slate-900/40 dark:bg-slate-950/40 backdrop-blur-2xl border border-cyan-400/50 shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_rgba(34,211,238,0.3)] hover:scale-105'
+          : 'w-[268px] h-[268px] bg-slate-900/85 dark:bg-slate-950/90 backdrop-blur-3xl border-2 border-cyan-400/60 shadow-[0_20px_50px_rgba(0,0,0,0.7),0_0_30px_rgba(34,211,238,0.35)] scale-100'
       }`}
     >
-      {!isHovered ? (
-        /* Circular Mostly-Transparent Frosted Glass Timer Badge */
-        <div className="relative w-24 h-24 rounded-full bg-slate-900/40 dark:bg-slate-950/40 backdrop-blur-3xl border border-cyan-400/50 shadow-[0_12px_32px_rgba(0,0,0,0.5),0_0_20px_rgba(34,211,238,0.3)] flex flex-col items-center justify-center group overflow-hidden transition-transform duration-300 hover:scale-105">
-          {/* SVG Progress Ring */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1" viewBox="0 0 100 100">
-            <circle
-              cx="50"
-              cy="50"
-              r="43"
-              stroke="rgba(255,255,255,0.12)"
-              strokeWidth="4"
-              fill="transparent"
-            />
-            <circle
-              cx="50"
-              cy="50"
-              r="43"
-              stroke="url(#timerCircleGrad)"
-              strokeWidth="4.5"
-              fill="transparent"
-              strokeDasharray={270.18}
-              strokeDashoffset={270.18 * (1 - progressPct / 100)}
-              strokeLinecap="round"
-              className="transition-all duration-1000 ease-linear"
-            />
-            <defs>
-              <linearGradient id="timerCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#22d3ee" />
-                <stop offset="100%" stopColor="#6366f1" />
-              </linearGradient>
-            </defs>
-          </svg>
+      {/* BACKGROUND AMBIENT GLOW */}
+      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-500/10 via-transparent to-indigo-500/15 pointer-events-none" />
 
-          {/* Time & Indicator */}
-          <span className="font-mono text-sm font-black tracking-tight text-white drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] z-10">
+      {/* STATE 1: COLLAPSED CIRCULAR BADGE (ONLY OUTER OUTLINE RING & DIGITS) */}
+      <div 
+        className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-300 pointer-events-none ${
+          !isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
+        }`}
+      >
+        {/* SVG Outer Ring for Collapsed State */}
+        <svg className="absolute inset-0 w-full h-full -rotate-90 p-1" viewBox="0 0 88 88">
+          {/* Track Line */}
+          <circle
+            cx="44"
+            cy="44"
+            r="38"
+            stroke="rgba(255, 255, 255, 0.12)"
+            strokeWidth="3.5"
+            fill="transparent"
+          />
+          {/* Animated Progress Line */}
+          <circle
+            cx="44"
+            cy="44"
+            r="38"
+            stroke="url(#collapsedTimerGrad)"
+            strokeWidth="4"
+            fill="transparent"
+            strokeDasharray={238.76}
+            strokeDashoffset={238.76 * (1 - progressPct / 100)}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-linear"
+          />
+          <defs>
+            <linearGradient id="collapsedTimerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#22d3ee" />
+              <stop offset="100%" stopColor="#818cf8" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        {/* Clean Countdown Time in the Center */}
+        <span className="font-mono text-base font-black tracking-tight text-white drop-shadow-[0_0_10px_rgba(34,211,238,0.9)] select-none">
+          {formatTime(timeLeft)}
+        </span>
+      </div>
+
+      {/* STATE 2: UNFOLDED CIRCULAR HUD DIAL (FULLY CIRCULAR WITH ORBITAL CONTROLS) */}
+      <div 
+        className={`absolute inset-0 flex flex-col items-center justify-between p-3.5 transition-all duration-300 ${
+          isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
+        }`}
+      >
+        {/* SVG Outer Progress Ring for Unfolded State */}
+        <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-1.5" viewBox="0 0 268 268">
+          <circle
+            cx="134"
+            cy="134"
+            r="126"
+            stroke="rgba(255, 255, 255, 0.08)"
+            strokeWidth="3.5"
+            fill="transparent"
+          />
+          <circle
+            cx="134"
+            cy="134"
+            r="126"
+            stroke="url(#unfoldedTimerGrad)"
+            strokeWidth="4.5"
+            fill="transparent"
+            strokeDasharray={791.68}
+            strokeDashoffset={791.68 * (1 - progressPct / 100)}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-linear"
+          />
+          <defs>
+            <linearGradient id="unfoldedTimerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#22d3ee" />
+              <stop offset="50%" stopColor="#6366f1" />
+              <stop offset="100%" stopColor="#a855f7" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        {/* TOP ARC: DRAG HANDLE & WINDOW ACTIONS */}
+        <div className="w-full flex items-center justify-between px-5 pt-2 z-20">
+          <div className="flex items-center gap-1.5">
+            <GripHorizontal size={13} className="text-cyan-400 opacity-80" />
+            <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400">
+              {mode}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsHovered(false)}
+              className="p-1 rounded-full hover:bg-white/15 text-[color:var(--text-muted)] hover:text-cyan-300 transition-colors cursor-pointer"
+              title="Collapse to Circle"
+            >
+              <Minus size={12} />
+            </button>
+            <button
+              onClick={hideFloatingTimer}
+              className="p-1 rounded-full hover:bg-white/15 text-[color:var(--text-muted)] hover:text-red-400 transition-colors cursor-pointer"
+              title="Dismiss"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+
+        {/* CENTER HUB: TIME, TOPIC & STATUS */}
+        <div className="flex flex-col items-center justify-center my-auto z-20">
+          <span className="text-[10px] font-semibold text-slate-300/80 truncate max-w-[170px] text-center px-2">
+            {activeTopic}
+          </span>
+          <span className="font-mono text-3xl font-black tracking-tight text-white drop-shadow-[0_0_14px_rgba(34,211,238,0.7)] my-0.5">
             {formatTime(timeLeft)}
           </span>
-
-          <div className="flex items-center gap-1 z-10 mt-0.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${isRunning && !isPaused ? 'bg-cyan-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span className="text-[9px] font-black uppercase tracking-wider text-cyan-300/80">
-              {mode === 'pomodoro' ? 'POMO' : mode === 'focus' ? 'FOCUS' : 'TIMER'}
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${isRunning && !isPaused ? 'bg-cyan-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span className="text-[9px] font-black uppercase tracking-wider text-cyan-300/90">
+              {isPaused ? 'Paused' : isRunning ? 'In Focus' : 'Idle'}
             </span>
           </div>
         </div>
-      ) : (
-        /* Expanded Control Card with Full Options */
-        <div className="w-72 rounded-3xl bg-slate-900/80 dark:bg-slate-950/80 backdrop-blur-3xl border border-cyan-400/40 shadow-[0_16px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(34,211,238,0.25)] flex flex-col gap-3 p-4 animate-in fade-in zoom-in-95 duration-200">
-          
-          {/* Top Header Bar with Drag Handle and Window Controls */}
-          <div className="flex items-center justify-between border-b border-white/10 pb-2 text-[color:var(--text-muted)]">
-            <div className="flex items-center gap-1.5">
-              <GripHorizontal size={14} className="text-[color:var(--text-muted)] opacity-70" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400">
-                {mode}
-              </span>
-              <span className="text-[10px]">•</span>
-              <span className="text-[10px] font-semibold text-[color:var(--text-muted)] truncate max-w-[110px]">
-                {activeTopic}
-              </span>
-            </div>
 
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setIsHovered(false)}
-                className="p-1 rounded-lg hover:bg-white/10 hover:text-cyan-400 cursor-pointer transition-colors"
-                title="Collapse to Circle"
-              >
-                <Minus size={13} />
-              </button>
-              <button 
-                onClick={hideFloatingTimer}
-                className="p-1 rounded-lg hover:bg-white/10 hover:text-red-400 cursor-pointer transition-colors"
-                title="Dismiss from screen"
-              >
-                <X size={13} />
-              </button>
-            </div>
-          </div>
+        {/* MIDDLE-LOWER ROW: CIRCULAR ACTION BUTTONS */}
+        <div className="flex items-center justify-center gap-3 z-20 pb-1">
+          {/* +5 Minutes Button */}
+          <button
+            onClick={() => addMinutes(5)}
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-cyan-300 text-xs font-black flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer"
+            title="Add 5 Minutes"
+          >
+            +5m
+          </button>
 
-          {/* Clock & Status */}
-          <div className="flex items-center justify-between px-1">
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black font-mono tracking-tight text-white drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]">
-                  {formatTime(timeLeft)}
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400/80">
-                  {isPaused ? 'Paused' : isRunning ? 'Focusing' : 'Idle'}
-                </span>
-              </div>
-              <div className="w-44 h-1.5 rounded-full bg-white/10 overflow-hidden mt-1.5">
-                <div 
-                  className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-1000"
-                  style={{ width: `${progressPct}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Presence Badge & Toggle */}
-            <button 
-              onClick={() => togglePresence()}
-              className={`p-2 rounded-xl border flex flex-col items-center gap-0.5 cursor-pointer transition-all ${
-                presenceEnabled 
-                  ? presenceStatus === 'present'
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.4)]'
-                    : presenceStatus === 'absent'
-                      ? 'bg-red-500/20 border-red-500/50 text-red-300 animate-pulse'
-                      : 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                  : 'bg-white/5 border-white/10 text-[color:var(--text-muted)] hover:text-white'
-              }`}
-              title={presenceEnabled ? `Presence Active (${presenceStatus})` : 'Turn on Camera Presence'}
+          {/* Primary Play / Pause Button */}
+          {isRunning && !isPaused ? (
+            <button
+              onClick={pauseTimer}
+              className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 flex items-center justify-center shadow-[0_0_16px_rgba(245,158,11,0.6)] active:scale-95 transition-all cursor-pointer"
+              title="Pause Timer"
             >
-              {presenceEnabled ? <Eye size={15} /> : <EyeOff size={15} />}
-              <span className="text-[8px] font-bold uppercase">
-                {presenceEnabled ? (presenceStatus === 'present' ? 'Face' : presenceStatus === 'absent' ? 'Away' : 'Scan') : 'Off'}
-              </span>
+              <Pause size={18} fill="currentColor" />
             </button>
-          </div>
-
-          {/* Control Buttons */}
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <div className="flex items-center gap-1.5">
-              {isRunning && !isPaused ? (
-                <button 
-                  onClick={pauseTimer}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.5)] cursor-pointer transition-all active:scale-95"
-                >
-                  <Pause size={13} />
-                  <span>Pause</span>
-                </button>
-              ) : (
-                <button 
-                  onClick={resumeTimer}
-                  className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.5)] cursor-pointer transition-all active:scale-95"
-                >
-                  <Play size={13} />
-                  <span>Resume</span>
-                </button>
-              )}
-
-              <button 
-                onClick={stopTimer}
-                className="p-2 rounded-xl bg-white/5 hover:bg-red-500/25 text-[color:var(--text-muted)] hover:text-red-400 border border-white/10 cursor-pointer transition-all active:scale-95"
-                title="Finish & Save Session"
-              >
-                <Square size={13} />
-              </button>
-
-              <button 
-                onClick={() => addMinutes(5)}
-                className="px-2 py-1.5 rounded-xl bg-white/5 hover:text-cyan-400 text-[color:var(--text-muted)] font-black text-xs border border-white/10 cursor-pointer transition-all active:scale-95"
-                title="Add 5 Minutes"
-              >
-                +5m
-              </button>
-            </div>
-
-            {/* Link to Fullscreen Engine */}
-            <button 
-              onClick={() => navigate('/os/timer')}
-              className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 cursor-pointer py-1"
+          ) : (
+            <button
+              onClick={resumeTimer}
+              className="w-12 h-12 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 flex items-center justify-center shadow-[0_0_18px_rgba(34,211,238,0.7)] active:scale-95 transition-all cursor-pointer"
+              title="Start / Resume Timer"
             >
-              <span>Engine</span>
-              <ChevronRight size={12} />
+              <Play size={18} fill="currentColor" className="ml-0.5" />
             </button>
-          </div>
-
-          {/* Notification toast */}
-          {lastNotification && (
-            <div className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1.5 rounded-lg flex items-center justify-between">
-              <span className="truncate max-w-[200px]">{lastNotification.message}</span>
-              <button onClick={clearNotification} className="text-[color:var(--text-muted)] hover:text-white ml-1 cursor-pointer">
-                <X size={10} />
-              </button>
-            </div>
           )}
+
+          {/* Stop / Reset Button */}
+          <button
+            onClick={stopTimer}
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-red-500/20 border border-white/15 text-slate-300 hover:text-red-400 flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer"
+            title="Stop & Save Session"
+          >
+            <Square size={14} fill="currentColor" />
+          </button>
         </div>
-      )}
+
+        {/* BOTTOM ARC: PRESENCE TOGGLE & ENGINE LINK */}
+        <div className="w-full flex items-center justify-between px-6 pb-2.5 z-20">
+          <button
+            onClick={() => togglePresence()}
+            className={`px-2.5 py-1 rounded-full border text-[9px] font-bold flex items-center gap-1 cursor-pointer transition-all ${
+              presenceEnabled
+                ? presenceStatus === 'present'
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.4)]'
+                  : 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                : 'bg-white/5 border-white/10 text-[color:var(--text-muted)] hover:text-white'
+            }`}
+            title="Toggle Camera Presence"
+          >
+            {presenceEnabled ? <Eye size={11} /> : <EyeOff size={11} />}
+            <span>{presenceEnabled ? presenceStatus : 'Camera'}</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/os/timer')}
+            className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 cursor-pointer"
+            title="Open Fullscreen Timer Engine"
+          >
+            <span>Engine</span>
+            <ChevronRight size={12} />
+          </button>
+        </div>
+
+        {/* Floating Notification Toast */}
+        {lastNotification && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-950/90 border border-amber-500/40 text-amber-300 text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-lg z-30 flex items-center gap-1.5 max-w-[210px]">
+            <span className="truncate">{lastNotification.message}</span>
+            <button onClick={clearNotification} className="hover:text-white cursor-pointer">
+              <X size={10} />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

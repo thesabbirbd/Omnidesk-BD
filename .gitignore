@@ -27,6 +27,6 @@ pnpm-debug.log*
 !.env.example
 .vscode/
 .idea/
-.DS_Store
-*.swp
-*.swo
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep

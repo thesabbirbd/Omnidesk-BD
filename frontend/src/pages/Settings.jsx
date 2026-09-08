@@ -1,13 +1,21 @@
 import React, { useState, useRef } from 'react';
-import { Settings as SettingsIcon, Palette, Target, DownloadCloud, UploadCloud, Database, Clock, Camera, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Settings as SettingsIcon, Palette, Target, DownloadCloud, UploadCloud, Database, Clock, Camera, CheckCircle2, AlertTriangle, Sparkles, Check } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
 
 export default function Settings() {
   const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'dark');
   const [themeStyle, setThemeStyle] = useState(localStorage.getItem('themeStyle') || 'glass');
+  const [glassGradient, setGlassGradient] = useState(localStorage.getItem('glassGradient') || 'aurora');
   const [dailyGoal, setDailyGoal] = useState(4);
   const [backupStatus, setBackupStatus] = useState(null);
   const fileInputRef = useRef(null);
+
+  const handleGlassGradientChange = (grad) => {
+    setGlassGradient(grad);
+    localStorage.setItem('glassGradient', grad);
+    document.documentElement.setAttribute('data-glass-gradient', grad);
+    window.dispatchEvent(new CustomEvent('studyos-glass-gradient-changed', { detail: { gradient: grad } }));
+  };
 
   const {
     presenceEnabled,
@@ -61,6 +69,7 @@ export default function Settings() {
         settings: {
           themeMode,
           themeStyle,
+          glassGradient,
           dailyGoal,
           durations,
           presenceIntervalSecs,
@@ -105,6 +114,7 @@ export default function Settings() {
         if (parsed.settings) {
           if (parsed.settings.themeMode) handleModeChange(parsed.settings.themeMode);
           if (parsed.settings.themeStyle) handleStyleChange(parsed.settings.themeStyle);
+          if (parsed.settings.glassGradient) handleGlassGradientChange(parsed.settings.glassGradient);
         }
         setBackupStatus({ type: 'success', text: 'Backup restored! Reloading...' });
         setTimeout(() => window.location.reload(), 1200);
@@ -183,6 +193,72 @@ export default function Settings() {
               })}
             </div>
           </div>
+
+          {/* Glass Atmosphere Gradients (Exclusive to Glass Theme) */}
+          {themeStyle === 'glass' && (
+            <div className="flex flex-col gap-3 p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)]">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-muted)] flex items-center gap-2">
+                  <Sparkles className="text-cyan-400" size={14} /> Glass Atmosphere Gradient
+                </span>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  {glassGradient}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  {
+                    id: 'aurora',
+                    label: 'Cyber Aurora',
+                    desc: 'Cyan & Violet',
+                    previewClass: 'from-cyan-400 via-indigo-500 to-purple-600',
+                    borderActive: 'border-cyan-400 ring-2 ring-cyan-400/50 bg-cyan-950/30'
+                  },
+                  {
+                    id: 'sunset',
+                    label: 'Sunset Radiant',
+                    desc: 'Rose & Amber',
+                    previewClass: 'from-pink-500 via-rose-500 to-amber-500',
+                    borderActive: 'border-rose-400 ring-2 ring-rose-400/50 bg-rose-950/30'
+                  },
+                  {
+                    id: 'emerald',
+                    label: 'Emerald Nebula',
+                    desc: 'Mint & Teal',
+                    previewClass: 'from-emerald-400 via-teal-500 to-cyan-700',
+                    borderActive: 'border-emerald-400 ring-2 ring-emerald-400/50 bg-emerald-950/30'
+                  }
+                ].map((grad) => {
+                  const isActive = glassGradient === grad.id;
+                  return (
+                    <button
+                      key={grad.id}
+                      type="button"
+                      onClick={() => handleGlassGradientChange(grad.id)}
+                      className={`p-3 rounded-xl border flex flex-col gap-2 text-left transition-all cursor-pointer relative overflow-hidden ${
+                        isActive
+                          ? grad.borderActive
+                          : 'border-[var(--border-color)] bg-[var(--bg-card)] hover:border-[color:var(--text-muted)]'
+                      }`}
+                    >
+                      <div className={`h-2.5 w-full rounded-full bg-gradient-to-r ${grad.previewClass} shadow-sm`} />
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-[color:var(--text-main)] leading-tight">{grad.label}</div>
+                          <div className="text-[10px] text-[color:var(--text-muted)] font-medium">{grad.desc}</div>
+                        </div>
+                        {isActive && (
+                          <div className="p-1 rounded-full bg-cyan-400/20 text-cyan-300">
+                            <Check size={12} />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Daily Goal Slider */}
           <div className="flex flex-col gap-3 p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)]">

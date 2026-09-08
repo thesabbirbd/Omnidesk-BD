@@ -32,10 +32,14 @@ import {
   Edit3,
   MoreHorizontal,
   ChevronDown,
-  Trash2
+  Trash2,
+  FileText,
+  Award,
+  Share2
 } from 'lucide-react';
-import { getTopics, updateTopic } from '../services/api';
+import { getTopics, updateTopic, getMindMap, updateNodePosition, updateTopicStatus } from '../services/api';
 import { useTimer } from '../context/TimerContext';
+import KnowledgeGraphModal from '../components/knowledge/KnowledgeGraphModal';
 
 export const statusConfig = {
   normal: { color: '#64748b', label: 'Normal', bg: 'rgba(100, 116, 139, 0.14)', border: 'rgba(100, 116, 139, 0.45)', glow: 'rgba(100, 116, 139, 0.3)', icon: Circle },
@@ -110,6 +114,8 @@ const CustomNode = ({ id, data, selected }) => {
 
   const handleStatusChange = async (e, newStatus) => {
     e.stopPropagation();
+    const prevStatus = data.status;
+    const prevProgress = data.progress;
     const newProgress = 
       newStatus === 'complete' || newStatus === 'mastered' ? 100 :
       newStatus === 'learning' || newStatus === 'review' ? 50 : 0;
@@ -134,14 +140,41 @@ const CustomNode = ({ id, data, selected }) => {
     setShowStatusPicker(false);
 
     try {
-      await updateTopic(id, { 
-        title: data.label, 
-        status: newStatus, 
-        progress: newProgress, 
-        study_space_id: null 
-      });
-    } catch {
-      // Offline fallback: already reflected in UI state
+      const res = await updateTopicStatus(id, newStatus, newProgress);
+      if (res?.anti_fake_progress_warning) {
+        window.dispatchEvent(new CustomEvent('studyos-show-toast', {
+          detail: {
+            type: 'warning',
+            title: 'Anti-Fake-Progress Flag',
+            message: res.warning_message || 'Rapid completion velocity detected. Please record study sessions!'
+          }
+        }));
+      }
+    } catch (err) {
+      // Competency gate blocked or network error -> Rollback optimistic update
+      const errMsg = err?.response?.data?.detail || 'Competency gate blocked: Complete hands-on skills first!';
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === id) {
+            return { 
+              ...node, 
+              data: { 
+                ...node.data, 
+                status: prevStatus, 
+                progress: prevProgress 
+              } 
+            };
+          }
+          return node;
+        })
+      );
+      window.dispatchEvent(new CustomEvent('studyos-show-toast', {
+        detail: {
+          type: 'error',
+          title: 'Completion Gate Blocked',
+          message: errMsg
+        }
+      }));
     }
   };
 
@@ -396,7 +429,7 @@ const CustomNode = ({ id, data, selected }) => {
           </div>
           
           {/* Metadata & Progress Subtitle */}
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-[color:var(--text-muted)]">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[color:var(--text-muted)]">
             <span 
               className="px-1.5 py-0.2 rounded font-black uppercase tracking-wider text-[9px]"
               style={{ color: currentStatus.color }}
@@ -405,7 +438,25 @@ const CustomNode = ({ id, data, selected }) => {
             </span>
             <span>•</span>
             <span>{data.progress}%</span>
+            {data.competency_count > 0 && (
+              <>
+                <span>•</span>
+                <span className="text-amber-400 font-bold" title="Completed competency skills">
+                  {data.completed_competency_count || 0}/{data.competency_count}
+                </span>
+              </>
+            )}
           </div>
+
+          {data.source_reference && (
+            <div 
+              className="flex items-center gap-1 max-w-[190px] truncate text-[9px] text-[color:var(--text-muted)] bg-[var(--bg-input)]/80 px-1.5 py-0.5 rounded-md border border-[var(--border-color)]/50"
+              title={data.source_reference}
+            >
+              <FileText size={9} className="text-cyan-400 shrink-0" />
+              <span className="truncate">{data.source_reference}</span>
+            </div>
+          )}
 
           {/* Micro Progress Track */}
           <div className="w-full h-1 rounded-full bg-[var(--bg-input)] overflow-hidden mt-0.5">
@@ -433,12 +484,33 @@ function MindMapFlow() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isKnowledgeGraphOpen, setIsKnowledgeGraphOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all'); // all, normal, learning, complete
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const { startTimer } = useTimer();
 
+  const onNodeDragStop = useCallback(async (event, node) => {
+    try {
+      await updateNodePosition(node.id, node.position.x, node.position.y);
+    } catch {
+      // offline silent fallback
+    }
+  }, []);
+
   useEffect(() => {
     const fetchTopics = async () => {
+      try {
+        const graph = await getMindMap();
+        if (graph && graph.nodes && graph.nodes.length > 0) {
+          setNodes(graph.nodes);
+          setEdges(graph.edges);
+          setTimeout(() => fitView({ duration: 600, padding: 0.2 }), 200);
+          return;
+        }
+      } catch {
+        // Fallback to topics endpoint
+      }
+
       try {
         const topics = await getTopics();
         if (topics && topics.length > 0) {
@@ -446,12 +518,12 @@ function MindMapFlow() {
             id: t.id.toString(),
             type: 'custom',
             position: { 
-              x: 100 + 260 * (index % 3), 
-              y: 80 + 160 * Math.floor(index / 3) 
+              x: t.position_x || (100 + 260 * (index % 3)), 
+              y: t.position_y || (80 + 160 * Math.floor(index / 3)) 
             },
             data: { 
               label: t.title, 
-              status: t.status || 'normal', 
+              status: (t.status || 'normal').toLowerCase(), 
               progress: t.progress || 0 
             },
             hidden: false
@@ -461,9 +533,9 @@ function MindMapFlow() {
             id: `edge-${topics[0].id}-${t.id}`,
             source: topics[0].id.toString(),
             target: t.id.toString(),
-            animated: t.status === 'learning' || t.status === 'review',
+            animated: t.status === 'LEARNING' || t.status === 'REVIEW' || t.status === 'learning' || t.status === 'review',
             style: { 
-              stroke: (statusConfig[t.status] && statusConfig[t.status].color) || statusColors.normal, 
+              stroke: (statusConfig[t.status?.toLowerCase()] && statusConfig[t.status?.toLowerCase()].color) || statusColors.normal, 
               strokeWidth: 2 
             }
           }));
@@ -618,6 +690,7 @@ function MindMapFlow() {
           onNodesChange={onNodesChange} 
           onEdgesChange={onEdgesChange} 
           onNodeClick={onNodeClick}
+          onNodeDragStop={onNodeDragStop}
           fitView
         >
           <Background color="#334155" gap={24} size={1.5} />
@@ -666,6 +739,39 @@ function MindMapFlow() {
               />
             </div>
 
+            {/* Source Grounding & Competency Evidence */}
+            {(selectedTopic.source_reference || selectedTopic.competency_count > 0) && (
+              <div className="flex flex-col gap-2 p-3 rounded-2xl bg-[var(--bg-input)]/70 border border-[var(--border-color)]">
+                {selectedTopic.source_reference && (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5 text-cyan-400 text-xs font-bold">
+                      <FileText size={13} />
+                      <span>Source Grounding</span>
+                      {selectedTopic.origin && (
+                        <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-cyan-400/10 text-cyan-300 uppercase font-black tracking-wider">
+                          {selectedTopic.origin}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[color:var(--text-muted)]">
+                      {selectedTopic.source_reference}
+                    </p>
+                  </div>
+                )}
+                {selectedTopic.competency_count > 0 && (
+                  <div className="flex items-center justify-between text-xs font-bold pt-1 border-t border-[var(--border-color)]/40">
+                    <span className="flex items-center gap-1.5 text-[color:var(--text-muted)]">
+                      <Award size={13} className="text-amber-400" />
+                      <span>Competency Skills</span>
+                    </span>
+                    <span className="text-amber-400">
+                      {selectedTopic.completed_competency_count || 0} / {selectedTopic.competency_count} Verified
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Key Milestones */}
             <div className="flex flex-col gap-3 flex-1">
               <h3 className="text-xs font-black uppercase tracking-wider text-[color:var(--text-muted)]">Core Milestones</h3>
@@ -692,6 +798,14 @@ function MindMapFlow() {
             {/* Quick Actions in Drawer */}
             <div className="flex flex-col gap-2.5 mt-auto">
               <button 
+                onClick={() => setIsKnowledgeGraphOpen(true)}
+                className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 shadow-[0_0_12px_rgba(34,211,238,0.2)] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Share2 size={13} />
+                <span>View Knowledge Graph</span>
+              </button>
+
+              <button 
                 onClick={() => {
                   startTimer({
                     topic: selectedTopic.label,
@@ -716,6 +830,13 @@ function MindMapFlow() {
           </>
         )}
       </div>
+
+      {/* Knowledge Graph Modal */}
+      <KnowledgeGraphModal
+        topicId={selectedTopic?.id}
+        isOpen={isKnowledgeGraphOpen}
+        onClose={() => setIsKnowledgeGraphOpen(false)}
+      />
 
     </div>
   );

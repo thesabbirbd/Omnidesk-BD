@@ -6,6 +6,7 @@ const TimerContext = createContext(null);
 
 const STORAGE_KEY = 'studyos_global_timer';
 const HISTORY_KEY = 'studyos_timer_history';
+const NOTIFICATIONS_KEY = 'studyos_notifications_list';
 
 const DEFAULT_MODES = {
   pomodoro: { label: 'Pomodoro', defaultMinutes: 25 },
@@ -13,6 +14,26 @@ const DEFAULT_MODES = {
   short_break: { label: 'Short Break', defaultMinutes: 5 },
   long_break: { label: 'Long Break', defaultMinutes: 15 },
   stopwatch: { label: 'Stopwatch', defaultMinutes: 0 },
+};
+
+// Browser Push Notification Dispatcher
+export const sendBrowserPush = (title, body) => {
+  try {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        const prefs = JSON.parse(localStorage.getItem('studyos_notification_prefs') || '{}');
+        if (prefs.browserPush !== false) {
+          new Notification(title, {
+            body,
+            icon: '/favicon.ico',
+            badge: '/favicon.ico'
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Browser push error:', e);
+  }
 };
 
 export function TimerProvider({ children }) {
@@ -27,7 +48,6 @@ export function TimerProvider({ children }) {
         if (parsed.isRunning && parsed.targetEndTime) {
           const remainingSecs = Math.round((parsed.targetEndTime - now) / 1000);
           if (remainingSecs <= 0) {
-            // Timer expired while page was closed
             return {
               ...parsed,
               isRunning: false,
@@ -79,14 +99,38 @@ export function TimerProvider({ children }) {
   });
 
   const [lastNotification, setLastNotification] = useState(null);
+  const [notificationsList, setNotificationsList] = useState(() => {
+    try {
+      const savedList = localStorage.getItem(NOTIFICATIONS_KEY);
+      if (savedList) return JSON.parse(savedList);
+    } catch {
+      // ignore
+    }
+    return [
+      { id: 'notif-1', type: 'info', title: 'Welcome to StudyOS', message: 'Your personal AI Engineering OS is ready.', timestamp: Date.now() - 100000, read: true },
+    ];
+  });
+
   const tickerRef = useRef(null);
+
+  // Helper to add notification both to live toast and history list
+  const triggerNotification = useCallback((notif) => {
+    const fullNotif = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: Date.now(),
+      read: false,
+      ...notif
+    };
+    setLastNotification(fullNotif);
+    setNotificationsList((prev) => [fullNotif, ...prev.slice(0, 29)]);
+  }, []);
 
   // Sync state to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
-      // ignore storage quota issues
+      // ignore
     }
   }, [state]);
 
@@ -98,6 +142,15 @@ export function TimerProvider({ children }) {
       // ignore
     }
   }, [history]);
+
+  // Sync notifications to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notificationsList));
+    } catch {
+      // ignore
+    }
+  }, [notificationsList]);
 
   // Complete session handler
   const completeSession = useCallback(async (currentSession) => {
@@ -127,14 +180,16 @@ export function TimerProvider({ children }) {
         mode: currentSession.mode
       });
     } catch {
-      // Offline fallback: session is safely kept in local history
+      // offline fallback
     }
 
-    setLastNotification({
+    triggerNotification({
       type: 'complete',
-      message: `Session complete: "${sessionRecord.topic}" (${sessionRecord.durationMinutes}m)`,
-      timestamp: Date.now()
+      title: 'Session Completed',
+      message: `Great job! Session complete: "${sessionRecord.topic}" (${sessionRecord.durationMinutes}m)`,
     });
+
+    sendBrowserPush('StudyOS • Session Completed 🎉', `Completed ${sessionRecord.durationMinutes}m focus on "${sessionRecord.topic}". Take a break!`);
 
     setState((prev) => {
       const modeConfig = DEFAULT_MODES[prev.mode] || DEFAULT_MODES.pomodoro;
@@ -149,20 +204,18 @@ export function TimerProvider({ children }) {
         presenceStatus: prev.presenceEnabled ? 'inactive' : prev.presenceStatus
       };
     });
-  }, []);
+  }, [triggerNotification]);
 
-  // Main countdown/stopwatch ticker using accurate timestamps
+  // Main countdown/stopwatch ticker
   useEffect(() => {
     if (state.isRunning && !state.isPaused) {
       tickerRef.current = setInterval(() => {
         const now = Date.now();
 
         if (state.mode === 'stopwatch') {
-          // In stopwatch mode, calculate elapsed
           const elapsedSecs = Math.floor((now - (state.startTime || now) - (state.totalPausedDurationMs || 0)) / 1000);
           setState((prev) => ({ ...prev, timeLeft: elapsedSecs }));
         } else {
-          // In countdown mode, compute remaining from targetEndTime
           if (!state.targetEndTime) return;
           const remainingSecs = Math.round((state.targetEndTime - now) / 1000);
 
@@ -208,11 +261,13 @@ export function TimerProvider({ children }) {
             };
           });
 
-          setLastNotification({
+          triggerNotification({
             type: 'absence',
+            title: 'Presence Alert',
             message: 'Camera: No face detected. Timer paused to protect study accuracy.',
-            timestamp: Date.now()
           });
+
+          sendBrowserPush('StudyOS • Presence Alert ⚠️', 'No face detected in study frame. Timer paused to protect study accuracy.');
         }
       }, (state.presenceIntervalSecs || 5) * 1000);
     } else {
@@ -225,7 +280,7 @@ export function TimerProvider({ children }) {
     return () => {
       stopPresenceDetection();
     };
-  }, [state.presenceEnabled, state.isRunning, state.isPaused, state.presenceIntervalSecs]);
+  }, [state.presenceEnabled, state.isRunning, state.isPaused, state.presenceIntervalSecs, triggerNotification]);
 
   // Actions
   const startTimer = useCallback((options = {}) => {
@@ -250,7 +305,15 @@ export function TimerProvider({ children }) {
       lastPauseTimestamp: null,
       isFloatingVisible: true,
     }));
-  }, [state.mode, state.activeTopic, state.durationMinutes]);
+
+    triggerNotification({
+      type: 'start',
+      title: 'Timer Started',
+      message: `Focus Timer Started: "${topic}" (${minutes}m ${modeConfig.label})`,
+    });
+
+    sendBrowserPush('StudyOS • Focus Started ⏱️', `Timer started for "${topic}" (${minutes}m).`);
+  }, [state.mode, state.activeTopic, state.durationMinutes, triggerNotification]);
 
   const pauseTimer = useCallback(() => {
     setState((prev) => {
@@ -261,7 +324,13 @@ export function TimerProvider({ children }) {
         lastPauseTimestamp: Date.now()
       };
     });
-  }, []);
+
+    triggerNotification({
+      type: 'pause',
+      title: 'Timer Paused',
+      message: 'Focus Timer paused. Take a breath and resume when ready.',
+    });
+  }, [triggerNotification]);
 
   const resumeTimer = useCallback(() => {
     setState((prev) => {
@@ -280,7 +349,13 @@ export function TimerProvider({ children }) {
         presenceStatus: prev.presenceEnabled ? 'checking' : prev.presenceStatus
       };
     });
-  }, []);
+
+    triggerNotification({
+      type: 'resume',
+      title: 'Timer Resumed',
+      message: `Resuming focus on "${state.activeTopic}".`,
+    });
+  }, [state.activeTopic, triggerNotification]);
 
   const stopTimer = useCallback(() => {
     if (state.isRunning || state.isPaused) {
@@ -311,16 +386,18 @@ export function TimerProvider({ children }) {
           mode: state.mode
         }).catch(() => {});
 
-        setLastNotification({
+        triggerNotification({
           type: 'complete',
+          title: 'Session Saved',
           message: `Session saved: "${sessionRecord.topic}" (${elapsedMinutes}m focused)`,
-          timestamp: Date.now()
         });
+
+        sendBrowserPush('StudyOS • Session Saved', `Saved ${elapsedMinutes}m focused on "${sessionRecord.topic}".`);
       } else {
-        setLastNotification({
+        triggerNotification({
           type: 'info',
+          title: 'Timer Stopped',
           message: 'Timer stopped (sessions under 1 minute are not saved).',
-          timestamp: Date.now()
         });
       }
     }
@@ -337,7 +414,7 @@ export function TimerProvider({ children }) {
       lastPauseTimestamp: null,
       presenceStatus: prev.presenceEnabled ? 'inactive' : prev.presenceStatus
     }));
-  }, [state]);
+  }, [state, triggerNotification]);
 
   const setPresenceInterval = useCallback((secs) => {
     setState((prev) => ({ ...prev, presenceIntervalSecs: Number(secs) }));
@@ -355,7 +432,13 @@ export function TimerProvider({ children }) {
       totalPausedDurationMs: 0,
       lastPauseTimestamp: null
     }));
-  }, [state.mode]);
+
+    triggerNotification({
+      type: 'info',
+      title: 'Timer Reset',
+      message: `Timer reset to ${state.durationMinutes || modeConfig.defaultMinutes} minutes.`,
+    });
+  }, [state.durationMinutes, state.mode, triggerNotification]);
 
   const addMinutes = useCallback((extraMinutes) => {
     setState((prev) => {
@@ -367,24 +450,48 @@ export function TimerProvider({ children }) {
         targetEndTime: prev.targetEndTime ? prev.targetEndTime + addedMs : null
       };
     });
-  }, []);
 
+    triggerNotification({
+      type: 'info',
+      title: '+5 Minutes Added',
+      message: `Extended focus time by ${extraMinutes} minutes.`,
+    });
+  }, [triggerNotification]);
+
+  // CRITICAL FIX: Prevent changing mode while timer is running or paused!
   const setTimerMode = useCallback((newMode, customMinutes = null) => {
-    const modeConfig = DEFAULT_MODES[newMode] || DEFAULT_MODES.pomodoro;
-    const mins = customMinutes !== null ? customMinutes : modeConfig.defaultMinutes;
+    setState((prev) => {
+      if (prev.isRunning || prev.isPaused) {
+        triggerNotification({
+          type: 'warning',
+          title: 'Mode Change Blocked',
+          message: 'Active timer in progress! Stop the current timer before changing mode.',
+        });
+        return prev;
+      }
 
-    setState((prev) => ({
-      ...prev,
-      mode: newMode,
-      durationMinutes: mins,
-      timeLeft: newMode === 'stopwatch' ? 0 : mins * 60,
-      isRunning: false,
-      isPaused: false,
-      startTime: null,
-      targetEndTime: null,
-      totalPausedDurationMs: 0
-    }));
-  }, []);
+      const modeConfig = DEFAULT_MODES[newMode] || DEFAULT_MODES.pomodoro;
+      const mins = customMinutes !== null ? customMinutes : modeConfig.defaultMinutes;
+
+      triggerNotification({
+        type: 'info',
+        title: 'Timer Mode Changed',
+        message: `Switched mode to ${modeConfig.label} (${mins}m).`,
+      });
+
+      return {
+        ...prev,
+        mode: newMode,
+        durationMinutes: mins,
+        timeLeft: newMode === 'stopwatch' ? 0 : mins * 60,
+        isRunning: false,
+        isPaused: false,
+        startTime: null,
+        targetEndTime: null,
+        totalPausedDurationMs: 0
+      };
+    });
+  }, [triggerNotification]);
 
   const setTopic = useCallback((topicTitle) => {
     setState((prev) => ({ ...prev, activeTopic: topicTitle }));
@@ -410,11 +517,23 @@ export function TimerProvider({ children }) {
     setState((prev) => ({ ...prev, isFloatingVisible: true }));
   }, []);
 
+  const clearNotificationsList = useCallback(() => {
+    setNotificationsList([]);
+  }, []);
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotificationsList((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
   const value = {
     ...state,
     history,
     lastNotification,
+    notificationsList,
     clearNotification: () => setLastNotification(null),
+    clearNotificationsList,
+    markAllNotificationsRead,
+    triggerNotification,
     startTimer,
     pauseTimer,
     resumeTimer,

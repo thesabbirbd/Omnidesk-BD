@@ -99,14 +99,14 @@ export default function StudyPlan() {
   });
 
   return (
-    <div className="flex flex-col h-full w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] overflow-y-auto p-4 md:p-8 gap-8">
+    <div className="flex flex-col w-full min-h-full text-[color:var(--text-main)] gap-6 md:gap-8 pb-12">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-wide flex items-center gap-3">
-            <Calendar className="text-cyan-400" size={36} />
-            Curriculum & Study Plan
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-wide flex items-center gap-3">
+            <Calendar className="text-cyan-400 shrink-0" size={36} />
+            <span>Curriculum & Study Plan</span>
           </h1>
           <p className="text-[color:var(--text-muted)] mt-1 font-medium text-sm md:text-base">
             Structured 14-week roadmap designed for deep engineering mastery.
@@ -114,7 +114,7 @@ export default function StudyPlan() {
         </div>
 
         {/* Global Stats Pill */}
-        <div className="flex items-center gap-3 bg-[var(--bg-card)] px-5 py-3 rounded-2xl border border-[var(--border-color)] shadow-[var(--card-shadow)]">
+        <div className="shrink-0 flex items-center gap-3 bg-[var(--bg-card)] px-5 py-3 rounded-2xl border border-[var(--border-color)] shadow-[var(--card-shadow)]">
           <div className="flex flex-col">
             <span className="text-xs uppercase font-bold text-[color:var(--text-muted)]">Roadmap Progress</span>
             <span className="text-xl font-black text-cyan-400">{completionPercentage}% Completed</span>
@@ -127,7 +127,7 @@ export default function StudyPlan() {
 
       {/* Overdue Milestones Alert Banner */}
       {overdueTopics.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-3xl bg-red-500/10 border border-red-500/30 text-red-300 shadow-[0_8px_20px_rgba(239,68,68,0.15)]">
+        <div className="shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-3xl bg-red-500/10 border border-red-500/30 text-red-300 shadow-[0_8px_20px_rgba(239,68,68,0.15)]">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-red-500/20 text-red-400">
               <AlertTriangle size={24} />
@@ -151,7 +151,7 @@ export default function StudyPlan() {
       )}
 
       {/* Progress Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="shrink-0 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[var(--card-shadow)] flex flex-col gap-1">
           <span className="text-xs font-bold uppercase text-[color:var(--text-muted)]">Total Milestones</span>
           <span className="text-2xl font-black text-[color:var(--text-main)]">{totalTopics}</span>
@@ -171,7 +171,7 @@ export default function StudyPlan() {
       </div>
 
       {/* Week Selector Pills */}
-      <div className="flex items-center gap-3 overflow-x-auto pb-2">
+      <div className="shrink-0 flex items-center gap-3 overflow-x-auto pb-2 w-full">
         {weeks.map((week) => {
           const isSelected = week.weekNumber === selectedWeek;
           const weekCompleted = week.topics.every((t) => t.status === 'complete');

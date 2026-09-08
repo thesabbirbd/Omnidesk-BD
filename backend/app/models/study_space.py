@@ -1,6 +1,7 @@
+import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, Text, ForeignKey, DateTime
+from sqlalchemy import String, Text, Boolean, DateTime, ForeignKey, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
@@ -8,19 +9,35 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.topic import Topic
     from app.models.project import Project
+    from app.models.material import Material
+    from app.models.note import Note
+    from app.models.study_plan import StudyPlan
+    from app.models.quiz import Quiz
+    from app.models.activity_log import ActivityLog
 
 
 class StudySpace(Base):
     __tablename__ = "study_spaces"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    user_id: Mapped[int] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
+
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    category: Mapped[str] = mapped_column(String(100), default="Backend / DevOps", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -40,8 +57,33 @@ class StudySpace(Base):
         back_populates="study_space",
         cascade="all, delete-orphan"
     )
+    study_plans: Mapped[List["StudyPlan"]] = relationship(
+        "StudyPlan",
+        back_populates="study_space",
+        cascade="all, delete-orphan"
+    )
     projects: Mapped[List["Project"]] = relationship(
         "Project",
+        back_populates="study_space",
+        cascade="all, delete-orphan"
+    )
+    materials: Mapped[List["Material"]] = relationship(
+        "Material",
+        back_populates="study_space",
+        cascade="all, delete-orphan"
+    )
+    notes: Mapped[List["Note"]] = relationship(
+        "Note",
+        back_populates="study_space",
+        cascade="all, delete-orphan"
+    )
+    quizzes: Mapped[List["Quiz"]] = relationship(
+        "Quiz",
+        back_populates="study_space",
+        cascade="all, delete-orphan"
+    )
+    activity_logs: Mapped[List["ActivityLog"]] = relationship(
+        "ActivityLog",
         back_populates="study_space",
         cascade="all, delete-orphan"
     )

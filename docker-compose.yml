@@ -1,0 +1,99 @@
+version: "3.8"
+
+services:
+  # PostgreSQL 16 Relational Database
+  db:
+    image: postgres:16-alpine
+    container_name: studyos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret123}
+      POSTGRES_DB: ${POSTGRES_DB:-studyos_db}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - studyos_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-studyos_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis 7 Caching, Queue & Rate Limiter
+  redis:
+    image: redis:7-alpine
+    container_name: studyos-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - studyos_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # StudyOS FastAPI Backend Service (Internal only)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: studyos-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-secret123}@db:5432/${POSTGRES_DB:-studyos_db}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7}
+      - REFRESH_SECRET_KEY=${REFRESH_SECRET_KEY:-e4d6a1b2c3f890123456789abcdef0123456789abcdef0123456789abcdef012}
+      - AI_PROVIDER=${AI_PROVIDER:-local}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - RATE_LIMIT_PER_MINUTE=120
+      - ENVIRONMENT=production
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - studyos_net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # StudyOS Frontend & Nginx Reverse Proxy (Exposed to Host)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: studyos-frontend
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-8080}:80"
+    networks:
+      - studyos_net
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+networks:
+  studyos_net:
+    driver: bridge
+
+volumes:
+  pg_data:
+    name: studyos_pg_data
+  redis_data:
+    name: studyos_redis_data
+  uploads_data:
+    name: studyos_uploads_data

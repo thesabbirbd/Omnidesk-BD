@@ -1,5 +1,20 @@
-import React, { useState } from 'react';
-import { Briefcase, Terminal, Wrench, CheckCircle, Clock, Bug, Activity, GitFork } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Briefcase, 
+  Terminal, 
+  Wrench, 
+  CheckCircle, 
+  Clock, 
+  Bug, 
+  Activity, 
+  GitFork,
+  Sparkles,
+  AlertTriangle,
+  FileCode,
+  Check,
+  ChevronDown
+} from 'lucide-react';
+import { getDebugJournals, createDebugJournal, getDebugHypothesis } from '../services/api';
 
 const LIFECYCLE_STAGES = ['Idea', 'Architecture', 'In Progress', 'Code Complete', 'Deployed'];
 
@@ -58,6 +73,101 @@ export default function Projects() {
   const [activeTab, setActiveTab] = useState('projects');
   const [projects, setProjects] = useState(initialProjects);
   const [stageFilter, setStageFilter] = useState('All');
+  const [debugJournals, setDebugJournals] = useState([]);
+  const [loadingJournals, setLoadingJournals] = useState(false);
+  const [loadingHypo, setLoadingHypo] = useState(false);
+  const [savingJournal, setSavingJournal] = useState(false);
+
+  const [newJournal, setNewJournal] = useState({
+    title: '',
+    problem: '',
+    symptom: '',
+    hypothesis: '',
+    command_used: '',
+    output_logs: '',
+    root_cause: '',
+    solution: '',
+    lesson_learned: '',
+    project_id: ''
+  });
+
+  const fetchJournals = async () => {
+    setLoadingJournals(true);
+    try {
+      const data = await getDebugJournals();
+      setDebugJournals(data || []);
+    } catch (e) {
+      console.warn("Failed to load debug journals:", e);
+    } finally {
+      setLoadingJournals(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchJournals();
+    const handleRefresh = () => fetchJournals();
+    window.addEventListener('studyos-debug-journal-added', handleRefresh);
+    return () => window.removeEventListener('studyos-debug-journal-added', handleRefresh);
+  }, []);
+
+  const handleAutoHypo = async () => {
+    if (!newJournal.problem && !newJournal.output_logs) {
+      alert("Please provide problem or error logs first.");
+      return;
+    }
+    setLoadingHypo(true);
+    try {
+      const res = await getDebugHypothesis({
+        problem: newJournal.problem || newJournal.title,
+        symptom: newJournal.symptom,
+        output_logs: newJournal.output_logs
+      });
+      if (res) {
+        setNewJournal((prev) => ({
+          ...prev,
+          hypothesis: res.hypothesis || prev.hypothesis,
+          command_used: res.investigation_command || prev.command_used,
+          root_cause: prev.root_cause || res.recommended_fix || ''
+        }));
+      }
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      setLoadingHypo(false);
+    }
+  };
+
+  const handleSaveJournal = async (e) => {
+    if (e) e.preventDefault();
+    if (!newJournal.title.trim() || !newJournal.problem.trim()) {
+      alert("Title and Problem description are required.");
+      return;
+    }
+    setSavingJournal(true);
+    try {
+      const saved = await createDebugJournal({
+        ...newJournal,
+        project_id: newJournal.project_id || null
+      });
+      setDebugJournals((prev) => [saved, ...prev]);
+      setNewJournal({
+        title: '',
+        problem: '',
+        symptom: '',
+        hypothesis: '',
+        command_used: '',
+        output_logs: '',
+        root_cause: '',
+        solution: '',
+        lesson_learned: '',
+        project_id: ''
+      });
+    } catch (err) {
+      alert(err?.response?.data?.detail || "Failed to save debug entry");
+    } finally {
+      setSavingJournal(false);
+    }
+  };
 
   const filteredProjects = projects.filter((p) =>
     stageFilter === 'All' ? true : p.stage === stageFilter
@@ -212,71 +322,196 @@ export default function Projects() {
         /* Debug Journal Interface */
         <div className="max-w-4xl mx-auto w-full flex flex-col gap-6">
           
-          <div className="p-8 md:p-10 rounded-[32px] overflow-hidden bg-[var(--bg-card)] shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col gap-6">
-            <h2 className="text-xl font-bold text-[color:var(--text-main)] flex items-center gap-3">
-              <Terminal className="text-orange-400" size={24} />
-              New Debug Entry
-            </h2>
+          <form 
+            onSubmit={handleSaveJournal}
+            className="p-8 md:p-10 rounded-[32px] overflow-hidden bg-[var(--bg-card)] shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col gap-6"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-[color:var(--text-main)] flex items-center gap-3">
+                <Terminal className="text-orange-400" size={24} />
+                New Debug Entry (Root Cause Isolation)
+              </h2>
+              <button
+                type="button"
+                onClick={handleAutoHypo}
+                disabled={loadingHypo}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-all cursor-pointer"
+              >
+                <Sparkles size={13} />
+                <span>{loadingHypo ? "Analyzing..." : "Auto-Diagnose (Offline AI)"}</span>
+              </button>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
+              {/* Title & Project Link */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Bug / Incident Title *</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="e.g. Postgres async checkout timeout"
+                  value={newJournal.title}
+                  onChange={(e) => setNewJournal({ ...newJournal, title: e.target.value })}
+                  className="w-full bg-[var(--bg-input)] text-[color:var(--text-main)] border border-[var(--border-color)] rounded-xl p-3 focus:outline-none focus:border-orange-500/50 text-sm font-semibold"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Associated Project</label>
+                <select
+                  value={newJournal.project_id}
+                  onChange={(e) => setNewJournal({ ...newJournal, project_id: e.target.value })}
+                  className="w-full bg-[var(--bg-input)] text-[color:var(--text-main)] border border-[var(--border-color)] rounded-xl p-3 focus:outline-none text-xs font-semibold"
+                >
+                  <option value="">No Project (General Lab)</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name || p.title}</option>
+                  ))}
+                </select>
+              </div>
+
               {/* Problem */}
               <div className="flex flex-col gap-2 md:col-span-2">
-                <label className="text-sm font-bold text-slate-500 uppercase tracking-widest px-2">Problem / Symptom</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Problem / What is broken? *</label>
                 <textarea 
                   rows="2"
-                  placeholder="What is broken?"
-                  className="w-full bg-[#0a0f18] text-orange-100 border border-[var(--border-color)] rounded-2xl p-4 focus:outline-none focus:border-orange-500/50 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.8),inset_-2px_-2px_4px_rgba(255,255,255,0.05)] resize-none font-mono text-sm"
-                ></textarea>
+                  required
+                  placeholder="What is failing? Expected vs actual result..."
+                  value={newJournal.problem}
+                  onChange={(e) => setNewJournal({ ...newJournal, problem: e.target.value })}
+                  className="w-full bg-[var(--bg-input)] text-orange-200 border border-[var(--border-color)] rounded-xl p-3 focus:outline-none focus:border-orange-500/50 resize-none font-mono text-xs"
+                />
               </div>
 
               {/* Hypothesis */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-slate-500 uppercase tracking-widest px-2">Hypothesis</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Hypothesis (Why did it break?)</label>
                 <textarea 
                   rows="3"
                   placeholder="Why do you think it's broken?"
-                  className="w-full bg-[#0a0f18] text-blue-100 border border-[var(--border-color)] rounded-2xl p-4 focus:outline-none focus:border-blue-500/50 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.8),inset_-2px_-2px_4px_rgba(255,255,255,0.05)] resize-none font-mono text-sm"
-                ></textarea>
+                  value={newJournal.hypothesis}
+                  onChange={(e) => setNewJournal({ ...newJournal, hypothesis: e.target.value })}
+                  className="w-full bg-[var(--bg-input)] text-blue-200 border border-[var(--border-color)] rounded-xl p-3 focus:outline-none focus:border-blue-500/50 resize-none font-mono text-xs"
+                />
               </div>
 
               {/* Command / Action */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-slate-500 uppercase tracking-widest px-2">Command / Action</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Command / Investigation Test</label>
                 <textarea 
                   rows="3"
-                  placeholder="What did you run or change to test?"
-                  className="w-full bg-[#0a0f18] text-green-100 border border-[var(--border-color)] rounded-2xl p-4 focus:outline-none focus:border-green-500/50 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.8),inset_-2px_-2px_4px_rgba(255,255,255,0.05)] resize-none font-mono text-sm"
-                ></textarea>
+                  placeholder="What diagnostic command did you execute?"
+                  value={newJournal.command_used}
+                  onChange={(e) => setNewJournal({ ...newJournal, command_used: e.target.value })}
+                  className="w-full bg-[var(--bg-input)] text-green-300 border border-[var(--border-color)] rounded-xl p-3 focus:outline-none focus:border-green-500/50 resize-none font-mono text-xs"
+                />
               </div>
 
               {/* Output / Result */}
               <div className="flex flex-col gap-2 md:col-span-2">
-                <label className="text-sm font-bold text-slate-500 uppercase tracking-widest px-2">Output / Error Log</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Terminal Output / Stack Trace</label>
                 <textarea 
-                  rows="4"
-                  placeholder="Paste error trace here..."
-                  className="w-full bg-[#05080f] text-red-300 border border-[var(--border-color)] rounded-2xl p-4 focus:outline-none focus:border-red-500/50 shadow-[inset_6px_6px_12px_rgba(0,0,0,0.9),inset_-2px_-2px_4px_rgba(255,255,255,0.02)] resize-none font-mono text-sm leading-relaxed"
-                ></textarea>
+                  rows="3"
+                  placeholder="Paste error logs or terminal output..."
+                  value={newJournal.output_logs}
+                  onChange={(e) => setNewJournal({ ...newJournal, output_logs: e.target.value })}
+                  className="w-full bg-[#05080f] text-red-300 border border-[var(--border-color)] rounded-xl p-3 focus:outline-none focus:border-red-500/50 resize-none font-mono text-xs leading-relaxed"
+                />
               </div>
 
               {/* Root Cause & Fix */}
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className="text-sm font-bold text-slate-500 uppercase tracking-widest px-2">Root Cause & Fix</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Root Cause</label>
                 <textarea 
-                  rows="3"
-                  placeholder="What was the actual cause and how did you fix it?"
-                  className="w-full bg-[#0a0f18] text-cyan-100 border border-[var(--border-color)] rounded-2xl p-4 focus:outline-none focus:border-cyan-500/50 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.8),inset_-2px_-2px_4px_rgba(255,255,255,0.05)] resize-none font-mono text-sm"
-                ></textarea>
+                  rows="2"
+                  placeholder="What was the actual underlying cause?"
+                  value={newJournal.root_cause}
+                  onChange={(e) => setNewJournal({ ...newJournal, root_cause: e.target.value })}
+                  className="w-full bg-[var(--bg-input)] text-cyan-200 border border-[var(--border-color)] rounded-xl p-3 focus:outline-none focus:border-cyan-500/50 resize-none font-mono text-xs"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Solution & Lesson Learned</label>
+                <textarea 
+                  rows="2"
+                  placeholder="How did you fix it permanently?"
+                  value={newJournal.solution}
+                  onChange={(e) => setNewJournal({ ...newJournal, solution: e.target.value })}
+                  className="w-full bg-[var(--bg-input)] text-emerald-200 border border-[var(--border-color)] rounded-xl p-3 focus:outline-none focus:border-emerald-500/50 resize-none font-mono text-xs"
+                />
               </div>
 
             </div>
 
-            <div className="flex justify-end mt-4">
-              <button className="px-8 py-4 rounded-xl font-bold bg-[var(--bg-card)] text-orange-400 shadow-[6px_6px_12px_var(--shadow-dark),-6px_-6px_12px_var(--shadow-light)] hover:shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)] active:scale-95 transition-all flex items-center gap-2">
-                <Wrench size={18} /> Save Entry
+            <div className="flex justify-end mt-2">
+              <button 
+                type="submit"
+                disabled={savingJournal}
+                className="px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-wider bg-orange-400 hover:bg-orange-300 text-slate-950 shadow-[0_0_15px_rgba(251,146,60,0.4)] active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Wrench size={14} />
+                <span>{savingJournal ? "Recording..." : "Save Debug Entry"}</span>
               </button>
             </div>
+          </form>
+
+          {/* Historical Debug Entries Section */}
+          <div className="flex flex-col gap-4 mt-4">
+            <h3 className="text-sm font-black uppercase tracking-wider text-[color:var(--text-muted)] flex items-center gap-2">
+              <Bug size={16} className="text-orange-400" />
+              <span>Resolved Bug History ({debugJournals.length})</span>
+            </h3>
+
+            {loadingJournals ? (
+              <div className="text-xs text-[color:var(--text-muted)] py-4 text-center">Loading debug journals...</div>
+            ) : debugJournals.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] text-center text-xs text-[color:var(--text-muted)]">
+                No debug entries recorded yet. Use the form above or click "I'm Stuck" whenever you encounter a blocking issue.
+              </div>
+            ) : (
+              debugJournals.map((entry) => (
+                <div 
+                  key={entry.id}
+                  className="p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[var(--card-shadow)] flex flex-col gap-3 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-base font-bold text-[color:var(--text-main)] flex items-center gap-2">
+                        <Terminal size={15} className="text-orange-400" />
+                        <span>{entry.title}</span>
+                      </h4>
+                      <span className="text-[10px] text-[color:var(--text-muted)]">
+                        {new Date(entry.created_at).toLocaleDateString()} at {new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      Resolved
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-orange-200/90 font-mono bg-[#070b12] p-2.5 rounded-xl border border-[var(--border-color)]/50">
+                    <span className="text-slate-500 font-bold uppercase text-[9px] block mb-0.5">Problem</span>
+                    {entry.problem}
+                  </p>
+
+                  {entry.root_cause && (
+                    <div className="text-xs text-cyan-200/90 font-mono bg-cyan-950/20 p-2.5 rounded-xl border border-cyan-500/20">
+                      <span className="text-cyan-400 font-bold uppercase text-[9px] block mb-0.5">Root Cause</span>
+                      {entry.root_cause}
+                    </div>
+                  )}
+
+                  {entry.solution && (
+                    <div className="text-xs text-emerald-200/90 font-mono bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-500/20">
+                      <span className="text-emerald-400 font-bold uppercase text-[9px] block mb-0.5">Verified Solution</span>
+                      {entry.solution}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
 
         </div>

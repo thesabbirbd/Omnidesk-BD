@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, RotateCcw, Clock, Brain, Coffee, Eye, EyeOff, Square, Sparkles, AlertCircle } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clock, Brain, Coffee, Eye, EyeOff, Square, Sparkles, AlertCircle, Lock } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
 
 export default function Timer() {
@@ -27,6 +27,8 @@ export default function Timer() {
     modes
   } = useTimer();
 
+  const isTimerActive = isRunning || isPaused;
+
   const modeDefinitions = {
     pomodoro: { label: 'Pomodoro', mins: 25, icon: Brain },
     focus: { label: 'Deep Focus', mins: 50, icon: Clock },
@@ -35,6 +37,7 @@ export default function Timer() {
   };
 
   const handleModeChange = (newMode) => {
+    if (isTimerActive) return;
     const def = modeDefinitions[newMode];
     setTimerMode(newMode, def.mins);
   };
@@ -62,26 +65,6 @@ export default function Timer() {
 
   return (
     <div className="flex flex-col h-full w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] overflow-y-auto p-4 md:p-8 lg:p-12 items-center gap-8 md:gap-12 relative">
-      
-      {/* Presence / Notification Alert */}
-      {lastNotification && (
-        <div className="fixed top-8 right-8 z-50 px-6 py-4 rounded-2xl shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)] flex items-center gap-3 transition-all duration-300 bg-[var(--bg-card)]/95 backdrop-blur-xl">
-          {lastNotification.type === 'absence' ? (
-            <AlertCircle className="text-amber-400 shrink-0" size={22} />
-          ) : (
-            <Sparkles className="text-cyan-400 shrink-0" size={22} />
-          )}
-          <span className="font-bold text-xs md:text-sm text-[color:var(--text-main)]">
-            {lastNotification.message}
-          </span>
-          <button 
-            onClick={clearNotification}
-            className="ml-2 text-[color:var(--text-muted)] hover:text-white text-xs font-bold"
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {/* Active Topic Tag */}
       {activeTopic && (
@@ -95,11 +78,18 @@ export default function Timer() {
         {Object.entries(modeDefinitions).map(([key, item]) => {
           const Icon = item.icon;
           const isActive = mode === key;
+          const isBlocked = isTimerActive && !isActive;
           return (
             <button
               key={key}
+              disabled={isBlocked}
               onClick={() => handleModeChange(key)}
-              className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-bold text-xs md:text-sm transition-all duration-300 cursor-pointer ${
+              title={isBlocked ? 'Active timer running! Stop the timer to change modes.' : item.label}
+              className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-bold text-xs md:text-sm transition-all duration-300 ${
+                isBlocked
+                  ? 'opacity-40 cursor-not-allowed text-[color:var(--text-muted)]'
+                  : 'cursor-pointer'
+              } ${
                 isActive 
                   ? 'bg-[var(--bg-card)] text-cyan-400 shadow-[4px_4px_10px_var(--shadow-dark),-4px_-4px_10px_var(--shadow-light)]' 
                   : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
@@ -107,6 +97,7 @@ export default function Timer() {
             >
               <Icon size={18} />
               <span>{item.label}</span>
+              {isBlocked && <Lock size={12} className="ml-1 opacity-60" />}
             </button>
           );
         })}

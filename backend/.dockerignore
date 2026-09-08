@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+env/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+.git
+.gitignore
+.env
+uploads/*
+!uploads/.gitkeep

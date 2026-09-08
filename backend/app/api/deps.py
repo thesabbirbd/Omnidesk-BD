@@ -1,3 +1,4 @@
+import uuid
 from typing import Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -29,10 +30,18 @@ def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
+        if payload.get("type") != "access":
+            raise credentials_exception
+
         user_id_str: str = payload.get("sub")
         if user_id_str is None:
             raise credentials_exception
-        user_id = int(user_id_str)
+
+        try:
+            user_id = uuid.UUID(user_id_str)
+        except ValueError:
+            raise credentials_exception
+
     except (jwt.PyJWTError, ValueError):
         raise credentials_exception
 
@@ -40,6 +49,13 @@ def get_current_user(
     if user is None:
         raise credentials_exception
     if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user account.")
 
     return user
+
+
+def get_current_active_user(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """Dependency ensuring the user is active."""
+    return current_user
