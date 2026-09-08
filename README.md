@@ -28,11 +28,20 @@
 
 ---
 
-### 🖥️ High-Fidelity Glassmorphic Dashboard Preview
+### 💎 1. Apple Frosted Glass Command Center & Topological MindMap
 
 <div align="center">
-  <img src="docs/images/dashboard-preview.png" alt="Omnidesk BD Interactive Glass Dashboard" width="95%" style="border-radius: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1);" />
-  <p><i>Figure 1: Omnidesk BD command center with frosted glass panels, topological mindmap, persistent timer, and dark/light gradients.</i></p>
+  <img src="docs/images/omnidesk-glass-dashboard.png" alt="Omnidesk BD Frosted Glass Dashboard" width="96%" style="border-radius: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.15);" />
+  <p><i>Figure 1: Omnidesk BD Glass Theme with vibrant atmospheric spheres, interactive DAG MindMap, focus timer HUD, and sprint tracking.</i></p>
+</div>
+
+---
+
+### 🎛️ 2. Active Sprints, Live Telemetry, Study Timer & Heatmap Hub
+
+<div align="center">
+  <img src="docs/images/omnidesk-dashboard-tools.png" alt="Omnidesk BD Dashboard Telemetry and Engineering Tools" width="96%" style="border-radius: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.15);" />
+  <p><i>Figure 2: Active sprint milestones, backend service telemetry, 4-week activity heatmap, structured study plan, pomodoro timer, and AI assistant.</i></p>
 </div>
 
 ---
@@ -44,7 +53,7 @@
 - [💡 What is Omnidesk BD?](#-what-is-omnidesk-bd)
 - [🎨 Design Engine (Glass, Clay & Neumorphism)](#-design-engine)
 - [⚡ Core Capabilities](#-core-capabilities)
-  - [1. Universal Ingestion & Course Pipeline](#1-universal-ingestion--course-pipeline)
+  - [1. Universal Ingestion & Material Engine](#1-universal-ingestion--material-engine)
   - [2. The Strict Analyze → Preview → Approve Flow](#2-the-strict-analyze--preview--approve-flow)
   - [3. Visual DAG MindMap (`@xyflow/react`)](#3-visual-dag-mindmap-xyflowreact)
   - [4. Time-Aware Scheduling & Deep-Work Engine](#4-time-aware-scheduling--deep-work-engine)
@@ -88,13 +97,26 @@ Omnidesk BD features an adaptive multi-material design system engineered with mo
 | **📐 Sleek Neumorphism** | Physical debossed inset shadows, tactile extruded surfaces | Form inputs, search fields, markdown note editor canvas |
 | **🌈 Atmospheric Gradients** | Cyber Aurora, Sunset Radiant, and Emerald Nebula background palettes | Immersive, distraction-free night and day learning modes |
 
+<div align="center">
+  <img src="docs/images/omnidesk-clay-dashboard.png" alt="Omnidesk BD Claymorphic Light Mode Dashboard" width="96%" style="border-radius: 24px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 0, 0, 0.08);" />
+  <p><i>Figure 3: Tactile Claymorphic & Neumorphic Light Mode — soft debossed surfaces, high-contrast typography, and organic 3D cards.</i></p>
+</div>
+
 ---
 
 ## ⚡ Core Capabilities
 
-### 1. Universal Ingestion & Course Pipeline
+### 1. Universal Ingestion & Material Engine
 - **Multi-Format Parsers**: Modular Python adapters automatically ingest **PDF** (via high-performance PyMuPDF with pypdf fallback), **Markdown** (frontmatter & header chunking), **Plain Text**, and **YouTube Transcripts** (with graceful fallback handling).
 - **Cryptographic Grounding**: Every ingested source generates a canonical SHA-256 integrity hash and segment-level timestamps.
+- **Universal Material Hub**: Central file vault for organizing, tagging, and filtering course documents across PDF, Video, URL, Markdown, and Docx formats.
+
+<div align="center">
+  <img src="docs/images/omnidesk-materials-engine.png" alt="Omnidesk BD Universal Material Engine" width="96%" style="border-radius: 24px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15); border: 1px solid rgba(0, 0, 0, 0.08);" />
+  <p><i>Figure 4: Universal Material Engine — instant search, format filters, drag-and-drop file ingestion, and topic-linked reference docs.</i></p>
+</div>
+
+---
 
 ### 2. The Strict Analyze → Preview → Approve Flow
 Omnidesk BD adheres to the strict safety invariant: **NEVER silently write AI-generated data to the database.**
