@@ -1,0 +1,63 @@
+{
+  "id": "cloud-native",
+  "title": "Cloud Native Architecture & Microservices",
+  "category": "Cloud Architecture",
+  "description": "Architecting, containerizing, and running distributed, resilient microservices across multi-cloud clusters.",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Microservices Design Principles & Domain-Driven Design",
+      "description": "Bounded contexts, database per service, API gateway patterns, and event-driven choreography.",
+      "subtopics": [
+        "Domain-Driven Design (DDD) fundamentals",
+        "API Gateway vs Direct Client Communication",
+        "Eventual consistency and Saga patterns"
+      ],
+      "dependencies": [],
+      "estimated_minutes": 60,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Cloud Native"
+    },
+    {
+      "title": "gRPC & High-Performance Inter-Service Communication",
+      "description": "Protocol Buffers schema definitions, streaming RPCs, and binary serialization.",
+      "subtopics": [
+        "Protobuf message schemas and codegen",
+        "Unary, client, server, and bidirectional streaming",
+        "HTTP/2 multiplexing and benchmark comparison"
+      ],
+      "dependencies": ["Microservices Design Principles & Domain-Driven Design"],
+      "estimated_minutes": 60,
+      "difficulty": "ADVANCED",
+      "source_reference": "Omnidesk Official Template: Cloud Native"
+    },
+    {
+      "title": "Terraform Infrastructure as Code (IaC)",
+      "description": "Declarative cloud provisioning, state management, modules, and multi-environment setup.",
+      "subtopics": [
+        "HCL language primitives and provider blocks",
+        "Remote state locking with S3 and DynamoDB",
+        "Reusable modules and environment separation"
+      ],
+      "dependencies": ["Microservices Design Principles & Domain-Driven Design"],
+      "estimated_minutes": 60,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Cloud Native"
+    },
+    {
+      "title": "Service Mesh Architecture with Istio",
+      "description": "Sidecar proxies (Envoy), mTLS security, traffic shifting, canary rollouts, and telemetry.",
+      "subtopics": [
+        "Envoy sidecar proxy injection and control plane",
+        "Mutual TLS (mTLS) zero-trust encryption",
+        "Canary deployments and traffic splitting"
+      ],
+      "dependencies": ["gRPC & High-Performance Inter-Service Communication"],
+      "estimated_minutes": 60,
+      "difficulty": "ADVANCED",
+      "source_reference": "Omnidesk Official Template: Cloud Native"
+    }
+  ]
+}

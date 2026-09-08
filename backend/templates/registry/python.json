@@ -1,0 +1,63 @@
+{
+  "id": "python",
+  "title": "Modern Python 3.12 Software Engineering",
+  "category": "Software Engineering",
+  "description": "Comprehensive journey from idiomatic Python syntax to advanced asynchronous concurrency, design patterns, and package distribution.",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Python 3.12 Core Syntax & Data Structures",
+      "description": "Lists, dicts, sets, comprehensions, pattern matching, and memory semantics.",
+      "subtopics": [
+        "Structural pattern matching with match/case",
+        "Dictionary & set comprehension performance",
+        "Generators, iterators, and itertools"
+      ],
+      "dependencies": [],
+      "estimated_minutes": 45,
+      "difficulty": "BEGINNER",
+      "source_reference": "Omnidesk Official Template: Python"
+    },
+    {
+      "title": "Object-Oriented Design & SOLID in Python",
+      "description": "Classes, dataclasses, dunder methods, inheritance vs composition, and abstract base classes.",
+      "subtopics": [
+        "Magic methods (__repr__, __eq__, __enter__)",
+        "Dataclasses and Pydantic models comparison",
+        "ABC and Protocol structural subtyping"
+      ],
+      "dependencies": ["Python 3.12 Core Syntax & Data Structures"],
+      "estimated_minutes": 60,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Python"
+    },
+    {
+      "title": "Concurrency: Asyncio, Multiprocessing & Threading",
+      "description": "CPU-bound vs I/O-bound workloads, GIL implications, and asynchronous event loops.",
+      "subtopics": [
+        "Async/await syntax and asyncio TaskGroups",
+        "ThreadPoolExecutor and ProcessPoolExecutor",
+        "Synchronization primitives: Locks, Semaphores, Queues"
+      ],
+      "dependencies": ["Object-Oriented Design & SOLID in Python"],
+      "estimated_minutes": 60,
+      "difficulty": "ADVANCED",
+      "source_reference": "Omnidesk Official Template: Python"
+    },
+    {
+      "title": "Testing, Pytest, and Mocking Strategies",
+      "description": "Test-driven development, fixtures, parameterization, mocking external APIs, and code coverage.",
+      "subtopics": [
+        "Pytest fixtures and dependency injection",
+        "Parametrized testing and test matrix runs",
+        "Mock, patch, and coverage analysis"
+      ],
+      "dependencies": ["Object-Oriented Design & SOLID in Python"],
+      "estimated_minutes": 45,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Python"
+    }
+  ]
+}

@@ -27,10 +27,23 @@ class BaseParser(ABC):
 
     @staticmethod
     def read_bytes(source: Union[str, Path, bytes]) -> bytes:
-        """Helper to read bytes from either a file path or raw bytes input."""
+        """Helper to read bytes from either a file path, raw bytes, or raw text string."""
         if isinstance(source, bytes):
             return source
+        if isinstance(source, Path):
+            if not source.is_file():
+                raise FileNotFoundError(f"Source file does not exist: {source}")
+            return source.read_bytes()
+
+        # If source contains newlines or is longer than standard path limit, treat as raw text
+        if "\n" in source or len(source) > 255:
+            return source.encode("utf-8")
+
         path = Path(source)
-        if not path.is_file():
-            raise FileNotFoundError(f"Source file does not exist: {path}")
-        return path.read_bytes()
+        try:
+            if path.is_file():
+                return path.read_bytes()
+        except (OSError, ValueError):
+            pass
+
+        return source.encode("utf-8")

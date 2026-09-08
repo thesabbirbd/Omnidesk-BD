@@ -1,0 +1,128 @@
+{
+  "id": "backend-devops",
+  "title": "Backend Engineering & DevOps Masterclass",
+  "category": "Backend / DevOps",
+  "description": "Production-grade distributed backend architecture, containerization with Docker, and Kubernetes cluster orchestration.",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Linux Fundamentals & Shell Scripting",
+      "description": "POSIX standards, file permissions, process management, bash automation, and networking primitives.",
+      "subtopics": [
+        "File hierarchies and permissions (chmod, chown)",
+        "Process lifecycle, systemd, and cron jobs",
+        "Bash scripting and environmental configuration"
+      ],
+      "dependencies": [],
+      "estimated_minutes": 60,
+      "difficulty": "BEGINNER",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    },
+    {
+      "title": "Modern Python & Asynchronous Programming",
+      "description": "Python 3.12 syntax, type hints, asyncio event loop, and coroutine concurrency.",
+      "subtopics": [
+        "Asyncio event loop, tasks, and gather",
+        "Pydantic v2 data validation and serialization",
+        "Context managers and generators"
+      ],
+      "dependencies": ["Linux Fundamentals & Shell Scripting"],
+      "estimated_minutes": 60,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    },
+    {
+      "title": "FastAPI Web Architecture & Dependency Injection",
+      "description": "Asynchronous REST endpoints, OpenAPI docs, middleware security, and dependency injection patterns.",
+      "subtopics": [
+        "Hierarchical routing and APIRouter structure",
+        "FastAPI Depends and database session lifespans",
+        "JWT Authentication and OAuth2 bearer flows"
+      ],
+      "dependencies": ["Modern Python & Asynchronous Programming"],
+      "estimated_minutes": 60,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    },
+    {
+      "title": "PostgreSQL & SQLAlchemy 2.0 ORM",
+      "description": "Relational schema design, connection pooling, Alembic migrations, and index optimization.",
+      "subtopics": [
+        "SQLAlchemy 2.0 Mapped columns and DeclarativeBase",
+        "Alembic auto-generated database migrations",
+        "B-Tree indexing and query performance analysis"
+      ],
+      "dependencies": ["Modern Python & Asynchronous Programming"],
+      "estimated_minutes": 60,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    },
+    {
+      "title": "Redis Caching & Celery Distributed Workers",
+      "description": "In-memory caching patterns, distributed background tasks, rate limiting, and message brokers.",
+      "subtopics": [
+        "Redis key-value patterns and TTL cache expiration",
+        "Celery task producer-consumer worker architecture",
+        "Flower task monitoring and dead-letter queues"
+      ],
+      "dependencies": ["FastAPI Web Architecture & Dependency Injection", "PostgreSQL & SQLAlchemy 2.0 ORM"],
+      "estimated_minutes": 60,
+      "difficulty": "ADVANCED",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    },
+    {
+      "title": "Docker Containerization & Multi-Stage Builds",
+      "description": "OCI container standards, Dockerfile optimization, multi-stage builds, and volume persistence.",
+      "subtopics": [
+        "Writing slim, secure multi-stage Dockerfiles",
+        "Docker Compose orchestration and isolated networks",
+        "Container security best practices and non-root users"
+      ],
+      "dependencies": ["Linux Fundamentals & Shell Scripting"],
+      "estimated_minutes": 60,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    },
+    {
+      "title": "Kubernetes Pod Lifecycle & Cluster Architecture",
+      "description": "Control plane components, Pods, Deployments, Services, and Ingress routing.",
+      "subtopics": [
+        "K8s Control Plane architecture (API server, etcd, scheduler)",
+        "Deployments, ReplicaSets, and rolling zero-downtime updates",
+        "ClusterIP, NodePort, and LoadBalancer networking"
+      ],
+      "dependencies": ["Docker Containerization & Multi-Stage Builds"],
+      "estimated_minutes": 90,
+      "difficulty": "ADVANCED",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    },
+    {
+      "title": "CI/CD Automation with GitHub Actions",
+      "description": "Continuous Integration, automated linting/testing, container registry pushes, and deployment webhooks.",
+      "subtopics": [
+        "GitHub Actions workflow syntax and triggers",
+        "Docker build-and-push to container registries",
+        "Secrets management and deployment pipelines"
+      ],
+      "dependencies": ["Docker Containerization & Multi-Stage Builds"],
+      "estimated_minutes": 45,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    },
+    {
+      "title": "Observability with Prometheus & Grafana",
+      "description": "Metrics aggregation, Prometheus scrape targets, alerts, and Grafana dashboard visualization.",
+      "subtopics": [
+        "Prometheus client instrumentation and metrics types",
+        "PromQL time-series queries and alert thresholds",
+        "Grafana dashboards and system monitoring"
+      ],
+      "dependencies": ["Kubernetes Pod Lifecycle & Cluster Architecture"],
+      "estimated_minutes": 60,
+      "difficulty": "ADVANCED",
+      "source_reference": "Omnidesk Official Template: Backend DevOps"
+    }
+  ]
+}

@@ -1,25 +1,513 @@
+import os
 import uuid
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import logging
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
 from app.models.study_space import StudySpace
-from app.models.topic import Topic
+from app.models.topic import Topic, SourceType
+from app.models.dependency import TopicDependency
+from app.models.task import Task
+from app.models.study_plan import StudyPlan, StudyWeek, StudyDay
 from app.models.material import Material
 from app.schemas.studyspace import (
     StudySpaceCreate,
     StudySpaceGenerateText,
     StudySpaceGenerateMaterial,
     StudySpaceResponse,
-    StudySpaceDetailResponse
+    StudySpaceDetailResponse,
+    StudySpaceGenerateRequest,
+    StudySpaceApproveRequest,
+    StudySpacePreviewResponse,
+    TopicPreviewItem,
+    StudyPlanPreview,
+    StudyTemplateSummary,
 )
 from app.services.course_generator import course_generator
 from app.services.document_processor import document_processor
+from app.services.template_service import template_service
+from app.services.scheduler import scheduler
+from app.ingestion import ingestion_engine
+from app.ai import ai_service
 from app.api.deps import get_current_user
 
+logger = logging.getLogger("omnidesk.api.study_spaces")
 router = APIRouter()
 
+
+# =========================================================================
+# TEMPLATE ENGINE (Packet 1L)
+# =========================================================================
+
+@router.get("/templates", response_model=List[StudyTemplateSummary])
+def list_curriculum_templates():
+    """
+    List pre-configured, production-grade curriculum templates from the registry.
+    Serves as an offline alternative to generative AI.
+    """
+    return template_service.list_templates()
+
+
+@router.get("/templates/{template_id}", response_model=StudySpacePreviewResponse)
+def get_curriculum_template_preview(
+    template_id: str,
+    time_limit_minutes: Optional[int] = Query(None, ge=15, le=10000),
+    daily_target_minutes: int = Query(60, ge=15, le=480),
+):
+    """
+    Load a pre-configured template and generate a time-aware preview ready for approval.
+    DOES NOT save to the database.
+    """
+    template_data = template_service.get_template(template_id)
+    if not template_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Template '{template_id}' not found in registry."
+        )
+
+    raw_topics = template_data.get("topics", [])
+    topic_items = [
+        TopicPreviewItem(
+            title=t["title"],
+            description=t.get("description", ""),
+            subtopics=t.get("subtopics", []),
+            dependencies=t.get("dependencies", []),
+            estimated_minutes=t.get("estimated_minutes", 60),
+            difficulty=t.get("difficulty", "INTERMEDIATE"),
+            source_reference=t.get("source_reference", f"Template: {template_id}"),
+            confidence_score=1.0,
+            source_type="USER_CREATED"
+        )
+        for t in raw_topics
+    ]
+
+    # Generate time-aware study plan preview
+    plan_dict = scheduler.build_study_plan(
+        topics=[t.model_dump() for t in topic_items],
+        available_time_minutes=time_limit_minutes,
+        daily_target_minutes=daily_target_minutes
+    )
+    study_plan = StudyPlanPreview(**plan_dict)
+
+    return StudySpacePreviewResponse(
+        preview_id=f"preview_template_{template_id}_{uuid.uuid4().hex[:8]}",
+        title=template_data.get("title", template_id.title()),
+        description=template_data.get("description", ""),
+        category=template_data.get("category", "Backend / DevOps"),
+        interface_language=template_data.get("interface_language", "en"),
+        learning_language=template_data.get("learning_language", "en"),
+        source_language=template_data.get("source_language", "en"),
+        provider_used="template_registry",
+        total_estimated_minutes=sum(t.estimated_minutes for t in topic_items),
+        topics=topic_items,
+        study_plan=study_plan,
+        material_id=None,
+        is_preview=True
+    )
+
+
+# =========================================================================
+# GENERATION API (Packet 1H) - Pure Preview, ZERO Database Persistence
+# =========================================================================
+
+@router.post("/generate", response_model=StudySpacePreviewResponse)
+def generate_study_space_preview(
+    payload: StudySpaceGenerateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a complete, structured StudySpace preview (Packet 1H).
+    CRITICAL: Does NOT save to PostgreSQL. Strictly enforces Analyze -> Preview -> Approve -> Persist.
+    
+    Accepts:
+    - Raw syllabus / prompt text or user goal.
+    - Reference to an already uploaded Material ID.
+    - Daily target capacity or overall time limit (e.g. 180 min sprint).
+    """
+    raw_source_text = ""
+    source_title = payload.title or payload.goal or "Curriculum Track"
+    material_record: Optional[Material] = None
+    source_type_tag = "AI_INFERRED"
+
+    # 1. Ingestion routing: Material or Text
+    if payload.material_id:
+        material_record = (
+            db.query(Material)
+            .filter(Material.id == payload.material_id, Material.user_id == current_user.id)
+            .first()
+        )
+        if not material_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Material '{payload.material_id}' not found for current user."
+            )
+        if not material_record.storage_path or not os.path.exists(material_record.storage_path):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Material physical file is not available on disk."
+            )
+
+        parsed_doc = ingestion_engine.parse_source(
+            material_record.storage_path,
+            title=material_record.title or payload.title
+        )
+        raw_source_text = parsed_doc.full_text
+        source_title = material_record.title
+        source_type_tag = "SOURCE_EXTRACTED"
+
+    elif payload.text and payload.text.strip():
+        parsed_doc = ingestion_engine.parse_source(
+            payload.text,
+            title=source_title
+        )
+        raw_source_text = parsed_doc.full_text
+        source_type_tag = "AI_INFERRED"
+
+    elif payload.goal and payload.goal.strip():
+        parsed_doc = ingestion_engine.parse_source(
+            payload.goal,
+            title=source_title
+        )
+        raw_source_text = parsed_doc.full_text
+        source_type_tag = "AI_INFERRED"
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Must provide either 'text', 'goal', or a valid 'material_id'."
+        )
+
+    # 2. AI Abstraction Extraction (Gemini -> Ollama -> Offline Heuristic)
+    try:
+        curriculum = ai_service.analyze_curriculum(
+            text=raw_source_text,
+            title=source_title,
+            preferred_provider=payload.preferred_provider
+        )
+    except Exception as ai_err:
+        logger.warning("AI service failed (%s). Falling back to course generator parser.", ai_err)
+        # Emergency fallback to local parser
+        fallback_topics = course_generator.parse_topics_from_text(raw_source_text)
+        from app.ai.schemas import CurriculumAnalysisResult, TopicAnalysisItem
+        curriculum = CurriculumAnalysisResult(
+            title=source_title,
+            category=payload.category,
+            summary=f"Curriculum extracted from input source ({len(fallback_topics)} topics).",
+            topics=[
+                TopicAnalysisItem(
+                    title=t["title"],
+                    description=t["description"],
+                    subtopics=[],
+                    dependencies=[],
+                    estimated_minutes=60,
+                    difficulty="INTERMEDIATE",
+                    source_reference="Emergency Local Fallback",
+                    confidence_score=0.85
+                )
+                for t in fallback_topics
+            ],
+            total_estimated_minutes=sum(60 for _ in fallback_topics),
+            provider_used="offline_heuristic"
+        )
+
+    # 3. Format topic items for preview
+    topic_items: List[TopicPreviewItem] = []
+    for item in curriculum.topics:
+        topic_items.append(
+            TopicPreviewItem(
+                title=item.title,
+                description=item.description,
+                subtopics=item.subtopics,
+                dependencies=item.dependencies,
+                estimated_minutes=item.estimated_minutes,
+                difficulty=item.difficulty,
+                source_reference=item.source_reference or (f"Document: {material_record.original_filename}" if material_record else "User Goal"),
+                confidence_score=item.confidence_score,
+                source_type=source_type_tag
+            )
+        )
+
+    # 4. Time-Aware Scheduling (Packet 1I)
+    plan_dict = scheduler.build_study_plan(
+        topics=[t.model_dump() for t in topic_items],
+        available_time_minutes=payload.time_limit_minutes,
+        daily_target_minutes=payload.daily_target_minutes
+    )
+    study_plan = StudyPlanPreview(**plan_dict)
+
+    preview_response = StudySpacePreviewResponse(
+        preview_id=f"prev_{uuid.uuid4().hex[:12]}",
+        title=payload.title or curriculum.title,
+        description=curriculum.summary,
+        category=payload.category,
+        interface_language=payload.interface_language,
+        learning_language=payload.learning_language,
+        source_language=payload.source_language,
+        provider_used=curriculum.provider_used,
+        total_estimated_minutes=sum(t.estimated_minutes for t in topic_items),
+        topics=topic_items,
+        study_plan=study_plan,
+        material_id=payload.material_id,
+        is_preview=True
+    )
+
+    # CRITICAL: Do NOT save to DB
+    return preview_response
+
+
+@router.post("/generate-file", response_model=StudySpacePreviewResponse)
+async def generate_study_space_from_file_upload(
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+    time_limit_minutes: Optional[int] = Form(None),
+    daily_target_minutes: int = Form(60),
+    category: str = Form("Backend / DevOps"),
+    interface_language: str = Form("en"),
+    learning_language: str = Form("en"),
+    source_language: str = Form("en"),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Direct file upload to StudySpace Preview.
+    Parses PDF, Markdown, or TXT directly and returns a preview without database changes.
+    """
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty."
+        )
+
+    doc_title = title or os.path.splitext(file.filename or "Document")[0].replace("_", " ").title()
+    parsed_doc = ingestion_engine.parse_source(
+        file_bytes,
+        filename_hint=file.filename,
+        title=doc_title
+    )
+
+    curriculum = ai_service.analyze_curriculum(
+        text=parsed_doc.full_text,
+        title=doc_title
+    )
+
+    topic_items = [
+        TopicPreviewItem(
+            title=item.title,
+            description=item.description,
+            subtopics=item.subtopics,
+            dependencies=item.dependencies,
+            estimated_minutes=item.estimated_minutes,
+            difficulty=item.difficulty,
+            source_reference=f"File: {file.filename}",
+            confidence_score=item.confidence_score,
+            source_type="SOURCE_EXTRACTED"
+        )
+        for item in curriculum.topics
+    ]
+
+    plan_dict = scheduler.build_study_plan(
+        topics=[t.model_dump() for t in topic_items],
+        available_time_minutes=time_limit_minutes,
+        daily_target_minutes=daily_target_minutes
+    )
+    study_plan = StudyPlanPreview(**plan_dict)
+
+    return StudySpacePreviewResponse(
+        preview_id=f"prev_upload_{uuid.uuid4().hex[:12]}",
+        title=curriculum.title,
+        description=curriculum.summary,
+        category=category,
+        interface_language=interface_language,
+        learning_language=learning_language,
+        source_language=source_language,
+        provider_used=curriculum.provider_used,
+        total_estimated_minutes=sum(t.estimated_minutes for t in topic_items),
+        topics=topic_items,
+        study_plan=study_plan,
+        material_id=None,
+        is_preview=True
+    )
+
+
+# =========================================================================
+# APPROVAL API (Packet 1J) - Persist Validated Preview into PostgreSQL
+# =========================================================================
+
+@router.post("/approve", response_model=StudySpaceDetailResponse, status_code=status.HTTP_201_CREATED)
+def approve_and_persist_study_space(
+    payload: StudySpaceApproveRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Approve and persist a previewed StudySpace into PostgreSQL (Packet 1J).
+    Persists:
+    1. StudySpace container.
+    2. Topics with 2D coordinates and provenance tags.
+    3. Competency tasks for each subtopic (anti-fake-progress).
+    4. TopicDependency prerequisite graph edges.
+    5. StudyPlan, StudyWeeks, and StudyDays if requested.
+    """
+    if not payload.topics:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot approve an empty StudySpace with 0 topics."
+        )
+
+    # 1. Create StudySpace
+    space = StudySpace(
+        user_id=current_user.id,
+        title=payload.title,
+        description=payload.description or f"Approved StudySpace with {len(payload.topics)} topics.",
+        category=payload.category,
+        is_active=True,
+        interface_language=payload.interface_language,
+        learning_language=payload.learning_language,
+        source_language=payload.source_language
+    )
+    db.add(space)
+    db.flush()
+
+    # 2. Persist Topics
+    created_topics = {}
+    st_enum = SourceType.SOURCE_EXTRACTED if payload.material_id else SourceType.AI_INFERRED
+
+    for idx, t_in in enumerate(payload.topics):
+        col = idx % 3
+        row = idx // 3
+        pos_x = 100.0 + (col * 320.0)
+        pos_y = 100.0 + (row * 240.0)
+
+        topic_st = SourceType.SOURCE_EXTRACTED if t_in.source_type == "SOURCE_EXTRACTED" else st_enum
+
+        topic = Topic(
+            user_id=current_user.id,
+            study_space_id=space.id,
+            title=t_in.title,
+            description=t_in.description,
+            source_type=topic_st,
+            source_reference=t_in.source_reference,
+            source_material_id=payload.material_id,
+            confidence_score=t_in.confidence_score,
+            status="NORMAL",
+            progress=0,
+            priority=1,
+            difficulty=t_in.difficulty.lower(),
+            estimated_minutes=t_in.estimated_minutes,
+            order=idx + 1,
+            position_x=pos_x,
+            position_y=pos_y
+        )
+        db.add(topic)
+        db.flush()
+        created_topics[t_in.title.strip().lower()] = topic
+
+        # Competency tasks / checkpoints
+        subtopics = t_in.subtopics or [
+            f"Core principles and syntax of {t_in.title}",
+            f"Practical implementation laboratory for {t_in.title}",
+            f"Debugging and architectural tradeoffs in {t_in.title}"
+        ]
+        task_min = max(15, t_in.estimated_minutes // max(1, len(subtopics)))
+        for s_idx, sub in enumerate(subtopics):
+            task = Task(
+                user_id=current_user.id,
+                topic_id=topic.id,
+                title=sub,
+                description=f"Competency milestone for {t_in.title}",
+                estimated_minutes=task_min,
+                is_completed=False,
+                priority=1,
+                source_type=topic_st,
+                confidence_score=t_in.confidence_score
+            )
+            db.add(task)
+
+    # 3. Persist TopicDependency Graph
+    for t_in in payload.topics:
+        dependent_topic = created_topics.get(t_in.title.strip().lower())
+        if not dependent_topic:
+            continue
+
+        for dep_title in (t_in.dependencies or []):
+            prereq_topic = created_topics.get(dep_title.strip().lower())
+            if prereq_topic and prereq_topic.id != dependent_topic.id:
+                dep_edge = TopicDependency(
+                    source_topic_id=prereq_topic.id,
+                    target_topic_id=dependent_topic.id,
+                    dependency_type="PREREQUISITE"
+                )
+                db.add(dep_edge)
+
+    # 4. Persist StudyPlan if requested
+    active_plan_id = None
+    if payload.generate_study_plan:
+        plan_days = payload.study_plan.estimated_days if payload.study_plan else max(1, len(payload.topics))
+        plan = StudyPlan(
+            study_space_id=space.id,
+            title=f"Mastery Plan: {space.title}",
+            description="Approved structured study trajectory.",
+            total_days=plan_days,
+            is_active=True
+        )
+        db.add(plan)
+        db.flush()
+        active_plan_id = plan.id
+
+        # Populate weeks and days from study plan preview
+        if payload.study_plan and payload.study_plan.sessions:
+            weeks_cache = {}
+            for sess in payload.study_plan.sessions:
+                w_num = sess.week_number
+                if w_num not in weeks_cache:
+                    week = StudyWeek(
+                        study_plan_id=plan.id,
+                        week_number=w_num,
+                        theme_title=f"Week {w_num} Focus Sprint"
+                    )
+                    db.add(week)
+                    db.flush()
+                    weeks_cache[w_num] = week
+
+                # Create study day
+                d_num = sess.day_number
+                day = StudyDay(
+                    study_week_id=weeks_cache[w_num].id,
+                    day_number=d_num,
+                    title=sess.title,
+                    focus_goal=f"Complete session: {sess.title} ({sess.planned_minutes} min)",
+                    is_completed=False
+                )
+                db.add(day)
+
+    db.commit()
+    db.refresh(space)
+
+    return StudySpaceDetailResponse(
+        id=space.id,
+        user_id=space.user_id,
+        title=space.title,
+        description=space.description,
+        category=space.category,
+        is_active=space.is_active,
+        is_archived=space.is_archived,
+        created_at=space.created_at,
+        updated_at=space.updated_at,
+        interface_language=space.interface_language or "en",
+        learning_language=space.learning_language or "en",
+        source_language=space.source_language or "en",
+        topic_count=len(payload.topics),
+        completed_topic_count=0,
+        active_plan_id=active_plan_id
+    )
+
+
+# =========================================================================
+# STANDARD CRUD & LEGACY GENERATION ENDPOINTS
+# =========================================================================
 
 @router.get("", response_model=List[StudySpaceDetailResponse])
 def list_study_spaces(
@@ -96,8 +584,7 @@ def generate_study_space_from_text(
     db: Session = Depends(get_db)
 ):
     """
-    Universal Course Generator: Parse raw topic text or prompt and generate a complete StudySpace
-    with DAG dependencies, React Flow 2D coordinates, and competency verification gates.
+    Legacy instant generation endpoint.
     """
     parsed_topics = course_generator.parse_topics_from_text(payload.text)
     if not parsed_topics:
@@ -125,9 +612,7 @@ def generate_study_space_from_material(
     db: Session = Depends(get_db)
 ):
     """
-    Course Generator from Uploaded PDF / Document:
-    Extracts text page-by-page, discovers topics with source page grounding,
-    and builds an interactive StudySpace with DAG dependencies and competency gates.
+    Legacy document generation endpoint.
     """
     material = (
         db.query(Material)
@@ -146,7 +631,6 @@ def generate_study_space_from_material(
             detail="Material does not have a physical storage file to process."
         )
 
-    # Extract text with page-level grounding
     extraction = document_processor.extract_text(material.storage_path, material.file_type)
     pages = extraction.get("pages", [])
 
