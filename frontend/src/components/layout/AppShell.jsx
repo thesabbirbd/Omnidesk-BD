@@ -19,8 +19,14 @@ export default function AppShell() {
         <TopBar 
           onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} 
         />
+        
+        {/* Main Viewport Container */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-panel)] via-[var(--bg-canvas)] to-[#04070a] -z-10" />
+          {/* Ambient Lighting Orbs for True Glassmorphism Translucency */}
+          <div className="absolute top-12 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+          <div className="absolute bottom-16 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-panel)] via-[var(--bg-canvas)] to-transparent -z-20 opacity-80" />
+          
           <Outlet />
         </main>
       </div>
