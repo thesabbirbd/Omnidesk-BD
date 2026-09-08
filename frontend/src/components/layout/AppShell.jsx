@@ -32,12 +32,13 @@ export default function AppShell() {
             <div className="absolute top-1/4 -left-20 w-[400px] h-[400px] bg-pink-500/15 dark:bg-rose-500/10 rounded-full blur-[100px]" />
 
             {/* Glossy 3D Spheres & Shapes from Reference Image */}
-            <div className="absolute top-24 right-1/3 w-16 h-16 rounded-full orb-3d-blue animate-float-slow opacity-90 hidden sm:block" />
-            <div className="absolute top-1/3 left-1/5 w-20 h-20 rounded-full orb-3d-pink animate-float-reverse opacity-85 hidden md:block" />
-            <div className="absolute bottom-28 right-16 w-24 h-24 rounded-full orb-3d-blue animate-float-slow opacity-95 hidden lg:block" />
-            <div className="absolute top-2/3 right-1/4 torus-3d-purple animate-float-reverse opacity-80 hidden lg:block" />
-            <div className="absolute bottom-1/4 left-1/4 w-12 h-12 rounded-full orb-3d-cyan animate-float-slow opacity-85 hidden md:block" />
-            <div className="absolute top-12 left-1/3 w-8 h-8 rounded-full orb-3d-blue animate-float-reverse opacity-80" />
+            <div className="absolute top-20 left-1/3 w-28 h-28 rounded-full orb-3d-blue animate-float-slow opacity-90 hidden sm:block" />
+            <div className="absolute top-1/4 right-1/4 w-32 h-32 rounded-full orb-3d-pink animate-float-reverse opacity-85 hidden md:block" />
+            <div className="absolute top-1/2 left-1/6 w-20 h-20 cube-3d-blue animate-float-slow opacity-90 hidden lg:block" />
+            <div className="absolute top-2/3 right-1/3 w-24 h-24 cube-3d-pink animate-float-reverse opacity-90 hidden md:block" />
+            <div className="absolute bottom-24 right-1/4 torus-3d-purple animate-float-slow opacity-85 hidden lg:block" />
+            <div className="absolute bottom-1/3 left-1/3 w-16 h-16 rounded-full orb-3d-cyan animate-float-reverse opacity-90 hidden md:block" />
+            <div className="absolute top-10 right-1/5 w-12 h-12 rounded-full orb-3d-blue animate-float-slow opacity-85" />
           </div>
           
           <Outlet />
