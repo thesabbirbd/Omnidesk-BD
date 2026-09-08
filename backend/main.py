@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.auth import router as auth_router
+from app.api.sessions import router as sessions_router
+from app.api.tasks import router as tasks_router
+from app.api.projects import router as projects_router
 from app.api import api_router
 
 app = FastAPI(
@@ -21,9 +24,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include Auth router directly at /auth and also under /api/auth
-app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+# Primary API Router (/api/auth, /api/sessions, /api/tasks, /api/projects)
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Top-level direct routers for flexible access (/auth, /sessions, /tasks, /projects)
+app.include_router(auth_router, prefix="/auth", tags=["Auth Direct"])
+app.include_router(sessions_router, prefix="/sessions", tags=["Study Sessions Direct"])
+app.include_router(tasks_router, prefix="/tasks", tags=["Tasks Direct"])
+app.include_router(projects_router, prefix="/projects", tags=["Projects Direct"])
 
 
 @app.get("/health", tags=["Health"])

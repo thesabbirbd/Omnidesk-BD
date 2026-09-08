@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import String, Text, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.study_space import StudySpace
+    from app.models.task import Task
+    from app.models.study_session import StudySession
 
 
 class Topic(Base):
@@ -39,6 +41,15 @@ class Topic(Base):
 
     # Relationships
     study_space: Mapped["StudySpace"] = relationship("StudySpace", back_populates="topics")
+    tasks: Mapped[List["Task"]] = relationship(
+        "Task",
+        back_populates="topic",
+        cascade="all, delete-orphan"
+    )
+    sessions: Mapped[List["StudySession"]] = relationship(
+        "StudySession",
+        back_populates="topic"
+    )
 
     def __repr__(self) -> str:
         return f"<Topic(id={self.id}, title='{self.title}', status={self.status}, space_id={self.study_space_id})>"
