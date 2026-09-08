@@ -107,7 +107,7 @@ export function TimerProvider({ children }) {
       // ignore
     }
     return [
-      { id: 'notif-1', type: 'info', title: 'Welcome to StudyOS', message: 'Your personal AI Engineering OS is ready.', timestamp: Date.now() - 100000, read: true },
+      { id: 'notif-1', type: 'info', title: 'Welcome to Omnidesk BD', message: 'Your personal AI Engineering OS is ready.', timestamp: Date.now() - 100000, read: true },
     ];
   });
 
@@ -189,7 +189,7 @@ export function TimerProvider({ children }) {
       message: `Great job! Session complete: "${sessionRecord.topic}" (${sessionRecord.durationMinutes}m)`,
     });
 
-    sendBrowserPush('StudyOS • Session Completed 🎉', `Completed ${sessionRecord.durationMinutes}m focus on "${sessionRecord.topic}". Take a break!`);
+    sendBrowserPush('Omnidesk BD • Session Completed 🎉', `Completed ${sessionRecord.durationMinutes}m focus on "${sessionRecord.topic}". Take a break!`);
 
     setState((prev) => {
       const modeConfig = DEFAULT_MODES[prev.mode] || DEFAULT_MODES.pomodoro;
@@ -267,7 +267,7 @@ export function TimerProvider({ children }) {
             message: 'Camera: No face detected. Timer paused to protect study accuracy.',
           });
 
-          sendBrowserPush('StudyOS • Presence Alert ⚠️', 'No face detected in study frame. Timer paused to protect study accuracy.');
+          sendBrowserPush('Omnidesk BD • Presence Alert ⚠️', 'No face detected in study frame. Timer paused to protect study accuracy.');
         }
       }, (state.presenceIntervalSecs || 5) * 1000);
     } else {
@@ -312,7 +312,7 @@ export function TimerProvider({ children }) {
       message: `Focus Timer Started: "${topic}" (${minutes}m ${modeConfig.label})`,
     });
 
-    sendBrowserPush('StudyOS • Focus Started ⏱️', `Timer started for "${topic}" (${minutes}m).`);
+    sendBrowserPush('Omnidesk BD • Focus Started ⏱️', `Timer started for "${topic}" (${minutes}m).`);
   }, [state.mode, state.activeTopic, state.durationMinutes, triggerNotification]);
 
   const pauseTimer = useCallback(() => {
@@ -392,7 +392,7 @@ export function TimerProvider({ children }) {
           message: `Session saved: "${sessionRecord.topic}" (${elapsedMinutes}m focused)`,
         });
 
-        sendBrowserPush('StudyOS • Session Saved', `Saved ${elapsedMinutes}m focused on "${sessionRecord.topic}".`);
+        sendBrowserPush('Omnidesk BD • Session Saved', `Saved ${elapsedMinutes}m focused on "${sessionRecord.topic}".`);
       } else {
         triggerNotification({
           type: 'info',

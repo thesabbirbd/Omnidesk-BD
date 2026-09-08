@@ -1,9 +1,11 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
-from sqlalchemy import String, Text, Boolean, Integer, ForeignKey, DateTime, Uuid
+import sqlalchemy as sa
+from sqlalchemy import String, Text, Boolean, Integer, Float, ForeignKey, DateTime, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
+from app.models.topic import SourceType
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -41,6 +43,17 @@ class Task(Base):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Data Provenance Metadata (Packet 1D)
+    source_type: Mapped[SourceType] = mapped_column(
+        sa.Enum(SourceType, name="source_type_enum"),
+        default=SourceType.USER_CREATED,
+        nullable=False,
+        index=True
+    )
+    source_reference: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    confidence_score: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     priority: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

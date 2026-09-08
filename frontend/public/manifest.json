@@ -1,6 +1,6 @@
 {
-  "name": "StudyOS — Universal Autonomous Study OS",
-  "short_name": "StudyOS",
+  "name": "Omnidesk BD — Universal Autonomous Study OS",
+  "short_name": "Omnidesk BD",
   "version": "1.2.4",
   "description": "Production-grade autonomous study workspace for engineers with focus timers, mind maps, and DevOps lab terminals.",
   "start_url": "/",

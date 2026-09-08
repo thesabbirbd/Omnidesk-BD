@@ -1,11 +1,14 @@
+import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class SessionStart(BaseModel):
-    topic_id: Optional[int] = None
+    topic_id: Optional[Union[uuid.UUID, str]] = None
+    study_space_id: Optional[Union[uuid.UUID, str]] = None
     mode: str = Field(default="pomodoro", description="Timer mode: pomodoro, focus, break, etc.")
+    planned_duration_minutes: int = 25
 
 
 class SessionStop(BaseModel):
@@ -13,8 +16,10 @@ class SessionStop(BaseModel):
 
 
 class SessionResponse(BaseModel):
-    id: int
-    topic_id: Optional[int] = None
+    id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None
+    topic_id: Optional[uuid.UUID] = None
+    study_space_id: Optional[uuid.UUID] = None
     start_time: datetime
     end_time: Optional[datetime] = None
     duration_minutes: int

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.user_settings import UserSettings
     from app.models.study_space import StudySpace
     from app.models.task import Task
+    from app.models.topic import Topic
     from app.models.study_session import StudySession
     from app.models.project import Project, DebugJournal
     from app.models.note import Note
@@ -62,6 +63,11 @@ class User(Base):
     # Scoped resources
     study_spaces: Mapped[List["StudySpace"]] = relationship(
         "StudySpace",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    topics: Mapped[List["Topic"]] = relationship(
+        "Topic",
         back_populates="user",
         cascade="all, delete-orphan"
     )

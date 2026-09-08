@@ -2,7 +2,7 @@ from app.models.user import User
 from app.models.user_profile import UserProfile
 from app.models.user_settings import UserSettings
 from app.models.study_space import StudySpace
-from app.models.topic import Topic
+from app.models.topic import Topic, SourceType
 from app.models.dependency import TopicDependency
 from app.models.competency import CompetencyItem
 from app.models.study_plan import StudyPlan, StudyWeek, StudyDay
@@ -21,6 +21,7 @@ __all__ = [
     "UserSettings",
     "StudySpace",
     "Topic",
+    "SourceType",
     "TopicDependency",
     "CompetencyItem",
     "StudyPlan",

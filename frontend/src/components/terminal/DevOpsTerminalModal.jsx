@@ -110,7 +110,7 @@ export default function DevOpsTerminalModal() {
 
     ws.onerror = () => {
       setConnectionStatus('disconnected');
-      term.write('\r\n\033[31m[WebSocket Connection Error: Check if StudyOS backend is running.]\033[0m\r\n');
+      term.write('\r\n\033[31m[WebSocket Connection Error: Check if Omnidesk BD backend is running.]\033[0m\r\n');
     };
 
     ws.onclose = () => {

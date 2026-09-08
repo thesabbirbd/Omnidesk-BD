@@ -1,11 +1,11 @@
 // ==============================================================================
-// StudyOS Offline State Queue & IndexedDB Synchronization Service (v1.3.1)
+// Omnidesk BD Offline State Queue & IndexedDB Synchronization Service (v1.2.4)
 // Guaranteed Data Integrity for Tasks, Timer Sessions, & Topic Progressions
 // ==============================================================================
 
 import axios from 'axios';
 
-const DB_NAME = 'StudyOS_Offline_DB';
+const DB_NAME = 'OmnideskBD_Offline_DB';
 const DB_VERSION = 1;
 const STORE_NAME = 'sync_queue';
 

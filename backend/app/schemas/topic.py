@@ -37,9 +37,16 @@ class TopicBase(BaseModel):
     position_x: float = 0.0
     position_y: float = 0.0
 
+    # Data Provenance
+    source_type: str = "USER_CREATED"
+    source_reference: Optional[str] = None
+    source_material_id: Optional[uuid.UUID] = None
+    confidence_score: float = 1.0
+
 
 class TopicCreate(TopicBase):
     study_space_id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None
 
 
 class TopicUpdate(BaseModel):
@@ -70,6 +77,7 @@ class TopicStatusUpdateResponse(BaseModel):
 
 class TopicResponse(TopicBase):
     id: uuid.UUID
+    user_id: uuid.UUID
     study_space_id: uuid.UUID
     created_at: datetime
     updated_at: datetime

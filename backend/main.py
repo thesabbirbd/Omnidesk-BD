@@ -22,6 +22,7 @@ from app.api.knowledge_graph import router as knowledge_graph_router
 from app.api.sync import router as sync_router
 from app.api.analytics import router as analytics_router
 from app.api.lab import router as lab_router, lab_terminal_websocket
+from app.core.auth_middleware import UserIsolationMiddleware
 from app.api import api_router
 
 # Configure root and structured logging
@@ -47,6 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Enforce strict cross-user tenancy and isolation boundaries
+app.add_middleware(UserIsolationMiddleware)
 
 
 # Structured JSON HTTP Request Logging Middleware
@@ -92,6 +96,7 @@ async def structured_logging_middleware(request: Request, call_next):
 
 # Primary API Router (/api/auth, /api/users, /api/study-spaces, /api/topics, /api/sync, /api/analytics, etc.)
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router, prefix="/api/v1")
 
 # Top-level direct routers for flexible access and backwards compatibility
 app.include_router(auth_router, prefix="/auth", tags=["Auth Direct"])

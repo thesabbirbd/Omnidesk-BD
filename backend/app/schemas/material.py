@@ -8,6 +8,7 @@ class MaterialBase(BaseModel):
     title: str
     file_type: str = "PDF"
     url: Optional[str] = None
+    source_language: str = "en"
 
 
 class MaterialResponse(MaterialBase):

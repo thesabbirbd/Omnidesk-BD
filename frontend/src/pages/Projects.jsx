@@ -21,11 +21,11 @@ const LIFECYCLE_STAGES = ['Idea', 'Architecture', 'In Progress', 'Code Complete'
 const initialProjects = [
   {
     id: 1,
-    name: "Universal Study OS Core",
+    name: "Omnidesk BD Core",
     description: "Multi-theme engineering workspace with real-time face presence, graph knowledge maps, and global timer engine.",
     stage: "In Progress",
     progress: 75,
-    githubUrl: "https://github.com/thesabbirbd/universal-study-os",
+    githubUrl: "https://github.com/thesabbirbd/Omnidesk-BD",
     tags: ["React 18", "FastAPI", "TailwindCSS", "PostgreSQL"],
     milestones: [
       { name: "Idea", status: "complete" },
@@ -41,7 +41,7 @@ const initialProjects = [
     description: "High-throughput Redis queue orchestrator with automatic exponential retries, dead-letter exchanges, and prometheus telemetry.",
     stage: "Architecture",
     progress: 35,
-    githubUrl: "https://github.com/thesabbirbd/universal-study-os",
+    githubUrl: "https://github.com/thesabbirbd/Omnidesk-BD",
     tags: ["Python 3.12", "Redis", "Celery", "Docker"],
     milestones: [
       { name: "Idea", status: "complete" },
@@ -57,7 +57,7 @@ const initialProjects = [
     description: "Stateless RS256 JWT key rotator with Argon2 hashing and rate-limiting middleware.",
     stage: "Deployed",
     progress: 100,
-    githubUrl: "https://github.com/thesabbirbd/universal-study-os",
+    githubUrl: "https://github.com/thesabbirbd/Omnidesk-BD",
     tags: ["FastAPI", "OAuth2", "PyJWT", "Argon2"],
     milestones: [
       { name: "Idea", status: "complete" },

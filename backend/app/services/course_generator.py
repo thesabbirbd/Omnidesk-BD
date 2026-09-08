@@ -3,7 +3,7 @@ import uuid
 from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from app.models.study_space import StudySpace
-from app.models.topic import Topic
+from app.models.topic import Topic, SourceType
 from app.models.dependency import TopicDependency
 from app.models.competency import CompetencyItem
 from app.models.study_plan import StudyPlan, StudyWeek, StudyDay
@@ -52,6 +52,14 @@ class CourseGenerator:
         Parse structured topics from plain text, roadmap descriptions, or lists.
         """
         raw_lines = [line.strip() for line in text.split("\n") if line.strip()]
+        if len(raw_lines) == 1:
+            if re.search(r"\d+\.\s+", raw_lines[0]):
+                split_items = [p.strip() for p in re.split(r"(?<=[.!?\w])\s+(?=\d+\.\s+)", raw_lines[0]) if p.strip()]
+                if len(split_items) > 1:
+                    raw_lines = split_items
+            elif ";" in raw_lines[0]:
+                raw_lines = [p.strip() for p in raw_lines[0].split(";") if p.strip()]
+
         topic_entries: List[Dict[str, Any]] = []
 
         # Case 1: Comma-separated or short bullet list
@@ -217,7 +225,15 @@ class CourseGenerator:
                 if not any(e[0] == cur.id and e[1] == nxt.id for e in edges):
                     edges.append((cur.id, nxt.id, "RECOMMENDED"))
 
-        return edges
+        # Deduplicate edges by (source, target)
+        unique_edges = []
+        seen_pairs = set()
+        for src, tgt, dtype in edges:
+            if src != tgt and (src, tgt) not in seen_pairs:
+                seen_pairs.add((src, tgt))
+                unique_edges.append((src, tgt, dtype))
+
+        return unique_edges
 
     def generate_study_space(
         self,
@@ -227,12 +243,15 @@ class CourseGenerator:
         description: Optional[str] = None,
         category: str = "Backend / DevOps",
         raw_topics: Optional[List[Dict[str, Any]]] = None,
-        material: Optional[Material] = None
+        material: Optional[Material] = None,
+        interface_language: str = "en",
+        learning_language: str = "en",
+        source_language: str = "en"
     ) -> StudySpace:
         """
         Execute end-to-end generation of a complete StudySpace with:
-        - StudySpace entity
-        - Topics with 2D React Flow positions
+        - StudySpace entity (top-level container with multilingual support)
+        - Topics with 2D React Flow positions, user_id, and provenance metadata
         - TopicDependencies (DAG)
         - CompetencyItems (anti-fake-progress criteria)
         - 100-Day StudyPlan with weeks & days
@@ -244,7 +263,10 @@ class CourseGenerator:
             title=title,
             description=description or f"Adaptive learning workspace for {title}",
             category=category,
-            is_active=True
+            is_active=True,
+            interface_language=interface_language,
+            learning_language=learning_language,
+            source_language=source_language
         )
         db.add(space)
         db.flush()
@@ -267,7 +289,7 @@ class CourseGenerator:
         for idx, t_data in enumerate(topic_data_list):
             pos_x, pos_y = coords[idx] if idx < len(coords) else (150.0 + (idx * 50), 200.0 + (idx * 50))
             
-            origin_tag = t_data.get("origin", "SOURCE_CONFIRMED" if material else "USER_CREATED")
+            origin_tag = t_data.get("origin", "SOURCE_EXTRACTED" if material else "USER_CREATED")
             source_ref = t_data.get("source_reference")
             if not source_ref and material:
                 source_ref = f"{material.original_filename}"
@@ -276,10 +298,26 @@ class CourseGenerator:
             if source_ref:
                 topic_desc += f" (Source: {source_ref} [{origin_tag}])"
 
+            # Determine provenance source type and confidence score
+            if material:
+                st = SourceType.SOURCE_EXTRACTED
+                conf = 0.95
+            elif raw_topics:
+                st = SourceType.AI_INFERRED
+                conf = 0.88
+            else:
+                st = SourceType.USER_CREATED
+                conf = 1.0
+
             topic = Topic(
+                user_id=user_id,
                 study_space_id=space.id,
                 title=t_data["title"],
                 description=topic_desc,
+                source_type=st,
+                source_reference=source_ref,
+                source_material_id=material.id if material else None,
+                confidence_score=conf,
                 status="NORMAL" if idx > 0 else "LEARNING",
                 progress=0,
                 priority=1 if idx < 3 else 2,
@@ -315,13 +353,16 @@ class CourseGenerator:
 
         # 4. Generate Dependencies (DAG)
         deps = self.infer_dependencies(created_topics)
+        seen_edges = set()
         for src_id, tgt_id, dep_type in deps:
-            dep = TopicDependency(
-                source_topic_id=src_id,
-                target_topic_id=tgt_id,
-                dependency_type=dep_type
-            )
-            db.add(dep)
+            if src_id != tgt_id and (src_id, tgt_id) not in seen_edges:
+                seen_edges.add((src_id, tgt_id))
+                dep = TopicDependency(
+                    source_topic_id=src_id,
+                    target_topic_id=tgt_id,
+                    dependency_type=dep_type
+                )
+                db.add(dep)
 
         # 5. Create Default 100-Day StudyPlan
         plan = StudyPlan(

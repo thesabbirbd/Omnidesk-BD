@@ -8,6 +8,9 @@ class StudySpaceBase(BaseModel):
     title: str
     description: Optional[str] = None
     category: str = "Backend / DevOps"
+    interface_language: str = "en"
+    learning_language: str = "en"
+    source_language: str = "en"
 
 
 class StudySpaceCreate(StudySpaceBase):

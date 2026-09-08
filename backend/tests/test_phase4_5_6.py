@@ -183,7 +183,7 @@ def test_phases_4_5_6_suite():
     with client.websocket_connect("/api/v1/lab/ws") as websocket:
         # Receive welcome banner
         banner = websocket.receive_text()
-        assert "StudyOS v1.2.4" in banner
+        assert "Omnidesk BD v1.2.4" in banner
         assert "DevOps Lab Shell" in banner
 
         # Send resize geometry

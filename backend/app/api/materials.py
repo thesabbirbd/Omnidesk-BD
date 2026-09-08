@@ -19,6 +19,7 @@ async def upload_material(
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
     study_space_id: Optional[uuid.UUID] = Form(None),
+    source_language: Optional[str] = Form("en"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -86,7 +87,8 @@ async def upload_material(
         page_count=page_count,
         processing_status=processing_status,
         processing_error=processing_error,
-        extracted_text=extracted_text
+        extracted_text=extracted_text,
+        source_language=source_language or "en"
     )
     db.add(material)
     db.commit()

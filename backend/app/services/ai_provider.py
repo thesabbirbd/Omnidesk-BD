@@ -52,7 +52,7 @@ class LocalOfflineAIProvider(AIProvider):
                 "pydantic schemas for serialization boundaries, and async engines for I/O bound operations."
             )
         return (
-            "StudyOS Offline Advisor: Break this engineering challenge down into: "
+            "Omnidesk BD Offline Advisor: Break this engineering challenge down into: "
             "1) Core invariant, 2) Isolated reproduction test, 3) Verified fix."
         )
 

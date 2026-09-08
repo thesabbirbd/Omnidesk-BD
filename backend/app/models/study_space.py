@@ -38,6 +38,11 @@ class StudySpace(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # Multilingual Architecture
+    interface_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+    learning_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+    source_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

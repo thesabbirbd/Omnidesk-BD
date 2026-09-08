@@ -64,7 +64,7 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
         setBrowserPermission(permission);
         if (permission === 'granted') {
           setPrefs((prev) => ({ ...prev, browserPush: true }));
-          sendBrowserPush('StudyOS • Notifications Enabled 🎉', 'Desktop push notifications are now active on your operating system!');
+          sendBrowserPush('Omnidesk BD • Notifications Enabled 🎉', 'Desktop push notifications are now active on your operating system!');
         } else {
           setPrefs((prev) => ({ ...prev, browserPush: false }));
         }
@@ -79,7 +79,7 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
   };
 
   const handleSendTestPush = () => {
-    sendBrowserPush('StudyOS Test Notification', 'Desktop push alerts are functioning smoothly on your device!');
+    sendBrowserPush('Omnidesk BD Test Notification', 'Desktop push alerts are functioning smoothly on your device!');
   };
 
   const formatRelativeTime = (timestamp) => {
@@ -262,7 +262,7 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-xs font-bold text-[color:var(--text-main)] truncate">
-                      {item.title || 'StudyOS Update'}
+                      {item.title || 'Omnidesk BD Update'}
                     </span>
                     <span className="text-[9px] font-mono text-[color:var(--text-muted)] shrink-0">
                       {formatRelativeTime(item.timestamp)}

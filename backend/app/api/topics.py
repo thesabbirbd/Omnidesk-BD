@@ -31,11 +31,7 @@ def list_topics(
     """
     List topics for the current user, optionally filtered by StudySpace.
     """
-    query = (
-        db.query(Topic)
-        .join(StudySpace, Topic.study_space_id == StudySpace.id)
-        .filter(StudySpace.user_id == current_user.id)
-    )
+    query = db.query(Topic).filter(Topic.user_id == current_user.id)
     if study_space_id:
         query = query.filter(Topic.study_space_id == study_space_id)
 
@@ -62,7 +58,9 @@ def create_topic(
             detail="Target StudySpace not found or unauthorized."
         )
 
-    topic = Topic(**topic_in.model_dump())
+    topic_data = topic_in.model_dump()
+    topic_data["user_id"] = current_user.id
+    topic = Topic(**topic_data)
     db.add(topic)
     db.commit()
     db.refresh(topic)
@@ -80,8 +78,7 @@ def get_topic(
     """
     topic = (
         db.query(Topic)
-        .join(StudySpace, Topic.study_space_id == StudySpace.id)
-        .filter(Topic.id == topic_id, StudySpace.user_id == current_user.id)
+        .filter(Topic.id == topic_id, Topic.user_id == current_user.id)
         .first()
     )
     if not topic:
@@ -102,8 +99,7 @@ def update_topic(
     """
     topic = (
         db.query(Topic)
-        .join(StudySpace, Topic.study_space_id == StudySpace.id)
-        .filter(Topic.id == topic_id, StudySpace.user_id == current_user.id)
+        .filter(Topic.id == topic_id, Topic.user_id == current_user.id)
         .first()
     )
     if not topic:
@@ -141,8 +137,7 @@ def update_topic_status(
 
     topic = (
         db.query(Topic)
-        .join(StudySpace, Topic.study_space_id == StudySpace.id)
-        .filter(Topic.id == topic_id, StudySpace.user_id == current_user.id)
+        .filter(Topic.id == topic_id, Topic.user_id == current_user.id)
         .first()
     )
     if not topic:
@@ -197,8 +192,7 @@ def toggle_competency_item(
     """
     topic = (
         db.query(Topic)
-        .join(StudySpace, Topic.study_space_id == StudySpace.id)
-        .filter(Topic.id == topic_id, StudySpace.user_id == current_user.id)
+        .filter(Topic.id == topic_id, Topic.user_id == current_user.id)
         .first()
     )
     if not topic:
@@ -236,8 +230,7 @@ def delete_topic(
     """
     topic = (
         db.query(Topic)
-        .join(StudySpace, Topic.study_space_id == StudySpace.id)
-        .filter(Topic.id == topic_id, StudySpace.user_id == current_user.id)
+        .filter(Topic.id == topic_id, Topic.user_id == current_user.id)
         .first()
     )
     if not topic:

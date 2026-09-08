@@ -1,9 +1,9 @@
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "StudyOS API"
+    PROJECT_NAME: str = "Omnidesk BD API"
     VERSION: str = "1.2.4"
     API_V1_STR: str = "/api"
 
@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = "none"
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "llama3"
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-1.5-flash"
 
     # CORS configuration
     BACKEND_CORS_ORIGINS: List[str] = ["*"]

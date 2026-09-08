@@ -60,7 +60,7 @@ export default function Settings() {
     setTimerMode(modeKey, mins);
   };
 
-  // Export JSON backup of all StudyOS local storage
+  // Export JSON backup of all Omnidesk BD local storage
   const handleExportBackup = () => {
     try {
       const backupData = {
@@ -126,7 +126,7 @@ export default function Settings() {
   };
 
   const handleFactoryReset = () => {
-    if (window.confirm('Are you sure you want to reset StudyOS? All local data and history will be cleared.')) {
+    if (window.confirm('Are you sure you want to reset Omnidesk BD? All local data and history will be cleared.')) {
       localStorage.clear();
       window.location.reload();
     }

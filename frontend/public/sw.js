@@ -1,9 +1,9 @@
 // ==============================================================================
-// StudyOS Service Worker (v1.3.1)
+// Omnidesk BD Service Worker (v1.2.4)
 // App Shell Pre-caching, Stale-While-Revalidate & Offline Navigation Fallback
 // ==============================================================================
 
-const CACHE_NAME = 'studyos-shell-v1.3.1';
+const CACHE_NAME = 'omnidesk-bd-shell-v1.2.4';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -62,7 +62,7 @@ self.addEventListener('fetch', (event) => {
             return new Response(
               JSON.stringify({
                 offline: true,
-                message: 'StudyOS is currently running offline. Changes queued in IndexedDB.'
+                message: 'Omnidesk BD is currently running offline. Changes queued in IndexedDB.'
               }),
               {
                 status: 503,

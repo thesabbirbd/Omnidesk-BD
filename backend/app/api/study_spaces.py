@@ -53,6 +53,9 @@ def list_study_spaces(
                 is_archived=s.is_archived,
                 created_at=s.created_at,
                 updated_at=s.updated_at,
+                interface_language=s.interface_language or "en",
+                learning_language=s.learning_language or "en",
+                source_language=s.source_language or "en",
                 topic_count=t_count,
                 completed_topic_count=completed_count,
                 active_plan_id=active_plan
@@ -75,7 +78,10 @@ def create_manual_study_space(
         title=space_in.title,
         description=space_in.description,
         category=space_in.category,
-        is_active=True
+        is_active=True,
+        interface_language=space_in.interface_language,
+        learning_language=space_in.learning_language,
+        source_language=space_in.source_language
     )
     db.add(space)
     db.commit()
@@ -203,6 +209,9 @@ def get_study_space(
         is_archived=space.is_archived,
         created_at=space.created_at,
         updated_at=space.updated_at,
+        interface_language=space.interface_language or "en",
+        learning_language=space.learning_language or "en",
+        source_language=space.source_language or "en",
         topic_count=t_count,
         completed_topic_count=completed_count,
         active_plan_id=active_plan

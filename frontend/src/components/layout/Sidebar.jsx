@@ -64,7 +64,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 uppercase leading-none">
-                StudyOS
+                Omnidesk BD
               </span>
               <span className="text-[11px] font-bold text-[color:var(--text-muted)] tracking-wider mt-1">
                 Learn • Build • Grow

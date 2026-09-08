@@ -39,6 +39,7 @@ class Material(Base):
     file_type: Mapped[str] = mapped_column(String(50), default="PDF", nullable=False)  # PDF, DOCX, TXT, MARKDOWN, VIDEO, URL, IMAGE
     storage_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    source_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
     file_size_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     checksum_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)

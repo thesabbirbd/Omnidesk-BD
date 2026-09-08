@@ -133,7 +133,7 @@ export default function DashboardAiQuickLinksWidget() {
           </a>
 
           <a
-            href="https://github.com/thesabbirbd/universal-study-os"
+            href="https://github.com/thesabbirbd/Omnidesk-BD"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 p-2.5 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-bold text-[color:var(--text-main)] hover:text-cyan-400 hover:border-cyan-500/30 transition-all group shadow-[inset_1px_1px_3px_var(--shadow-dark)]"

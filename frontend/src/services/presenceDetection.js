@@ -1,5 +1,5 @@
 /**
- * StudyOS Camera Presence Detection Service (Snapshot-Based)
+ * Omnidesk BD Camera Presence Detection Service (Snapshot-Based)
  * 
  * Runs 100% locally in the browser using FaceDetector or optical heuristics.
  * 

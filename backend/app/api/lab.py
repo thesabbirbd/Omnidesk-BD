@@ -34,7 +34,7 @@ async def lab_terminal_websocket(websocket: WebSocket):
     env["TERM"] = "xterm-256color"
     env["COLORTERM"] = "truecolor"
     env["LANG"] = "en_US.UTF-8"
-    env["PS1"] = "\033[01;36mStudyOS-Lab\033[00m:\033[01;34m\\w\033[00m$ "
+    env["PS1"] = "\033[01;36mOmnidesk-Lab\033[00m:\033[01;34m\\w\033[00m$ "
 
     # Set default terminal size (80 cols, 24 rows)
     winsize = struct.pack("HHHH", 24, 80, 0, 0)
@@ -62,7 +62,7 @@ async def lab_terminal_websocket(websocket: WebSocket):
     # Send initial welcome banner to client
     welcome_banner = (
         "\r\n\033[1;36m=====================================================\033[0m\r\n"
-        f"\033[1;32m  StudyOS v{settings.VERSION} — Autonomous DevOps Lab Shell\033[0m\r\n"
+        f"\033[1;32m  Omnidesk BD v{settings.VERSION} — Autonomous DevOps Lab Shell\033[0m\r\n"
         "\033[0;37m  Connected to sandboxed host environment.\033[0m\r\n"
         "\033[1;36m=====================================================\033[0m\r\n\r\n"
     )
