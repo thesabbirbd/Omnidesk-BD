@@ -60,9 +60,9 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         <div className="pt-6 pb-5 px-6 flex items-center justify-between border-b border-[var(--border-color)]">
           <div className="flex items-center gap-3.5">
             <img 
-              src="/omnidesk-logo.png" 
+              src="/omnidesk-mark.png" 
               alt="Omnidesk BD" 
-              className="w-11 h-11 rounded-2xl object-cover shadow-[0_0_12px_rgba(34,211,238,0.4)] shrink-0 border border-cyan-500/20" 
+              className="w-11 h-11 rounded-2xl object-contain shadow-[0_0_15px_rgba(0,240,255,0.35)] shrink-0 border border-cyan-500/20 bg-slate-950/40 p-1" 
             />
             <div className="flex flex-col">
               <span className="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 uppercase leading-none">

@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="docs/images/omnidesk-logo.png" alt="Omnidesk BD Logo" width="160" height="160" style="border-radius: 50%; box-shadow: 0 0 45px rgba(0, 240, 255, 0.45); margin-bottom: 12px;" />
+  <img src="docs/images/omnidesk-logo.png" alt="Omnidesk BD Logo" width="260" style="filter: drop-shadow(0 0 24px rgba(0, 240, 255, 0.35)); margin-bottom: 12px;" />
 
 # 🌌 Omnidesk BD
 ### *The Universal Autonomous Learning & Engineering Operating System*

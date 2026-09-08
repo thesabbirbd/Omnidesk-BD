@@ -9,10 +9,12 @@ const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/favicon.png',
   '/favicon.svg',
   '/omnidesk-logo.png',
-  '/icon-192.svg',
-  '/icon-512.svg'
+  '/omnidesk-mark.png',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
