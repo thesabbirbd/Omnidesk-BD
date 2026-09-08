@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Omnidesk BD API"
-    VERSION: str = "1.2.6"
+    VERSION: str = "1.2.7"
     API_V1_STR: str = "/api"
 
     # Default Database URL (PostgreSQL)

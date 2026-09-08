@@ -10,7 +10,7 @@ import {
   FileCode,
   FolderKanban
 } from 'lucide-react';
-import { createDebugJournal, getDebugHypothesis, getProjects } from '../../services/api';
+import { createDebugJournal, getDebugHypothesis, getProjects, sendAiChat } from '../../services/api';
 
 export default function ImStuckModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -69,21 +69,41 @@ export default function ImStuckModal() {
     }
     setLoadingHypo(true);
     try {
-      const res = await getDebugHypothesis({
-        problem: form.problem || form.title || "Unknown error",
-        symptom: form.symptom,
-        output_logs: form.output_logs
+      const debugPrompt = `Problem: ${form.problem || form.title || 'Unexpected runtime error'}\n` +
+        (form.symptom ? `Symptom: ${form.symptom}\n` : '') +
+        (form.output_logs ? `Output / Logs:\n${form.output_logs}\n` : '');
+
+      const res = await sendAiChat({
+        message: debugPrompt,
+        mode: 'debug',
+        context_topic: form.title || 'Engineering Lab Blocker'
       });
-      if (res) {
+
+      if (res?.reply) {
+        const replyText = res.reply;
         setForm((prev) => ({
           ...prev,
-          hypothesis: res.hypothesis || prev.hypothesis,
-          command_used: res.investigation_command || prev.command_used,
-          root_cause: prev.root_cause || res.recommended_fix || ''
+          hypothesis: replyText,
+          root_cause: prev.root_cause || "Diagnosed via Gemini 1.5 Flash Debug Lab. Review hypotheses above."
         }));
+      } else {
+        // Fallback to structured hypothesis API
+        const legacyRes = await getDebugHypothesis({
+          problem: form.problem || form.title || "Unknown error",
+          symptom: form.symptom,
+          output_logs: form.output_logs
+        });
+        if (legacyRes) {
+          setForm((prev) => ({
+            ...prev,
+            hypothesis: legacyRes.hypothesis || prev.hypothesis,
+            command_used: legacyRes.investigation_command || prev.command_used,
+            root_cause: prev.root_cause || legacyRes.recommended_fix || ''
+          }));
+        }
       }
     } catch (err) {
-      console.warn("AI hypothesis error:", err);
+      console.warn("AI debug diagnosis error:", err);
     } finally {
       setLoadingHypo(false);
     }
@@ -242,7 +262,7 @@ export default function ImStuckModal() {
                 className="flex items-center gap-1 text-[11px] font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-all cursor-pointer"
               >
                 <Sparkles size={11} />
-                <span>{loadingHypo ? "Analyzing..." : "Auto-Diagnose (Offline AI)"}</span>
+                <span>{loadingHypo ? "Analyzing with Gemini..." : "Diagnose with Gemini (Debug Lab)"}</span>
               </button>
             </div>
             <textarea 

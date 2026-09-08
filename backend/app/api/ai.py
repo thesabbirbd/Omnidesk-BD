@@ -7,6 +7,7 @@ from app.models.user import User
 from app.services.ai_provider import (
     get_ai_provider,
     generate_verification_quiz,
+    chat_assistant,
     GeminiProvider
 )
 from app.api.study_spaces import generate_study_space_preview
@@ -15,6 +16,47 @@ from app.schemas.studyspace import StudySpacePreviewResponse
 logger = logging.getLogger("studyos.api.ai")
 
 router = APIRouter()
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, description="The user's query or problem description")
+    mode: str = Field("explain", description="'explain' (Feynman), 'hint' (Socratic), or 'debug' (Engineering Lab)")
+    context_topic: Optional[str] = Field(None, description="Active topic or concept from the Mind Map or workspace")
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    mode: str
+    context_topic: Optional[str] = None
+    provider: Optional[str] = "gemini-1.5-flash"
+
+
+@router.post("/chat", response_model=ChatResponse)
+def chat_with_assistant(
+    payload: ChatRequest,
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Omni-AI Assistant Chat Endpoint (Phase 3 / v1.2.7):
+    - mode='explain': Feynman Technique (plain English analogies, fundamental mechanisms)
+    - mode='hint': Socratic Tutor (guiding questions, clues; AI IS NOT A KEYBOARD)
+    - mode='debug': Senior Engineering Lab (root-cause diagnosis, structured hypotheses)
+    """
+    if not payload.message.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Message cannot be empty."
+        )
+
+    mode = payload.mode.lower()
+    if mode not in {"explain", "hint", "debug"}:
+        mode = "explain"
+
+    return chat_assistant(
+        message=payload.message.strip(),
+        mode=mode,
+        context_topic=payload.context_topic.strip() if payload.context_topic else None
+    )
 
 
 class QuizRequest(BaseModel):
