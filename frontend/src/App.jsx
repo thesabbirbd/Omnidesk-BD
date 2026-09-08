@@ -19,10 +19,13 @@ import Analytics from './pages/Analytics';
 import Ai from './pages/Ai';
 import Settings from './pages/Settings';
 
+import { TimerProvider } from './context/TimerContext';
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <TimerProvider>
+        <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/os" element={<AppShell />}>
           <Route index element={<Navigate to="/os/dashboard" replace />} />
@@ -42,7 +45,8 @@ export default function App() {
           <Route path="ai-assistant" element={<Ai />} />
           <Route path="settings" element={<Settings />} />
         </Route>
-      </Routes>
+        </Routes>
+      </TimerProvider>
     </BrowserRouter>
   );
 }

@@ -25,10 +25,16 @@ import {
   Target,
   Sparkles,
   AlertCircle,
-  RotateCw,
-  Layers
+  Layers,
+  Play,
+  FolderOpen,
+  Edit3,
+  MoreHorizontal,
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
 import { getTopics, updateTopic } from '../services/api';
+import { useTimer } from '../context/TimerContext';
 
 export const statusConfig = {
   normal: { color: '#64748b', label: 'Normal', bg: 'rgba(100, 116, 139, 0.14)', border: 'rgba(100, 116, 139, 0.45)', glow: 'rgba(100, 116, 139, 0.3)', icon: Circle },
@@ -72,11 +78,34 @@ const DEFAULT_EDGES = [
   { id: 'e-root-8', source: 'root', target: '8', animated: true, style: { stroke: statusColors.mastered, strokeWidth: 2.5 } },
 ];
 
-// Floating, Premium Mind Map Node with Micro-Animations (150ms)
+// Floating, Premium Mind Map Node with Continuous Hover Hitbox & Full Action Suite
 const CustomNode = ({ id, data, selected }) => {
   const currentStatus = statusConfig[data.status] || statusConfig.normal;
   const [isHovered, setIsHovered] = useState(false);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editLabel, setEditLabel] = useState(data.label || '');
+  
+  const hoverTimeoutRef = useRef(null);
   const { setNodes } = useReactFlow();
+  const { startTimer } = useTimer();
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false);
+      setShowStatusPicker(false);
+      setShowMoreMenu(false);
+    }, 280); // 280ms grace window prevents toolbar from disappearing while cursor transits
+  };
 
   const handleStatusChange = async (e, newStatus) => {
     e.stopPropagation();
@@ -101,7 +130,8 @@ const CustomNode = ({ id, data, selected }) => {
       })
     );
 
-    // Persist to backend if possible
+    setShowStatusPicker(false);
+
     try {
       await updateTopic(id, { 
         title: data.label, 
@@ -114,80 +144,283 @@ const CustomNode = ({ id, data, selected }) => {
     }
   };
 
-  const StatusIcon = currentStatus.icon;
+  const handleStartStudy = (e) => {
+    e.stopPropagation();
+    startTimer({
+      topic: data.label,
+      mode: 'pomodoro',
+      durationMinutes: 25
+    });
+  };
+
+  const handleOpenDrawer = (e) => {
+    e.stopPropagation();
+    window.dispatchEvent(new CustomEvent('studyos-open-node-drawer', { detail: { id, ...data } }));
+  };
+
+  const handleSaveEdit = async (e) => {
+    if (e) e.stopPropagation();
+    if (!editLabel.trim()) return;
+
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          return {
+            ...node,
+            data: { ...node.data, label: editLabel }
+          };
+        }
+        return node;
+      })
+    );
+    setIsEditing(false);
+
+    try {
+      await updateTopic(id, {
+        title: editLabel,
+        status: data.status,
+        progress: data.progress,
+        study_space_id: null
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDeleteNode = (e) => {
+    e.stopPropagation();
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+  };
+
+  const handleSetProgress = (e, progress) => {
+    e.stopPropagation();
+    setNodes((nds) =>
+      nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, progress } } : n))
+    );
+    setShowMoreMenu(false);
+  };
 
   return (
     <div 
-      className={`relative rounded-2xl px-5 py-3.5 font-bold text-xs text-[color:var(--text-main)] text-center min-w-[180px] transition-all duration-150 ease-out border backdrop-blur-md cursor-pointer ${
-        selected 
-          ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-[var(--bg-canvas)] scale-105 shadow-[0_0_24px_rgba(34,211,238,0.6)]' 
-          : 'hover:-translate-y-1 hover:scale-[1.02]'
-      }`}
-      style={{ 
-        backgroundColor: currentStatus.bg, 
-        borderColor: currentStatus.border,
-        boxShadow: selected 
-          ? `0 0 25px ${currentStatus.glow}, 6px 6px 14px var(--shadow-dark)`
-          : `6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light), 0 0 14px ${currentStatus.glow}` 
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="relative group select-none"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      <Handle type="target" position={Position.Top} className="opacity-0" />
-      
-      <div className="flex flex-col items-center gap-1.5 relative">
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] shrink-0" 
-            style={{ backgroundColor: currentStatus.color, color: currentStatus.color }}
-          />
-          <span className="tracking-wide text-xs font-bold leading-tight px-0.5 truncate max-w-[160px]">{data.label}</span>
-          {data.status === 'complete' && <Check size={13} className="text-emerald-400 shrink-0" />}
-          {data.status === 'mastered' && <Sparkles size={13} className="text-purple-400 shrink-0" />}
-        </div>
-        
-        <div className="flex items-center gap-2 text-[10px] font-semibold text-[color:var(--text-muted)]">
-          <span 
-            className="px-1.5 py-0.2 rounded font-bold uppercase tracking-wider text-[9px]"
-            style={{ color: currentStatus.color }}
-          >
-            {currentStatus.label}
-          </span>
-          <span>•</span>
-          <span>{data.progress}%</span>
-        </div>
-      </div>
-
-      <Handle type="source" position={Position.Bottom} className="opacity-0" />
-
-      {/* Floating 6-Status Contextual Action Menu on Hover */}
+      {/* Invisible seamless hit bridge spanning node and floating toolbar */}
       {isHovered && (
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-[var(--bg-card)]/95 backdrop-blur-xl p-1.5 rounded-2xl shadow-[0_10px_25px_rgba(0,0,0,0.4),inset_1px_1px_2px_rgba(255,255,255,0.1)] border border-[var(--border-color)] z-50 animate-in fade-in zoom-in-95 duration-150 whitespace-nowrap">
-          {Object.entries(statusConfig).map(([statusKey, cfg]) => {
-            const Icon = cfg.icon;
-            const isActive = data.status === statusKey;
-            return (
-              <div key={statusKey} className="group/item relative">
-                <button 
-                  onClick={(e) => handleStatusChange(e, statusKey)} 
-                  className={`p-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center ${
-                    isActive 
-                      ? 'bg-[var(--bg-input)] ring-1 ring-cyan-400 scale-110' 
-                      : 'hover:bg-[var(--bg-input)] hover:scale-105'
-                  }`}
-                  style={{ color: cfg.color }}
-                  title={`Mark as ${cfg.label}`}
-                >
-                  <Icon size={14} />
-                </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 bg-[var(--bg-input)] text-[9px] font-bold rounded-lg shadow-lg opacity-0 group-hover/item:opacity-100 pointer-events-none transition-opacity text-center whitespace-nowrap border border-[var(--border-color)]" style={{ color: cfg.color }}>
-                  {cfg.label}
-                </div>
-              </div>
-            );
-          })}
+        <div 
+          className="absolute -top-16 -bottom-4 -left-6 -right-6 pointer-events-auto z-40" 
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Floating Action Suite Toolbar */}
+      {isHovered && (
+        <div 
+          className="absolute -top-14 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-50 animate-in fade-in zoom-in-95 duration-150 whitespace-nowrap"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Main Actions Bar */}
+          <div className="flex items-center gap-1 bg-[var(--bg-card)]/95 backdrop-blur-2xl px-2 py-1.5 rounded-2xl shadow-[0_12px_28px_rgba(0,0,0,0.45),inset_1px_1px_2px_rgba(255,255,255,0.1)] border border-[var(--border-color)]">
+            {/* Action 1: Open Drawer */}
+            <button
+              onClick={handleOpenDrawer}
+              className="flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold text-[color:var(--text-muted)] hover:text-cyan-400 hover:bg-[var(--bg-input)] transition-all cursor-pointer"
+              title="Open Node Details"
+            >
+              <FolderOpen size={13} />
+              <span>Open</span>
+            </button>
+
+            <div className="w-px h-3.5 bg-[var(--border-color)]" />
+
+            {/* Action 2: Start Study Session */}
+            <button
+              onClick={handleStartStudy}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black text-slate-950 bg-cyan-400 hover:bg-cyan-300 shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-all cursor-pointer"
+              title="Start 25m Focus Timer for this topic"
+            >
+              <Play size={11} fill="currentColor" />
+              <span>Study</span>
+            </button>
+
+            <div className="w-px h-3.5 bg-[var(--border-color)]" />
+
+            {/* Action 3: Status Selector Toggle */}
+            <button
+              onClick={() => {
+                setShowStatusPicker(!showStatusPicker);
+                setShowMoreMenu(false);
+              }}
+              className={`flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                showStatusPicker 
+                  ? 'bg-[var(--bg-input)] text-amber-400 ring-1 ring-amber-400/50' 
+                  : 'text-[color:var(--text-muted)] hover:text-amber-400 hover:bg-[var(--bg-input)]'
+              }`}
+              title="Change Status (6 States)"
+            >
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentStatus.color }} />
+              <span>Status</span>
+              <ChevronDown size={11} />
+            </button>
+
+            <div className="w-px h-3.5 bg-[var(--border-color)]" />
+
+            {/* Action 4: Edit */}
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-1.5 rounded-xl text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)] transition-all cursor-pointer"
+              title="Edit Topic Title"
+            >
+              <Edit3 size={13} />
+            </button>
+
+            {/* Action 5: More Options */}
+            <button
+              onClick={() => {
+                setShowMoreMenu(!showMoreMenu);
+                setShowStatusPicker(false);
+              }}
+              className="p-1.5 rounded-xl text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)] transition-all cursor-pointer"
+              title="More Options"
+            >
+              <MoreHorizontal size={13} />
+            </button>
+          </div>
+
+          {/* Sub-Bar: 6-Status Picker */}
+          {showStatusPicker && (
+            <div className="flex items-center gap-1 bg-[var(--bg-card)]/95 backdrop-blur-2xl p-1.5 rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.45)] border border-[var(--border-color)] animate-in fade-in slide-in-from-top-1 duration-150">
+              {Object.entries(statusConfig).map(([statusKey, cfg]) => {
+                const Icon = cfg.icon;
+                const isActive = data.status === statusKey;
+                return (
+                  <button
+                    key={statusKey}
+                    onClick={(e) => handleStatusChange(e, statusKey)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                      isActive 
+                        ? 'bg-[var(--bg-input)] ring-1 ring-cyan-400 scale-105' 
+                        : 'hover:bg-[var(--bg-input)] opacity-80 hover:opacity-100'
+                    }`}
+                    style={{ color: cfg.color }}
+                    title={`Set status to ${cfg.label}`}
+                  >
+                    <Icon size={12} />
+                    <span>{cfg.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Sub-Bar: More Menu */}
+          {showMoreMenu && (
+            <div className="flex items-center gap-1 bg-[var(--bg-card)]/95 backdrop-blur-2xl p-1.5 rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.45)] border border-[var(--border-color)] text-[10px] font-bold animate-in fade-in slide-in-from-top-1 duration-150">
+              <button
+                onClick={(e) => handleSetProgress(e, 0)}
+                className="px-2 py-1 rounded-lg text-[color:var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] cursor-pointer"
+              >
+                Reset (0%)
+              </button>
+              <button
+                onClick={(e) => handleSetProgress(e, 100)}
+                className="px-2 py-1 rounded-lg text-emerald-400 hover:bg-[var(--bg-input)] cursor-pointer"
+              >
+                Done (100%)
+              </button>
+              <button
+                onClick={handleDeleteNode}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-red-400 hover:bg-red-500/20 cursor-pointer"
+              >
+                <Trash2 size={11} />
+                <span>Delete</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Main Node Card Body with Visually Distinct 6 Statuses */}
+      <div 
+        className={`relative rounded-2xl px-5 py-3.5 font-bold text-xs text-[color:var(--text-main)] text-center min-w-[190px] max-w-[240px] transition-all duration-150 ease-out border backdrop-blur-md cursor-pointer ${
+          selected 
+            ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-[var(--bg-canvas)] scale-105 shadow-[0_0_24px_rgba(34,211,238,0.6)]' 
+            : 'hover:-translate-y-0.5'
+        } ${data.status === 'complete' ? 'opacity-90' : 'opacity-100'}`}
+        style={{ 
+          backgroundColor: currentStatus.bg, 
+          borderColor: currentStatus.border,
+          boxShadow: selected 
+            ? `0 0 25px ${currentStatus.glow}, 6px 6px 14px var(--shadow-dark)`
+            : `6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light), 0 0 14px ${currentStatus.glow}` 
+        }}
+      >
+        <Handle type="target" position={Position.Top} className="opacity-0" />
+        
+        <div className="flex flex-col items-center gap-1.5 relative">
+          {/* Status Glow Dot & Label */}
+          <div className="flex items-center gap-2 w-full justify-center">
+            <div 
+              className={`w-2.5 h-2.5 rounded-full shrink-0 ${data.status === 'learning' ? 'animate-pulse' : ''}`} 
+              style={{ backgroundColor: currentStatus.color, boxShadow: `0 0 8px ${currentStatus.color}` }}
+            />
+            
+            {isEditing ? (
+              <form 
+                onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }}
+                className="flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="text"
+                  value={editLabel}
+                  onChange={(e) => setEditLabel(e.target.value)}
+                  autoFocus
+                  className="bg-[var(--bg-input)] text-xs font-bold rounded px-1.5 py-0.5 border border-cyan-400 outline-none w-28 text-center"
+                />
+                <button type="submit" className="p-0.5 text-cyan-400 hover:text-cyan-300">
+                  <Check size={12} />
+                </button>
+              </form>
+            ) : (
+              <span className="tracking-wide text-xs font-bold leading-tight px-0.5 truncate max-w-[150px]">
+                {data.label}
+              </span>
+            )}
+
+            {data.status === 'complete' && <Check size={13} className="text-emerald-400 shrink-0" />}
+            {data.status === 'mastered' && <Sparkles size={13} className="text-purple-400 shrink-0" />}
+            {data.status === 'blocked' && <AlertCircle size={13} className="text-red-400 shrink-0" />}
+          </div>
+          
+          {/* Metadata & Progress Subtitle */}
+          <div className="flex items-center gap-2 text-[10px] font-semibold text-[color:var(--text-muted)]">
+            <span 
+              className="px-1.5 py-0.2 rounded font-black uppercase tracking-wider text-[9px]"
+              style={{ color: currentStatus.color }}
+            >
+              {currentStatus.label}
+            </span>
+            <span>•</span>
+            <span>{data.progress}%</span>
+          </div>
+
+          {/* Micro Progress Track */}
+          <div className="w-full h-1 rounded-full bg-[var(--bg-input)] overflow-hidden mt-0.5">
+            <div 
+              className="h-full rounded-full transition-all duration-500"
+              style={{ 
+                width: `${data.progress}%`,
+                backgroundColor: currentStatus.color,
+                boxShadow: `0 0 6px ${currentStatus.color}`
+              }}
+            />
+          </div>
+        </div>
+
+        <Handle type="source" position={Position.Bottom} className="opacity-0" />
+      </div>
     </div>
   );
 };
@@ -201,6 +434,7 @@ function MindMapFlow() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all'); // all, normal, learning, complete
   const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { startTimer } = useTimer();
 
   useEffect(() => {
     const fetchTopics = async () => {
@@ -262,6 +496,18 @@ function MindMapFlow() {
   const onNodeClick = useCallback((event, node) => {
     setSelectedTopic(node.data);
     setIsDrawerOpen(true);
+  }, []);
+
+  // Listen for toolbar 'Open' click from CustomNode
+  useEffect(() => {
+    const handleDrawerEvent = (e) => {
+      if (e.detail) {
+        setSelectedTopic(e.detail);
+        setIsDrawerOpen(true);
+      }
+    };
+    window.addEventListener('studyos-open-node-drawer', handleDrawerEvent);
+    return () => window.removeEventListener('studyos-open-node-drawer', handleDrawerEvent);
   }, []);
 
   const handleFilterChange = (filter) => {
@@ -443,10 +689,25 @@ function MindMapFlow() {
             </div>
             
             {/* Quick Actions in Drawer */}
-            <div className="flex flex-col gap-2 mt-auto">
+            <div className="flex flex-col gap-2.5 mt-auto">
+              <button 
+                onClick={() => {
+                  startTimer({
+                    topic: selectedTopic.label,
+                    mode: 'pomodoro',
+                    durationMinutes: 25
+                  });
+                  setIsDrawerOpen(false);
+                }}
+                className="w-full py-3 rounded-xl font-black text-xs uppercase tracking-wider text-slate-950 bg-cyan-400 hover:bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.5)] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Play size={13} fill="currentColor" />
+                <span>Start 25m Focus Session</span>
+              </button>
+
               <button 
                 onClick={() => setIsDrawerOpen(false)}
-                className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-cyan-400 bg-[var(--bg-input)] border border-cyan-500/30 shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 transition-all cursor-pointer"
+                className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] bg-[var(--bg-input)] border border-[var(--border-color)] shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 transition-all cursor-pointer"
               >
                 Close Details
               </button>

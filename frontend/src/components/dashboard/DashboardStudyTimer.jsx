@@ -1,37 +1,27 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Timer as TimerIcon, ChevronRight, Play, Pause, RotateCcw, Plus, Sparkles } from 'lucide-react';
+import React from 'react';
+import { Timer as TimerIcon, ChevronRight, Play, Pause, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTimer } from '../../context/TimerContext';
 
 export default function DashboardStudyTimer() {
   const navigate = useNavigate();
+  const {
+    mode,
+    timeLeft,
+    durationMinutes,
+    isRunning,
+    isPaused,
+    history,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
+    addMinutes,
+    setTimerMode
+  } = useTimer();
 
-  // State ISOLATED to this component to prevent full-dashboard re-renders every second
-  const [timerMode, setTimerMode] = useState('pomodoro'); // pomodoro (25m), focus (50m), custom (15m)
-  const [timerSeconds, setTimerSeconds] = useState(25 * 60);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [completedSessions, setCompletedSessions] = useState([
-    { id: 1, label: 'Python OOP', time: '10:24 AM', duration: '25m', mode: 'Focus' },
-    { id: 2, label: 'FastAPI Router', time: '09:30 AM', duration: '45m', mode: 'Study' },
-  ]);
-
-  const maxSeconds = timerMode === 'focus' ? 50 * 60 : timerMode === 'custom' ? 15 * 60 : 25 * 60;
-
-  useEffect(() => {
-    let interval = null;
-    if (timerRunning) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => {
-          if (prev <= 1) {
-            // Session complete
-            setTimerRunning(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [timerRunning]);
+  const maxSeconds = (durationMinutes || 25) * 60;
+  const progressPercent = maxSeconds > 0 ? Math.min(100, Math.max(0, (timeLeft / maxSeconds) * 100)) : 0;
 
   const formatTimer = (sec) => {
     const m = Math.floor(sec / 60);
@@ -40,25 +30,18 @@ export default function DashboardStudyTimer() {
   };
 
   const handleToggle = () => {
-    setTimerRunning(!timerRunning);
+    if (isRunning && !isPaused) {
+      pauseTimer();
+    } else if (isRunning && isPaused) {
+      resumeTimer();
+    } else {
+      startTimer({ mode: mode || 'pomodoro' });
+    }
   };
 
-  const handleReset = () => {
-    setTimerRunning(false);
-    setTimerSeconds(maxSeconds);
+  const handleModeChange = (newMode, mins) => {
+    setTimerMode(newMode, mins);
   };
-
-  const handleAdd5 = () => {
-    setTimerSeconds((prev) => prev + 300);
-  };
-
-  const handleModeChange = (mode, secs) => {
-    setTimerMode(mode);
-    setTimerSeconds(secs);
-    setTimerRunning(false);
-  };
-
-  const progressPercent = Math.min(100, Math.max(0, (timerSeconds / maxSeconds) * 100));
 
   return (
     <div className="p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col justify-between gap-4 h-full min-h-[480px] transition-all">
@@ -85,22 +68,22 @@ export default function DashboardStudyTimer() {
         {/* Mode Selector Tabs with Inset Pressed States */}
         <div className="flex items-center justify-center gap-1.5 p-1 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] shadow-[inset_1px_1px_3px_var(--shadow-dark)]">
           {[
-            { id: 'pomodoro', label: 'Pomodoro', secs: 25 * 60 },
-            { id: 'focus', label: 'Deep Focus', secs: 50 * 60 },
-            { id: 'custom', label: 'Short Break', secs: 15 * 60 },
-          ].map((mode) => {
-            const isActive = timerMode === mode.id;
+            { id: 'pomodoro', label: 'Pomodoro', mins: 25 },
+            { id: 'focus', label: 'Deep Focus', mins: 50 },
+            { id: 'short_break', label: 'Short Break', mins: 5 },
+          ].map((m) => {
+            const isActive = mode === m.id;
             return (
               <button
-                key={mode.id}
-                onClick={() => handleModeChange(mode.id, mode.secs)}
+                key={m.id}
+                onClick={() => handleModeChange(m.id, m.mins)}
                 className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[var(--bg-card)] text-orange-400 shadow-[2px_2px_6px_var(--shadow-dark)] border border-orange-500/20'
                     : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] active:opacity-75'
                 }`}
               >
-                {mode.label}
+                {m.label}
               </button>
             );
           })}
@@ -131,36 +114,40 @@ export default function DashboardStudyTimer() {
               />
             </svg>
             <div className="absolute flex flex-col items-center pointer-events-none select-none">
-              <span className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
-                {formatTimer(timerSeconds)}
+              <span className="text-2xl font-black font-mono tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
+                {formatTimer(timeLeft)}
               </span>
               <span className="text-[9px] font-bold text-[color:var(--text-muted)] uppercase tracking-wider mt-0.5">
-                {timerRunning ? 'Focusing...' : 'Paused'}
+                {isRunning && !isPaused ? 'Focusing...' : isPaused ? 'Paused' : 'Ready'}
               </span>
             </div>
           </div>
 
-          {/* Premium Tactile Controls (Active/Pressed Inset Clay States) */}
+          {/* Tactile Controls */}
           <div className="flex items-center gap-3">
             <button
               onClick={handleToggle}
-              className="w-10 h-10 rounded-xl bg-orange-500 hover:bg-orange-400 text-slate-950 flex items-center justify-center shadow-[0_0_12px_rgba(249,115,22,0.6)] hover:scale-105 active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.6)] transition-all cursor-pointer"
-              title={timerRunning ? 'Pause' : 'Start'}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-slate-950 transition-all cursor-pointer ${
+                isRunning && !isPaused
+                  ? 'bg-amber-500 hover:bg-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.6)]'
+                  : 'bg-orange-500 hover:bg-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.6)]'
+              }`}
+              title={isRunning && !isPaused ? 'Pause' : 'Start'}
             >
-              {timerRunning ? <Pause size={17} /> : <Play size={17} className="ml-0.5" />}
+              {isRunning && !isPaused ? <Pause size={17} /> : <Play size={17} className="ml-0.5" />}
             </button>
 
             <button
-              onClick={handleReset}
-              className="w-10 h-10 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] flex items-center justify-center shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 active:shadow-[inset_4px_4px_8px_var(--shadow-dark)] transition-all cursor-pointer"
+              onClick={resetTimer}
+              className="w-10 h-10 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] flex items-center justify-center shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 transition-all cursor-pointer"
               title="Reset Timer"
             >
               <RotateCcw size={15} />
             </button>
 
             <button
-              onClick={handleAdd5}
-              className="px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[11px] font-black text-orange-400 hover:text-orange-300 shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 active:shadow-[inset_3px_3px_6px_var(--shadow-dark)] transition-all cursor-pointer"
+              onClick={() => addMinutes(5)}
+              className="px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[11px] font-black text-orange-400 hover:text-orange-300 shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 transition-all cursor-pointer"
               title="Add 5 minutes"
             >
               +5m
@@ -183,18 +170,26 @@ export default function DashboardStudyTimer() {
           </span>
         </div>
         <div className="flex flex-col gap-1.5">
-          {completedSessions.map((session) => (
-            <div key={session.id} className="flex items-center justify-between text-xs px-2 py-1 rounded-lg bg-[var(--bg-input)]/40 border border-[var(--border-color)]/60">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="font-semibold text-[color:var(--text-main)] truncate max-w-[120px]">{session.label}</span>
+          {(!history || history.length === 0) ? (
+            <span className="text-[10px] text-[color:var(--text-muted)] py-1">No completed sessions yet.</span>
+          ) : (
+            history.slice(0, 2).map((session, idx) => (
+              <div key={session.id || idx} className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg bg-[var(--bg-input)]/40 border border-[var(--border-color)]/60">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="font-semibold text-[color:var(--text-main)] truncate max-w-[120px]">
+                    {session.topic || session.label || 'Deep Focus'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className="text-emerald-400 font-bold">{session.durationMinutes || session.duration}m</span>
+                  <span className="text-[color:var(--text-muted)]">
+                    {session.completedAt ? new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (session.time || 'Today')}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-[10px]">
-                <span className="text-emerald-400 font-bold">{session.duration}</span>
-                <span className="text-[color:var(--text-muted)]">{session.time}</span>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 

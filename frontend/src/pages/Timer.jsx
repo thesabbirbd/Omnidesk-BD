@@ -1,116 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Clock, Brain, Coffee, Eye, EyeOff } from 'lucide-react';
-import { createSession } from '../services/api';
+import React from 'react';
+import { Play, Pause, RotateCcw, Clock, Brain, Coffee, Eye, EyeOff, Square, Sparkles, AlertCircle } from 'lucide-react';
+import { useTimer } from '../context/TimerContext';
 
 export default function Timer() {
-  const [mode, setMode] = useState('pomodoro'); // pomodoro, focus, stopwatch
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [isActive, setIsActive] = useState(false);
-  const [startTime, setStartTime] = useState(null);
-  
-  // Phase 10: Presence Service
-  const [isPresenceEnabled, setIsPresenceEnabled] = useState(false);
-  const [presenceIntervalSecs, setPresenceIntervalSecs] = useState(5); // default 5s
-  const [notification, setNotification] = useState(null); // { message, type }
-  const [mockIsAbsent, setMockIsAbsent] = useState(false); // for testing auto-pause
+  const {
+    mode,
+    timeLeft,
+    durationMinutes,
+    activeTopic,
+    isRunning,
+    isPaused,
+    presenceEnabled,
+    presenceStatus,
+    history,
+    lastNotification,
+    clearNotification,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    stopTimer,
+    resetTimer,
+    setTimerMode,
+    togglePresence,
+    modes
+  } = useTimer();
 
-  // Presence Detection Scaffolding
-  useEffect(() => {
-    let presenceInterval;
-    if (isPresenceEnabled && isActive) {
-      presenceInterval = setInterval(() => {
-        const isFaceDetected = !mockIsAbsent; 
-        
-        if (isFaceDetected) {
-          setNotification({ message: 'Presence Detected! Keep focusing.', type: 'success' });
-          setTimeout(() => setNotification(null), 3000);
-        } else {
-          setNotification({ message: 'No face detected! Auto-pausing timer.', type: 'warning' });
-          setIsActive(false);
-          setTimeout(() => setNotification(null), 4000);
-        }
-      }, presenceIntervalSecs * 1000);
-    }
-    return () => clearInterval(presenceInterval);
-  }, [isPresenceEnabled, isActive, presenceIntervalSecs, mockIsAbsent]);
-  
-  const [history, setHistory] = useState([
-    { id: 1, mode: 'pomodoro', duration: 25, date: new Date().toLocaleDateString() },
-    { id: 2, mode: 'focus', duration: 50, date: new Date().toLocaleDateString() }
-  ]);
-
-  const timerRef = useRef(null);
-
-  // Mode settings
-  const modes = {
-    pomodoro: { time: 25 * 60, label: 'Pomodoro', icon: Brain },
-    focus: { time: 50 * 60, label: 'Long Focus', icon: Clock },
-    stopwatch: { time: 0, label: 'Stopwatch', icon: Coffee }
+  const modeDefinitions = {
+    pomodoro: { label: 'Pomodoro', mins: 25, icon: Brain },
+    focus: { label: 'Deep Focus', mins: 50, icon: Clock },
+    short_break: { label: 'Short Break', mins: 5, icon: Coffee },
+    stopwatch: { label: 'Stopwatch', mins: 0, icon: Coffee }
   };
 
-  const switchMode = (newMode) => {
-    setIsActive(false);
-    setMode(newMode);
-    setTimeLeft(modes[newMode].time);
-    setStartTime(null);
+  const handleModeChange = (newMode) => {
+    const def = modeDefinitions[newMode];
+    setTimerMode(newMode, def.mins);
   };
 
-  useEffect(() => {
-    if (isActive) {
-      if (!startTime) setStartTime(new Date());
-
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prevTime) => {
-          if (mode === 'stopwatch') {
-            return prevTime + 1;
-          } else {
-            if (prevTime <= 1) {
-              handleSessionComplete();
-              return 0;
-            }
-            return prevTime - 1;
-          }
-        });
-      }, 1000);
+  const handleToggle = () => {
+    if (isRunning && !isPaused) {
+      pauseTimer();
+    } else if (isRunning && isPaused) {
+      resumeTimer();
     } else {
-      clearInterval(timerRef.current);
+      startTimer({ mode });
     }
-    return () => clearInterval(timerRef.current);
-  }, [isActive, mode]);
-
-  const handleSessionComplete = async () => {
-    setIsActive(false);
-    clearInterval(timerRef.current);
-    
-    const duration = mode === 'stopwatch' ? Math.floor(timeLeft / 60) : modes[mode].time / 60;
-    
-    if (duration > 0) {
-      try {
-        const newSession = await createSession({
-          topic_id: null, // Global session for now
-          duration_minutes: duration,
-          mode: mode
-        });
-        
-        setHistory([
-          { id: newSession.id, mode: newSession.mode, duration: newSession.duration_minutes, date: new Date(newSession.start_time).toLocaleDateString() },
-          ...history
-        ]);
-      } catch (err) {
-        console.error("Failed to save session", err);
-      }
-    }
-    
-    // Reset based on mode
-    setTimeLeft(modes[mode].time);
-    setStartTime(null);
-  };
-
-  const toggleTimer = () => setIsActive(!isActive);
-  const resetTimer = () => {
-    setIsActive(false);
-    setTimeLeft(modes[mode].time);
-    setStartTime(null);
   };
 
   const formatTime = (seconds) => {
@@ -119,177 +53,186 @@ export default function Timer() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Calculate total hours today
-  const totalMinutesToday = history.reduce((acc, curr) => acc + curr.duration, 0);
+  // Calculate total focus time today
+  const totalMinutesToday = (history || []).reduce((acc, curr) => acc + (curr.durationMinutes || curr.duration || 0), 0);
   const hours = Math.floor(totalMinutesToday / 60);
   const mins = totalMinutesToday % 60;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] overflow-y-auto p-6 md:p-12 items-center gap-12 relative">
+    <div className="flex flex-col h-full w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] overflow-y-auto p-4 md:p-8 lg:p-12 items-center gap-8 md:gap-12 relative">
       
-      {/* Top Right Notification */}
-      {notification && (
-        <div className={`fixed top-8 right-8 z-50 px-6 py-4 rounded-2xl shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)] flex items-center gap-3 transition-all duration-300 transform translate-y-0 opacity-100 ${
-          notification.type === 'success' ? 'bg-[var(--bg-card)]' : 'bg-red-500/10 border-red-500/30'
-        }`}>
-          {notification.type === 'success' ? <Eye className="text-green-400" size={24}/> : <EyeOff className="text-red-400" size={24}/>}
-          <span className={`font-bold ${notification.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-            {notification.message}
+      {/* Presence / Notification Alert */}
+      {lastNotification && (
+        <div className="fixed top-8 right-8 z-50 px-6 py-4 rounded-2xl shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)] flex items-center gap-3 transition-all duration-300 bg-[var(--bg-card)]/95 backdrop-blur-xl">
+          {lastNotification.type === 'absence' ? (
+            <AlertCircle className="text-amber-400 shrink-0" size={22} />
+          ) : (
+            <Sparkles className="text-cyan-400 shrink-0" size={22} />
+          )}
+          <span className="font-bold text-xs md:text-sm text-[color:var(--text-main)]">
+            {lastNotification.message}
           </span>
+          <button 
+            onClick={clearNotification}
+            className="ml-2 text-[color:var(--text-muted)] hover:text-white text-xs font-bold"
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Mode Selector */}
-      <div className="flex gap-4 p-2 bg-[var(--bg-panel)] rounded-2xl shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)]">
-        {Object.keys(modes).map(m => (
-          <button
-            key={m}
-            onClick={() => switchMode(m)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
-              mode === m 
-                ? 'bg-[var(--bg-card)] text-cyan-400 shadow-[4px_4px_10px_var(--shadow-dark),-4px_-4px_10px_var(--shadow-light)]' 
-                : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
-            }`}
-          >
-            {React.createElement(modes[m].icon, { size: 18 })}
-            <span className="hidden sm:inline">{modes[m].label}</span>
-          </button>
-        ))}
+      {/* Active Topic Tag */}
+      {activeTopic && (
+        <div className="px-4 py-1.5 rounded-full bg-[var(--bg-input)] border border-cyan-500/30 text-cyan-400 text-xs font-bold tracking-wide shadow-[inset_1px_1px_2px_var(--shadow-dark)]">
+          Target Topic: <span className="text-[color:var(--text-main)]">{activeTopic}</span>
+        </div>
+      )}
+
+      {/* Mode Selector Tabs */}
+      <div className="flex flex-wrap justify-center gap-2 md:gap-4 p-2 bg-[var(--bg-panel)] rounded-2xl shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)]">
+        {Object.entries(modeDefinitions).map(([key, item]) => {
+          const Icon = item.icon;
+          const isActive = mode === key;
+          return (
+            <button
+              key={key}
+              onClick={() => handleModeChange(key)}
+              className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-bold text-xs md:text-sm transition-all duration-300 cursor-pointer ${
+                isActive 
+                  ? 'bg-[var(--bg-card)] text-cyan-400 shadow-[4px_4px_10px_var(--shadow-dark),-4px_-4px_10px_var(--shadow-light)]' 
+                  : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
+              }`}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Main Timer Display */}
-      <div className="relative w-80 h-80 flex items-center justify-center bg-[var(--bg-panel)] rounded-full shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] border-[4px] border-[var(--bg-canvas)] group">
+      {/* Main Circular Timer Display */}
+      <div className="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center bg-[var(--bg-panel)] rounded-full shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] border-[4px] border-[var(--bg-canvas)] group">
         <div className="absolute inset-4 rounded-full bg-[var(--bg-card)] shadow-[inset_6px_6px_12px_var(--shadow-dark),inset_-6px_-6px_12px_var(--shadow-light)] flex items-center justify-center flex-col">
           
           <span 
-            className="text-7xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-cyan-400 to-blue-600"
-            style={{ textShadow: '0 0 40px rgba(34,211,238,0.4)' }}
+            className="text-6xl md:text-7xl font-black font-mono tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-cyan-400 to-blue-600"
+            style={{ textShadow: '0 0 40px rgba(34,211,238,0.35)' }}
           >
             {formatTime(timeLeft)}
           </span>
-          <span className="text-[color:var(--text-muted)] font-semibold tracking-widest uppercase mt-4 text-sm">
-            {mode === 'stopwatch' ? 'Elapsed' : 'Remaining'}
+          <span className="text-[color:var(--text-muted)] font-semibold tracking-widest uppercase mt-3 text-xs md:text-sm">
+            {mode === 'stopwatch' ? 'Elapsed' : isRunning && !isPaused ? 'Focusing...' : isPaused ? 'Paused' : 'Ready'}
           </span>
           
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex gap-8">
+      {/* Tactical Controls */}
+      <div className="flex items-center gap-6">
         <button 
-          onClick={toggleTimer}
-          className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 ${
-            isActive 
-              ? 'bg-[var(--bg-panel)] shadow-[inset_6px_6px_12px_var(--shadow-dark),inset_-6px_-6px_12px_var(--shadow-light)] text-orange-400' 
-              : 'bg-[var(--bg-card)] shadow-[6px_6px_12px_var(--shadow-dark),-6px_-6px_12px_var(--shadow-light)] text-cyan-400 hover:scale-105'
+          onClick={handleToggle}
+          className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer ${
+            isRunning && !isPaused 
+              ? 'bg-amber-500 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.5)]' 
+              : 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.5)] hover:scale-105 active:scale-95'
           }`}
+          title={isRunning && !isPaused ? 'Pause' : 'Start'}
         >
-          {isActive ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-2" />}
+          {isRunning && !isPaused ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
         </button>
 
         <button 
           onClick={resetTimer}
-          className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 bg-[var(--bg-card)] shadow-[6px_6px_12px_var(--shadow-dark),-6px_-6px_12px_var(--shadow-light)] active:shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)] text-[color:var(--text-muted)] hover:text-slate-200"
+          className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center transition-all duration-300 bg-[var(--bg-card)] shadow-[6px_6px_12px_var(--shadow-dark),-6px_-6px_12px_var(--shadow-light)] active:shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)] text-[color:var(--text-muted)] hover:text-cyan-400 cursor-pointer"
+          title="Reset Timer"
         >
-          <RotateCcw size={28} />
+          <RotateCcw size={24} />
         </button>
         
-        {/* Stop Button (only for stopwatch to end manually) */}
-        {mode === 'stopwatch' && isActive && (
+        {/* Stop / Finish button */}
+        {(isRunning || isPaused) && (
           <button 
-            onClick={handleSessionComplete}
-            className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 bg-[var(--bg-card)] shadow-[6px_6px_12px_var(--shadow-dark),-6px_-6px_12px_var(--shadow-light)] active:shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)] text-red-400 hover:scale-105"
+            onClick={stopTimer}
+            className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center transition-all duration-300 bg-[var(--bg-card)] shadow-[6px_6px_12px_var(--shadow-dark),-6px_-6px_12px_var(--shadow-light)] text-red-400 hover:scale-105 active:scale-95 cursor-pointer"
+            title="Complete & Save Session"
           >
-            <div className="w-6 h-6 bg-red-400 rounded-sm"></div>
+            <Square size={22} />
           </button>
         )}
       </div>
 
-      {/* Presence Service Toggle */}
-      <div className="mt-8 p-6 md:p-8 rounded-[32px] overflow-hidden bg-[var(--bg-card)] shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col items-center justify-center text-center gap-4 overflow-hidden w-full max-w-md">
-        <h3 className="text-lg font-bold text-[color:var(--text-main)] flex items-center gap-3 justify-center w-full">
-          {isPresenceEnabled ? <Eye className="text-cyan-400" size={24} /> : <EyeOff className="text-[color:var(--text-muted)]" size={24} />}
-          Camera Presence
-        </h3>
-        <p className="text-sm font-medium text-[color:var(--text-muted)] max-w-[280px]">
-          Auto-pause the timer when you step away from the keyboard.
+      {/* Camera Presence Detection Card */}
+      <div className="p-6 md:p-8 rounded-[32px] bg-[var(--bg-card)] shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col items-center justify-center text-center gap-4 w-full max-w-md">
+        <div className="flex items-center gap-2">
+          {presenceEnabled ? <Eye className="text-cyan-400" size={22} /> : <EyeOff className="text-[color:var(--text-muted)]" size={22} />}
+          <h3 className="text-base md:text-lg font-bold text-[color:var(--text-main)]">
+            Local Camera Presence Detection
+          </h3>
+        </div>
+        
+        <p className="text-xs md:text-sm font-medium text-[color:var(--text-muted)] max-w-[320px]">
+          Checks locally every 60s. Auto-pauses if you step away. Zero video frames are saved or transmitted.
         </p>
         
         <button 
-          onClick={() => setIsPresenceEnabled(!isPresenceEnabled)}
-          className={`relative w-20 h-10 rounded-full mt-2 transition-all duration-300 flex items-center px-1 ${
-            isPresenceEnabled 
+          onClick={() => togglePresence()}
+          className={`relative w-16 h-8 rounded-full transition-all duration-300 flex items-center px-1 cursor-pointer ${
+            presenceEnabled 
               ? 'bg-cyan-500 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5),0_0_10px_rgba(34,211,238,0.5)]' 
               : 'bg-[var(--bg-input)] shadow-[inset_4px_4px_8px_var(--shadow-dark),inset_-4px_-4px_8px_var(--shadow-light)]'
           }`}
         >
-          <div className={`w-8 h-8 rounded-full bg-[var(--bg-card)] shadow-[2px_2px_4px_var(--shadow-dark),-2px_-2px_4px_var(--shadow-light)] transition-all duration-300 ${
-            isPresenceEnabled ? 'translate-x-10' : 'translate-x-0'
-          }`}></div>
+          <div className={`w-6 h-6 rounded-full bg-white shadow-[2px_2px_4px_var(--shadow-dark)] transition-all duration-300 ${
+            presenceEnabled ? 'translate-x-8' : 'translate-x-0'
+          }`} />
         </button>
 
-        {isPresenceEnabled && (
-          <div className="flex flex-col w-full gap-4 mt-2">
-            <div className="flex flex-col gap-2 mt-4 items-center">
-              <label className="text-xs font-bold uppercase text-[color:var(--text-muted)]">Check Interval</label>
-              <select 
-                value={presenceIntervalSecs} 
-                onChange={(e) => setPresenceIntervalSecs(Number(e.target.value))}
-                className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] rounded-xl px-4 py-2 text-sm font-semibold shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] focus:outline-none focus:border-cyan-500/50"
-              >
-                <option value={5}>5 Seconds (Test)</option>
-                <option value={10}>10 Seconds</option>
-                <option value={30}>30 Seconds</option>
-                <option value={60}>1 Minute</option>
-                <option value={120}>2 Minutes</option>
-                <option value={300}>5 Minutes</option>
-                <option value={600}>10 Minutes</option>
-              </select>
-            </div>
-            
-            {/* Mock testing toggle */}
-            <div className="flex justify-between items-center px-5 py-3 rounded-xl bg-orange-500/10 border border-orange-500/30 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]">
-              <span className="text-xs font-bold text-orange-400 uppercase tracking-wider flex items-center gap-2">
-                <EyeOff size={14} /> Simulate Absence
-              </span>
-              <input 
-                type="checkbox" 
-                checked={mockIsAbsent} 
-                onChange={(e) => setMockIsAbsent(e.target.checked)} 
-                className="w-4 h-4 accent-orange-500 cursor-pointer" 
-              />
-            </div>
+        {presenceEnabled && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-bold">
+            <span className={`w-2 h-2 rounded-full ${
+              presenceStatus === 'present' ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' :
+              presenceStatus === 'absent' ? 'bg-red-400 animate-pulse' : 'bg-amber-400'
+            }`} />
+            <span className="text-[color:var(--text-muted)]">Status:</span>
+            <span className="capitalize text-[color:var(--text-main)]">{presenceStatus}</span>
           </div>
         )}
       </div>
 
       {/* Session History Widget */}
-      <div className="w-full max-w-2xl mt-8 flex flex-col gap-6 p-8 bg-[var(--bg-panel)] rounded-3xl shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)]">
+      <div className="w-full max-w-2xl flex flex-col gap-6 p-6 md:p-8 bg-[var(--bg-panel)] rounded-3xl shadow-[8px_8px_16px_var(--shadow-dark),-8px_-8px_16px_var(--shadow-light)] border border-[var(--border-color)]">
         <div className="flex justify-between items-center pb-4 border-b border-[var(--border-color)]">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Clock className="text-cyan-400" /> Session History
+          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <Clock className="text-cyan-400" /> Focus History
           </h3>
           <div className="text-right">
-            <span className="block text-2xl font-black text-cyan-400">{hours}h {mins}m</span>
-            <span className="text-xs uppercase tracking-widest text-[color:var(--text-muted)]">Today</span>
+            <span className="block text-xl md:text-2xl font-black text-cyan-400">{hours}h {mins}m</span>
+            <span className="text-[10px] uppercase tracking-widest text-[color:var(--text-muted)] font-bold">Total Recorded</span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          {history.length === 0 ? (
-            <p className="text-center text-[color:var(--text-muted)] py-4">No sessions yet. Start focusing!</p>
+        <div className="flex flex-col gap-3">
+          {(!history || history.length === 0) ? (
+            <p className="text-center text-[color:var(--text-muted)] py-4 text-xs">No sessions yet. Start focusing!</p>
           ) : (
-            history.slice(0, 5).map((session, idx) => (
-              <div key={idx} className="flex justify-between items-center p-4 bg-[var(--bg-input)] rounded-2xl shadow-[inset_2px_2px_6px_var(--shadow-dark),inset_-2px_-2px_6px_var(--shadow-light)]">
-                <div className="flex items-center gap-4">
+            history.slice(0, 6).map((session, idx) => (
+              <div key={session.id || idx} className="flex justify-between items-center p-3 md:p-4 bg-[var(--bg-input)] rounded-2xl shadow-[inset_2px_2px_6px_var(--shadow-dark),inset_-2px_-2px_6px_var(--shadow-light)]">
+                <div className="flex items-center gap-3">
                   <div className="p-2 bg-[var(--bg-card)] rounded-xl shadow-[2px_2px_4px_var(--shadow-dark),-2px_-2px_4px_var(--shadow-light)] text-cyan-400">
-                    {session.mode === 'pomodoro' ? <Brain size={18} /> : session.mode === 'focus' ? <Clock size={18} /> : <Coffee size={18} />}
+                    {session.mode === 'pomodoro' ? <Brain size={16} /> : session.mode === 'focus' ? <Clock size={16} /> : <Coffee size={16} />}
                   </div>
-                  <span className="font-semibold capitalize text-[color:var(--text-main)]">{session.mode}</span>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs md:text-sm text-[color:var(--text-main)] truncate max-w-[200px] md:max-w-[280px]">
+                      {session.topic || session.label || 'Deep Focus'}
+                    </span>
+                    <span className="text-[10px] text-[color:var(--text-muted)] capitalize">{session.mode}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-6">
-                  <span className="text-[color:var(--text-muted)] text-sm">{session.date}</span>
-                  <span className="font-bold text-lg text-cyan-400">+{session.duration}m</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-[color:var(--text-muted)] text-xs">
+                    {session.completedAt ? new Date(session.completedAt).toLocaleDateString() : (session.date || 'Today')}
+                  </span>
+                  <span className="font-bold text-sm md:text-base text-cyan-400">+{session.durationMinutes || session.duration}m</span>
                 </div>
               </div>
             ))
