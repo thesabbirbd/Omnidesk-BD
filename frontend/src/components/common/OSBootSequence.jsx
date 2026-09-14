@@ -20,15 +20,15 @@ export default function OSBootSequence({ onComplete, forcePlay = false }) {
     }, 250);
 
     // Sequence timelines
-    const t1 = setTimeout(() => setStage(1), 850);
-    const t2 = setTimeout(() => setStage(2), 1900);
+    const t1 = setTimeout(() => setStage(1), 1100);
+    const t2 = setTimeout(() => setStage(2), 2200);
     const t3 = setTimeout(() => {
       setIsFadingOut(true);
-    }, 2800);
+    }, 3200);
     const t4 = setTimeout(() => {
       sessionStorage.setItem('studyos_booted', 'true');
       if (onComplete) onComplete();
-    }, 3400);
+    }, 3900);
 
     return () => {
       clearTimeout(timerAudio);
@@ -44,7 +44,7 @@ export default function OSBootSequence({ onComplete, forcePlay = false }) {
     setTimeout(() => {
       sessionStorage.setItem('studyos_booted', 'true');
       if (onComplete) onComplete();
-    }, 300);
+    }, 500);
   };
 
   const toggleSound = (e) => {
@@ -57,91 +57,91 @@ export default function OSBootSequence({ onComplete, forcePlay = false }) {
   return (
     <div 
       onClick={handleSkip}
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950 text-white select-none transition-opacity duration-700 cursor-pointer overflow-hidden ${
-        isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-2xl text-slate-800 select-none transition-opacity duration-[800ms] cursor-pointer overflow-hidden ${
+        isFadingOut ? 'opacity-0 scale-105 pointer-events-none' : 'opacity-100 scale-100'
       }`}
     >
-      {/* Futuristic cybernetic backdrop */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(14,165,233,0.25),rgba(255,255,255,0))] pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0284c70d_1px,transparent_1px),linear-gradient(to_bottom,#0284c70d_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none animate-pulse" />
+      {/* Light Glassmorphism backdrop */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,182,212,0.15),rgba(255,255,255,0))] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-br from-cyan-400/20 to-blue-400/20 rounded-full blur-[100px] pointer-events-none animate-pulse duration-1000" />
+      <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-purple-400/20 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Top Controls: Sound toggle & Skip */}
       <div className="absolute top-6 right-6 flex items-center gap-3 z-20">
         <button
           onClick={toggleSound}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-300 hover:text-cyan-400 text-xs font-semibold backdrop-blur-md transition-all hover:scale-105"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white/50 border border-white/60 shadow-sm text-slate-600 hover:text-cyan-600 text-xs font-bold backdrop-blur-xl transition-all hover:scale-105 hover:bg-white/80 hover:shadow-md"
           title={soundEnabled ? 'Mute System Audio' : 'Unmute System Audio'}
         >
-          {soundEnabled ? <Volume2 size={15} className="text-cyan-400" /> : <VolumeX size={15} className="text-slate-500" />}
+          {soundEnabled ? <Volume2 size={16} className="text-cyan-500" /> : <VolumeX size={16} className="text-slate-400" />}
           <span>{soundEnabled ? 'Audio ON' : 'Audio OFF'}</span>
         </button>
         <button
           onClick={handleSkip}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-400 hover:text-white text-xs font-semibold backdrop-blur-md transition-all hover:scale-105"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-2xl bg-white/50 border border-white/60 shadow-sm text-slate-500 hover:text-slate-800 text-xs font-bold backdrop-blur-xl transition-all hover:scale-105 hover:bg-white/80 hover:shadow-md"
         >
           <span>Skip</span>
-          <X size={13} />
+          <X size={14} />
         </button>
       </div>
 
       {/* Centerpiece: Glowing Logo & Orbital Loader */}
-      <div className="flex flex-col items-center gap-8 z-10">
+      <div className="flex flex-col items-center gap-10 z-10 transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]" style={{ transform: stage === 2 ? 'translateY(-10px)' : 'translateY(0)' }}>
         <div className="relative flex items-center justify-center">
-          {/* Orbital Multi-Ring Glowing Cybernetic Loader */}
-          <div className="absolute -inset-10 rounded-full border border-cyan-500/20 animate-spin [animation-duration:8s]" />
-          <div className="absolute -inset-6 rounded-full border-2 border-dashed border-cyan-400/40 animate-spin [animation-duration:4s] [animation-direction:reverse]" />
-          <div className="absolute -inset-2 rounded-full border border-teal-400/30 animate-ping [animation-duration:3s]" />
+          {/* Orbital Multi-Ring Glassmorphic Loader */}
+          <div className="absolute -inset-12 rounded-full border-[1.5px] border-cyan-400/20 animate-[spin_10s_linear_infinite]" />
+          <div className="absolute -inset-8 rounded-full border-[1.5px] border-dashed border-blue-400/30 animate-[spin_6s_linear_infinite_reverse]" />
+          <div className="absolute -inset-4 rounded-full border border-purple-400/20 animate-ping [animation-duration:3s]" />
 
-          {/* Logo Container with 3D drop shadow */}
-          <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-slate-900/90 border border-cyan-400/40 p-4 shadow-[0_0_50px_rgba(34,211,238,0.35)] flex items-center justify-center overflow-hidden animate-in zoom-in-75 duration-500">
+          {/* Logo Container with 3D Glassmorphism drop shadow */}
+          <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-[2.5rem] bg-white/60 border border-white/80 p-6 shadow-[0_20px_60px_-15px_rgba(6,182,212,0.3),inset_0_2px_10px_rgba(255,255,255,1)] flex items-center justify-center overflow-hidden animate-in zoom-in-75 duration-700 backdrop-blur-md transition-all hover:scale-105">
             <img 
               src="/omnidesk-mark.png" 
               alt="Omnidesk BD" 
-              className="w-full h-full object-contain drop-shadow-[0_0_16px_rgba(34,211,238,0.8)] filter brightness-110"
+              className="w-full h-full object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.1)] filter brightness-95"
               onError={(e) => {
                 e.target.style.display = 'none';
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-transparent to-teal-400/20 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400/10 via-transparent to-blue-400/10 pointer-events-none" />
           </div>
         </div>
 
         {/* System Title */}
         <div className="flex flex-col items-center text-center gap-2">
-          <h1 className="text-3xl sm:text-4xl font-black tracking-widest uppercase bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-300 drop-shadow-[0_0_20px_rgba(34,211,238,0.5)]">
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-cyan-600 via-blue-600 to-indigo-600 drop-shadow-sm transition-all duration-700" style={{ opacity: stage >= 1 ? 1 : 0, transform: stage >= 1 ? 'translateY(0)' : 'translateY(10px)' }}>
             Omnidesk BD
           </h1>
-          <p className="text-xs sm:text-sm font-semibold tracking-wider text-slate-400 uppercase">
-            Autonomous Cognitive Study & DevOps OS
+          <p className="text-xs sm:text-sm font-bold tracking-widest text-slate-500/80 uppercase transition-all duration-700 delay-100" style={{ opacity: stage >= 1 ? 1 : 0, transform: stage >= 1 ? 'translateY(0)' : 'translateY(10px)' }}>
+            Advanced Cognitive Workspace
           </p>
         </div>
 
-        {/* Futuristic Cybernetic Buffering / Progress Bar */}
-        <div className="flex flex-col items-center gap-3 w-72 sm:w-80">
-          <div className="w-full h-1.5 bg-slate-800/80 rounded-full overflow-hidden p-0.5 border border-slate-700/50 relative">
+        {/* Smooth Glassmorphic Progress Bar */}
+        <div className="flex flex-col items-center gap-4 w-72 sm:w-96 transition-all duration-700 delay-200" style={{ opacity: stage >= 1 ? 1 : 0 }}>
+          <div className="w-full h-2.5 bg-white/40 rounded-full overflow-hidden p-0.5 border border-white/60 shadow-inner relative backdrop-blur-md">
             <div 
-              className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-teal-300 rounded-full shadow-[0_0_12px_rgba(34,211,238,0.8)] transition-all duration-700 ease-out"
+              className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.6)] transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
               style={{
-                width: stage === 0 ? '25%' : stage === 1 ? '70%' : '100%'
+                width: stage === 0 ? '15%' : stage === 1 ? '65%' : '100%'
               }}
             />
           </div>
 
           {/* Real-time Status Text */}
-          <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            {stage === 0 && <span>[ SYSTEM WARMING UP... ]</span>}
-            {stage === 1 && <span>[ INITIALIZING COGNITIVE KERNEL... ]</span>}
-            {stage === 2 && <span className="text-teal-300 font-bold">[ SYSTEM READY • WELCOME ]</span>}
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-600 tracking-wide">
+            <span className={`w-2 h-2 rounded-full transition-colors duration-300 ${stage === 2 ? 'bg-indigo-500' : 'bg-cyan-500 animate-pulse'}`} />
+            {stage === 0 && <span>SYSTEM WARMUP...</span>}
+            {stage === 1 && <span>LOADING COGNITIVE ENGINE...</span>}
+            {stage === 2 && <span className="text-indigo-600">WORKSPACE READY</span>}
           </div>
         </div>
       </div>
 
       {/* Footer Info */}
-      <div className="absolute bottom-8 flex flex-col items-center gap-1 text-[11px] font-mono text-slate-500 z-10">
-        <span>Omnidesk BD v1.2.9 • Architecture: Linux x86_64 / WebKit</span>
-        <span className="text-slate-600">Click anywhere to launch instantly</span>
+      <div className="absolute bottom-8 flex flex-col items-center gap-1.5 text-[11px] font-bold text-slate-400/80 z-10 transition-opacity duration-1000 delay-300" style={{ opacity: stage >= 1 ? 1 : 0 }}>
+        <span>v1.2.9 • Motion Graphics Engine • Glassmorphism UI</span>
+        <span className="text-cyan-600/70">Click anywhere to skip</span>
       </div>
     </div>
   );

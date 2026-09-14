@@ -1,5 +1,5 @@
 // Web Audio API & Speech Synthesis Engine for Omnidesk BD
-// Synthesizes studio-grade futuristic power-on chimes and clean female voice welcomes
+// Clean, soft glassmorphism style audio and clean female voice
 
 class SoundEngine {
   constructor() {
@@ -32,7 +32,8 @@ class SoundEngine {
   }
 
   /**
-   * Synthesize a modern futuristic power-on chime with dual harmonics, lowpass sweep & reverb tail
+   * Synthesize a modern, soft glassmorphism startup chime
+   * Less aggressive, more ambient and smooth.
    */
   playPowerOnChime() {
     if (!this.isSoundEnabled()) return;
@@ -42,68 +43,53 @@ class SoundEngine {
 
       const now = ctx.currentTime;
 
-      // Master gain for the whole chord
+      // Master output with very smooth attack and long decay
       const masterGain = ctx.createGain();
       masterGain.gain.setValueAtTime(0.0001, now);
-      masterGain.gain.exponentialRampToValueAtTime(0.28, now + 0.12);
-      masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+      masterGain.gain.exponentialRampToValueAtTime(0.2, now + 0.3); // Softer peak
+      masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
       masterGain.connect(ctx.destination);
 
-      // Lowpass resonant filter sweep (creates that deep, satisfying electronic power-up hum)
+      // Lowpass filter to keep it warm and non-piercing
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(140, now);
-      filter.frequency.exponentialRampToValueAtTime(3200, now + 0.8);
-      filter.Q.setValueAtTime(4.2, now);
+      filter.frequency.setValueAtTime(400, now);
+      filter.frequency.exponentialRampToValueAtTime(1800, now + 1.0);
+      filter.Q.setValueAtTime(2.0, now);
       filter.connect(masterGain);
 
-      // Sub-bass fundamental (warmth)
-      const oscSub = ctx.createOscillator();
-      oscSub.type = 'sine';
-      oscSub.frequency.setValueAtTime(110, now); // A2
-      oscSub.frequency.exponentialRampToValueAtTime(220, now + 0.35); // Glide up to A3
-      oscSub.frequency.exponentialRampToValueAtTime(440, now + 1.2); // Settle on A4
+      // Layer 1: Warm ambient pad
+      const oscPad = ctx.createOscillator();
+      oscPad.type = 'sine';
+      oscPad.frequency.setValueAtTime(261.63, now); // C4
+      oscPad.frequency.exponentialRampToValueAtTime(523.25, now + 0.5); // C5
+      
+      const padGain = ctx.createGain();
+      padGain.gain.setValueAtTime(0.001, now);
+      padGain.gain.linearRampToValueAtTime(0.4, now + 0.4);
+      padGain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
+      oscPad.connect(padGain);
+      padGain.connect(filter);
 
-      const subGain = ctx.createGain();
-      subGain.gain.setValueAtTime(0.35, now);
-      subGain.gain.linearRampToValueAtTime(0.1, now + 1.8);
-      oscSub.connect(subGain);
-      subGain.connect(filter);
+      // Layer 2: Shimmering glass bell
+      const oscBell = ctx.createOscillator();
+      oscBell.type = 'triangle';
+      oscBell.frequency.setValueAtTime(783.99, now + 0.1); // G5
+      oscBell.frequency.exponentialRampToValueAtTime(1046.50, now + 0.8); // C6
 
-      // Mid harmonic (Cyber chord E4 -> C#5 -> E5)
-      const oscMid = ctx.createOscillator();
-      oscMid.type = 'triangle';
-      oscMid.frequency.setValueAtTime(329.63, now + 0.1); // E4
-      oscMid.frequency.exponentialRampToValueAtTime(659.25, now + 0.9); // E5
+      const bellGain = ctx.createGain();
+      bellGain.gain.setValueAtTime(0.001, now);
+      bellGain.gain.linearRampToValueAtTime(0.15, now + 0.5);
+      bellGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+      oscBell.connect(bellGain);
+      bellGain.connect(filter);
 
-      const midGain = ctx.createGain();
-      midGain.gain.setValueAtTime(0.001, now);
-      midGain.gain.linearRampToValueAtTime(0.22, now + 0.2);
-      midGain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
-      oscMid.connect(midGain);
-      midGain.connect(filter);
+      // Start & Stop
+      oscPad.start(now);
+      oscBell.start(now + 0.1);
 
-      // High futuristic shimmer (Chime tone)
-      const oscHigh = ctx.createOscillator();
-      oscHigh.type = 'sine';
-      oscHigh.frequency.setValueAtTime(880, now + 0.25); // A5
-      oscHigh.frequency.exponentialRampToValueAtTime(1760, now + 1.1); // A6 shimmer
-
-      const highGain = ctx.createGain();
-      highGain.gain.setValueAtTime(0.001, now);
-      highGain.gain.linearRampToValueAtTime(0.15, now + 0.35);
-      highGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
-      oscHigh.connect(highGain);
-      highGain.connect(filter);
-
-      // Start all nodes
-      oscSub.start(now);
-      oscMid.start(now + 0.08);
-      oscHigh.start(now + 0.22);
-
-      oscSub.stop(now + 2.8);
-      oscMid.stop(now + 2.8);
-      oscHigh.stop(now + 2.8);
+      oscPad.stop(now + 4.0);
+      oscBell.stop(now + 4.0);
     } catch (e) {
       console.warn("Could not synthesize power-on audio:", e);
     }
@@ -117,6 +103,9 @@ class SoundEngine {
       if (onEndCallback) onEndCallback();
       return;
     }
+    
+    // NOTE: To get a true studio-quality advertisement voice, 
+    // a real audio file (MP3) is required. Web Speech API is inherently limited.
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       if (onEndCallback) onEndCallback();
       return;
@@ -126,30 +115,31 @@ class SoundEngine {
       window.speechSynthesis.cancel(); // Clear any pending speech
 
       const utterance = new SpeechSynthesisUtterance("Welcome to Omnidesk BD");
-      utterance.rate = 0.92; // Warm, confident studio pace
-      utterance.pitch = 1.06; // Natural friendly female pitch
-      utterance.volume = 1.0;
+      utterance.rate = 0.95; // Slightly slower, more natural pace
+      utterance.pitch = 1.05; // Slightly higher but natural
+      utterance.volume = 0.9;
 
       // Select high quality female voice if available
       const voices = window.speechSynthesis.getVoices();
       if (voices && voices.length > 0) {
+        // Try to find the most premium voice available on the OS
         const preferredFemale = voices.find(v => 
           (v.lang.startsWith('en')) && 
-          (v.name.includes('Female') || 
-           v.name.includes('Zira') || 
+          (v.name.includes('Premium') ||
+           v.name.includes('Enhanced') ||
            v.name.includes('Samantha') || 
-           v.name.includes('Google UK English Female') || 
            v.name.includes('Google US English') || 
-           v.name.includes('Natural') || 
-           v.name.includes('Victoria') ||
+           v.name.includes('Google UK English Female') || 
            v.name.includes('Karen') ||
-           v.name.includes('Moira'))
+           v.name.includes('Moira') ||
+           v.name.includes('Victoria') ||
+           v.name.includes('Female'))
         );
 
         if (preferredFemale) {
           utterance.voice = preferredFemale;
         } else {
-          const anyEnglish = voices.find(v => v.lang.startsWith('en'));
+          const anyEnglish = voices.find(v => v.lang.startsWith('en') && !v.name.includes('Male') && !v.name.includes('David'));
           if (anyEnglish) utterance.voice = anyEnglish;
         }
       }
@@ -168,14 +158,14 @@ class SoundEngine {
 
   /**
    * Combined Futuristic Boot Sequence Trigger:
-   * Power-on sound plays immediately, followed by the warm female greeting
    */
   triggerBootAudio(onComplete) {
     this.playPowerOnChime();
-    // Start speech after the power chime swells (~650ms for maximum futuristic cinematic effect)
+    
+    // Start speech shortly after the smooth chime reaches its peak
     setTimeout(() => {
       this.speakWelcome(onComplete);
-    }, 650);
+    }, 700);
   }
 }
 

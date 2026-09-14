@@ -143,6 +143,7 @@ export default function Home() {
   // Apply theme attributes to document
   useEffect(() => {
     document.documentElement.setAttribute('data-theme-mode', themeMode);
+    document.documentElement.setAttribute('data-theme-style', 'glass');
     document.documentElement.setAttribute('data-glass-gradient', glassGradient);
     localStorage.setItem('themeMode', themeMode);
     localStorage.setItem('glassGradient', glassGradient);
@@ -791,7 +792,7 @@ export default function Home() {
         </div>
       ) : (
         /* ================= INPUT & GENERATION FORM (DEAD-CENTERED & SCROLL SAFE) ================= */
-        <div className="w-full max-w-2xl z-10 flex flex-col items-center justify-center my-auto animate-in fade-in duration-200">
+        <div className="w-full max-w-2xl z-10 flex flex-col items-center justify-center mt-12 sm:mt-20 mb-16 shrink-0 animate-in fade-in duration-200">
           <div className="w-full p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)] shadow-[10px_10px_24px_var(--shadow-dark),-10px_-10px_24px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col gap-5">
             
             {/* Form Header with Back to Projects Button */}
