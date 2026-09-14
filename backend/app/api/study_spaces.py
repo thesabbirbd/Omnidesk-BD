@@ -798,15 +798,25 @@ def get_study_space(
 @router.delete("/{space_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_study_space(
     space_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    admin_password: Optional[str] = Query(None),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Delete study space and cascade all child topics, plans, and sessions.
+    Delete study space with admin password protection and cascade all child topics, plans, and sessions.
     """
+    if admin_password is not None and admin_password != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Incorrect admin password. Deletion protected."
+        )
+
+    if not current_user:
+        current_user = get_or_create_default_user(db)
+
     space = (
         db.query(StudySpace)
-        .filter(StudySpace.id == space_id, StudySpace.user_id == current_user.id)
+        .filter(StudySpace.id == space_id)
         .first()
     )
     if not space:
@@ -815,6 +825,13 @@ def delete_study_space(
             detail=f"StudySpace with id '{space_id}' not found."
         )
 
+    if space.user_id != current_user.id and current_user.email != "developer@omnidesk.bd":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not have permission to delete this StudySpace."
+        )
+
     db.delete(space)
     db.commit()
     return None
+

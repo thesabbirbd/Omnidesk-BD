@@ -25,7 +25,8 @@ import {
   RefreshCw,
   FolderOpen,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Trash2
 } from 'lucide-react';
 import { generateMasterPrompt, DEFAULT_TOPIC_PLACEHOLDER } from '../utils/masterPrompt';
 import { 
@@ -35,7 +36,9 @@ import {
   generateStudySpace, 
   approveStudySpace 
 } from '../services/api';
+import DeleteProjectModal from '../components/projects/DeleteProjectModal';
 import DashboardInteractiveMindMap from '../components/dashboard/DashboardInteractiveMindMap';
+
 import DashboardActiveSprintPanel from '../components/dashboard/DashboardActiveSprintPanel';
 import DashboardStudyTimer from '../components/dashboard/DashboardStudyTimer';
 import DashboardTodaysStudy from '../components/dashboard/DashboardTodaysStudy';
@@ -132,6 +135,18 @@ export default function Dashboard() {
 
   const [showMasterPromptModal, setShowMasterPromptModal] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
+
+  const handleProjectDeleted = (deletedId) => {
+    setSpaces(prev => prev.filter(s => s.id !== deletedId));
+    if (currentSpace?.id === deletedId) {
+      localStorage.removeItem('current_study_space_id');
+      localStorage.removeItem('current_study_space_title');
+      window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: null }));
+      navigate('/os/dashboard');
+    }
+    loadActiveSpaceAndTopics();
+  };
 
   const handleCopyMasterPrompt = () => {
     const prompt = generateMasterPrompt(topicInput);
@@ -139,6 +154,7 @@ export default function Dashboard() {
     setCopiedPrompt(true);
     setTimeout(() => setCopiedPrompt(false), 2500);
   };
+
 
   const fileInputRef = useRef(null);
   const topicInputRef = useRef(null);
@@ -835,28 +851,42 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Mini gauge */}
-          <div className="relative w-8 h-8 flex items-center justify-center">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-700/40"
-                strokeWidth="3.5"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-cyan-400 transition-all duration-1000"
-                strokeDasharray={`${progressPercent}, 100`}
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
+          {/* Mini gauge & Delete button */}
+          <div className="flex items-center gap-2">
+            <div className="relative w-8 h-8 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <path
+                  className="text-slate-700/40"
+                  strokeWidth="3.5"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  className="text-cyan-400 transition-all duration-1000"
+                  strokeDasharray={`${progressPercent}, 100`}
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+              </svg>
+            </div>
+
+            {currentSpace && currentSpace.id !== 'default-devops' && (
+              <button
+                type="button"
+                onClick={() => setProjectToDelete(currentSpace)}
+                className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors ml-1 cursor-pointer"
+                title={`Delete ${currentSpace.title} (Admin protected)`}
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
           </div>
         </div>
+
 
       </div>
 
@@ -999,6 +1029,16 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Admin Password Protected Delete Project Modal */}
+
+      <DeleteProjectModal 
+        isOpen={Boolean(projectToDelete)}
+        onClose={() => setProjectToDelete(null)}
+        project={projectToDelete}
+        onDeleted={handleProjectDeleted}
+      />
+
     </div>
   );
 }
+

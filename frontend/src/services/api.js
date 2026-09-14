@@ -64,6 +64,13 @@ export const createStudySpace = async (spaceData) => {
   return response.data;
 };
 
+export const deleteStudySpace = async (spaceId, adminPassword = 'admin') => {
+  const params = adminPassword ? { admin_password: adminPassword } : {};
+  const response = await api.delete(`/study-spaces/${spaceId}`, { params });
+  return response.data;
+};
+
+
 export const generateStudySpaceFromText = async (text, title, category) => {
   const response = await api.post('/study-spaces/generate-from-text', { text, title, category });
   return response.data;

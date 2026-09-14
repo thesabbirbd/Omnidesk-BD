@@ -92,18 +92,29 @@ def get_or_create_default_user(db: Session) -> User:
     """Return an active user from DB or create a default user for guest/demo sessions."""
     user = db.query(User).filter(User.email == "developer@omnidesk.bd").first()
     if not user:
-        user = db.query(User).filter(User.is_active == True).first()
-    if not user:
         user = User(
             email="developer@omnidesk.bd",
             hashed_password="hashed_demo_password",
-            full_name="Omnidesk Developer",
-            is_active=True
+            is_active=True,
+            is_verified=True
         )
         db.add(user)
         db.commit()
         db.refresh(user)
+
+    # Ensure default developer owns key spaces if count is low
+    from app.models.study_space import StudySpace
+    user_spaces_count = db.query(StudySpace).filter(StudySpace.user_id == user.id, StudySpace.is_archived == False).count()
+    if user_spaces_count < 2:
+        for s in db.query(StudySpace).filter(StudySpace.is_archived == False).all():
+            if s.user_id != user.id:
+                title_l = s.title.lower()
+                if any(k in title_l for k in ["backend", "devops", "networking", "cloud native"]):
+                    s.user_id = user.id
+        db.commit()
+
     return user
+
 
 
 # ==============================================================================

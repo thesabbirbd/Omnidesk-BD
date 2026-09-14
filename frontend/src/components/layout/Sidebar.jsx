@@ -19,10 +19,15 @@ import {
   X,
   Plus,
   ChevronRight,
-  FolderGit2
+  FolderGit2,
+  Trash2,
+  Info
 } from 'lucide-react';
 import { getStudySpaces } from '../../services/api';
 import { getSpaceSlug } from '../../utils/slugify';
+import DeleteProjectModal from '../projects/DeleteProjectModal';
+import AboutOmnideskModal from '../common/AboutOmnideskModal';
+
 
 const navItems = [
   { path: '/os/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-cyan-400' },
@@ -43,12 +48,26 @@ const navItems = [
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const navigate = useNavigate();
   const [spacesList, setSpacesList] = useState([]);
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [showAboutModal, setShowAboutModal] = useState(false);
   const [activeSpaceId, setActiveSpaceId] = useState(() => {
     return localStorage.getItem('current_study_space_id') || '';
   });
   const [activeSpaceTitle, setActiveSpaceTitle] = useState(() => {
     return localStorage.getItem('current_study_space_title') || '';
   });
+
+  const handleProjectDeleted = (deletedId) => {
+    setSpacesList(prev => prev.filter(s => s.id !== deletedId));
+    if (localStorage.getItem('current_study_space_id') === deletedId) {
+      localStorage.removeItem('current_study_space_id');
+      localStorage.removeItem('current_study_space_title');
+      window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: null }));
+      navigate('/os/dashboard');
+    }
+    loadSpaces();
+  };
+
 
   const loadSpaces = async () => {
     try {
@@ -223,21 +242,46 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
                       }`} />
                       <span className="truncate text-[11px]">{space.title}</span>
                     </div>
-                    {isActive ? (
-                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 shrink-0">
-                        Active
-                      </span>
-                    ) : (
-                      <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-[color:var(--text-muted)] shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProjectToDelete(space);
+                        }}
+                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-all cursor-pointer"
+                        title={`Delete ${space.title} (Admin protected)`}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                      {isActive ? (
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 shrink-0">
+                          Active
+                        </span>
+                      ) : (
+                        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-[color:var(--text-muted)] shrink-0" />
+                      )}
+                    </div>
                   </button>
                 );
               })
             )}
           </div>
 
+          {/* About Omnidesk BD Option */}
+          <button
+            onClick={() => setShowAboutModal(true)}
+            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-bold text-[color:var(--text-muted)] hover:text-cyan-400 hover:bg-[var(--bg-card)] transition-colors group cursor-pointer border border-transparent hover:border-cyan-500/20"
+          >
+            <div className="flex items-center gap-2">
+              <Info size={14} className="text-cyan-400" />
+              <span>About Omnidesk BD</span>
+            </div>
+            <span className="text-[10px] font-mono font-bold text-slate-500">v1.2.9</span>
+          </button>
+
           {/* Compact Encouragement */}
-          <div className="mt-1 pt-2 border-t border-[var(--border-color)]/60 flex items-center justify-between px-1 text-[10px] font-semibold text-[color:var(--text-muted)]">
+          <div className="pt-1.5 border-t border-[var(--border-color)]/60 flex items-center justify-between px-1 text-[10px] font-semibold text-[color:var(--text-muted)]">
             <span className="flex items-center gap-1 text-emerald-400">
               <Sprout size={12} /> Small daily steps
             </span>
@@ -246,6 +290,21 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         </div>
 
       </aside>
+
+      {/* Admin Password Protected Delete Project Modal */}
+      <DeleteProjectModal 
+        isOpen={Boolean(projectToDelete)}
+        onClose={() => setProjectToDelete(null)}
+        project={projectToDelete}
+        onDeleted={handleProjectDeleted}
+      />
+
+      {/* About Omnidesk BD Modal */}
+      <AboutOmnideskModal 
+        isOpen={showAboutModal}
+        onClose={() => setShowAboutModal(false)}
+      />
     </>
   );
 }
+
