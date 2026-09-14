@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { 
   X, 
+  ArrowLeft,
   User, 
   Lock, 
   Unlock, 
@@ -51,7 +53,21 @@ export default function UserProfileModal({ isOpen, onClose }) {
     setFormData(profile);
   }, [profile]);
 
-  if (!isOpen) return null;
+  // Escape key listener to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (isPasswordModalOpen) {
+          setIsPasswordModalOpen(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isPasswordModalOpen, onClose]);
 
   const handleStartEdit = () => {
     // If profile is already saved, require password to edit
@@ -90,23 +106,36 @@ export default function UserProfileModal({ isOpen, onClose }) {
     setTimeout(() => setSaveToast(false), 3000);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm animate-in fade-in duration-200">
+  if (!isOpen) return null;
+
+  const modalContent = (
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 select-none"
+    >
       <div 
-        className="w-full max-w-xl rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_20px_50px_rgba(0,0,0,0.7),inset_1px_1px_2px_rgba(255,255,255,0.1)] p-6 md:p-8 relative flex flex-col gap-6 max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-xl rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_1px_1px_2px_rgba(255,255,255,0.1)] p-6 md:p-8 relative flex flex-col gap-6 max-h-[88vh] overflow-y-auto select-text transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
         <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-              <User size={22} />
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] text-[color:var(--text-muted)] hover:text-cyan-400 border border-[var(--border-color)] transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold shrink-0"
+              title="Back to Workspace (Esc)"
+            >
+              <ArrowLeft size={16} />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+            <div className="p-2.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shrink-0">
+              <User size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-black tracking-wide text-[color:var(--text-main)]">
+              <h2 className="text-base sm:text-lg font-black tracking-wide text-[color:var(--text-main)]">
                 Engineer Profile
               </h2>
-              <span className="text-xs font-semibold text-[color:var(--text-muted)]">
+              <span className="text-[11px] sm:text-xs font-semibold text-[color:var(--text-muted)]">
                 Universal Study OS Identity & Target Configuration
               </span>
             </div>
@@ -114,7 +143,8 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] text-[color:var(--text-muted)] hover:text-white border border-[var(--border-color)] transition-all cursor-pointer flex items-center justify-center shrink-0"
+            title="Close Profile (Esc)"
           >
             <X size={18} />
           </button>
@@ -385,7 +415,25 @@ export default function UserProfileModal({ isOpen, onClose }) {
           </div>
         )}
 
+        {/* Modal Bottom Footer Actions */}
+        <div className="flex items-center justify-between pt-4 border-t border-[var(--border-color)]">
+          <span className="text-[11px] font-bold text-[color:var(--text-muted)] flex items-center gap-1.5">
+            <Lock size={12} className="text-cyan-400" />
+            Protected profile settings
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] border border-[var(--border-color)] text-xs font-bold text-[color:var(--text-main)] hover:text-cyan-400 shadow-sm cursor-pointer transition-all flex items-center gap-1.5"
+          >
+            <ArrowLeft size={14} />
+            <span>Close Profile</span>
+          </button>
+        </div>
+
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? ReactDOM.createPortal(modalContent, document.body) : modalContent;
 }

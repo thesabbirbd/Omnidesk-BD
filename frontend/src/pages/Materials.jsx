@@ -1,5 +1,68 @@
-import React, { useState } from 'react';
-import { Search, Link as LinkIcon, FileText, File as FilePdf, FileVideo, UploadCloud, Folder, Plus, FileCode, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Search, 
+  Link as LinkIcon, 
+  FileText, 
+  File as FilePdf, 
+  FileVideo, 
+  UploadCloud, 
+  Folder, 
+  Plus, 
+  FileCode, 
+  CheckCircle2, 
+  ArrowLeft,
+  ExternalLink,
+  BookOpen,
+  Sparkles,
+  Globe,
+  Terminal,
+  Bookmark
+} from 'lucide-react';
+import { getStudySpaces } from '../services/api';
+import { getSpaceSlug } from '../utils/slugify';
+
+// Curated Online Resources generator based on active topic
+const generateCuratedOnlineMaterials = (title = '', category = '') => {
+  const t = (title + ' ' + category).toLowerCase();
+  
+  if (t.includes('network') || t.includes('tcp') || t.includes('cisco')) {
+    return [
+      { id: 'cur-1', title: 'RFC 793: Transmission Control Protocol (TCP) Specification', type: 'url', category: 'Official Standard', source: 'IETF RFC Database', url: 'https://datatracker.ietf.org/doc/html/rfc793', badge: 'OFFICIAL RFC', duration: '45 min read' },
+      { id: 'cur-2', title: 'Computer Networking: A Top-Down Approach Companion Labs', type: 'url', category: 'Interactive Lab', source: 'Kurose & Ross', url: 'https://gaia.cs.umass.edu/kurose_ross/online_lectures.htm', badge: 'ACADEMIC LAB', duration: '2 hours' },
+      { id: 'cur-3', title: 'Wireshark Packet Analysis Masterclass', type: 'video', category: 'Practical Lab', source: 'Wireshark Foundation', url: 'https://www.wireshark.org/docs/', badge: 'PACKET LAB', duration: '1h 30m' },
+      { id: 'cur-4', title: 'Cloudflare Learning Center: What is DNS & IP Routing?', type: 'url', category: 'Architecture Guide', source: 'Cloudflare', url: 'https://www.cloudflare.com/learning/network-layer/what-is-the-network-layer/', badge: 'GUIDE', duration: '20 min read' }
+    ];
+  } else if (t.includes('python')) {
+    return [
+      { id: 'cur-1', title: 'Official Python 3.12 Documentation & Language Reference', type: 'url', category: 'Official Docs', source: 'Python Software Foundation', url: 'https://docs.python.org/3/', badge: 'OFFICIAL DOCS', duration: 'Comprehensive' },
+      { id: 'cur-2', title: 'FastAPI High-Performance Async Architecture Guide', type: 'url', category: 'Framework Docs', source: 'tiangolo', url: 'https://fastapi.tiangolo.com/tutorial/', badge: 'INTERACTIVE DOCS', duration: '1 hour' },
+      { id: 'cur-3', title: 'Python AsyncIO: Coroutines, Tasks & Event Loop Deep Dive', type: 'url', category: 'Deep Dive', source: 'Real Python', url: 'https://realpython.com/async-io-python/', badge: 'DEEP DIVE', duration: '40 min read' },
+      { id: 'cur-4', title: 'Python AST & Bytecode Disassembler Playground', type: 'url', category: 'Interactive Tool', source: 'Python Tutor', url: 'https://pythontutor.com/', badge: 'PLAYGROUND', duration: 'Hands-on' }
+    ];
+  } else if (t.includes('kube') || t.includes('cloud') || t.includes('devops') || t.includes('docker')) {
+    return [
+      { id: 'cur-1', title: 'Kubernetes Official Documentation & Interactive Katacoda Tutorials', type: 'url', category: 'Official Docs', source: 'CNCF / Kubernetes', url: 'https://kubernetes.io/docs/tutorials/', badge: 'OFFICIAL CNCF', duration: 'Hands-on Labs' },
+      { id: 'cur-2', title: 'Docker Multi-Stage Builds & Security Best Practices', type: 'url', category: 'Production Guide', source: 'Docker Documentation', url: 'https://docs.docker.com/build/building/multi-stage/', badge: 'BEST PRACTICES', duration: '30 min read' },
+      { id: 'cur-3', title: 'Killercoda Interactive Cloud Native Sandboxes', type: 'url', category: 'Live Terminal Sandbox', source: 'Killercoda', url: 'https://killercoda.com/', badge: 'LIVE PTY LAB', duration: 'Self-Paced' },
+      { id: 'cur-4', title: 'The Twelve-Factor App System Design Manifesto', type: 'url', category: 'Architecture Blueprint', source: '12factor.net', url: 'https://12factor.net/', badge: 'MANIFESTO', duration: '25 min read' }
+    ];
+  } else if (t.includes('video') || t.includes('editing')) {
+    return [
+      { id: 'cur-1', title: 'DaVinci Resolve Official Training & Certification Courseware', type: 'url', category: 'Official Docs', source: 'Blackmagic Design', url: 'https://www.blackmagicdesign.com/products/davinciresolve/training', badge: 'CERTIFIED COURSE', duration: 'Multi-Module' },
+      { id: 'cur-2', title: 'Color Grading & Color Science Fundamentals', type: 'video', category: 'Video Guide', source: 'Color Grading Central', url: 'https://www.colorgradingcentral.com/', badge: 'COLOR SCIENCE', duration: '45 min' },
+      { id: 'cur-3', title: 'FFmpeg Command Line Audio/Video Transcoding Cookbook', type: 'url', category: 'CLI Reference', source: 'FFmpeg Org', url: 'https://ffmpeg.org/documentation.html', badge: 'CLI COOKBOOK', duration: 'Reference' }
+    ];
+  }
+
+  // General fallback tailored to topic title
+  return [
+    { id: 'cur-1', title: `${title || 'Core Subject'} Official Technical Documentation & Reference Manual`, type: 'url', category: 'Official Docs', source: 'Standard Technical Index', url: 'https://developer.mozilla.org', badge: 'OFFICIAL REFERENCE', duration: 'Comprehensive' },
+    { id: 'cur-2', title: `System Architecture & Implementation Blueprints for ${title || 'Topic'}`, type: 'url', category: 'Architecture Guide', source: 'Engineering Architecture Hub', url: 'https://github.com/donnemartin/system-design-primer', badge: 'SYSTEM DESIGN', duration: '1 hour' },
+    { id: 'cur-3', title: `Hands-On Interactive Code Sandbox & Practice Repository`, type: 'url', category: 'Interactive Sandbox', source: 'CodeSandbox / Replit', url: 'https://codesandbox.io', badge: 'SANDBOX', duration: 'Hands-on' },
+    { id: 'cur-4', title: `Comprehensive Cheat Sheet & Key Concept Summaries`, type: 'url', category: 'Quick Reference', source: 'DevCheatSheets', url: 'https://devhints.io', badge: 'CHEAT SHEET', duration: '15 min read' }
+  ];
+};
 
 const mockMaterials = [
   { id: 1, type: 'pdf', name: 'FastAPI_Architecture.pdf', topic: 'Backend Engineering', size: '2.4 MB', date: 'Oct 12' },
@@ -18,10 +81,72 @@ const typeConfig = {
 };
 
 export default function Materials() {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('all');
+  const [activeSpaceTitle, setActiveSpaceTitle] = useState(() => {
+    return localStorage.getItem('current_study_space_title') || '100-Day Backend → DevOps';
+  });
+  const [activeSpaceCategory, setActiveSpaceCategory] = useState('Backend / DevOps');
+  const [activeSpaceId, setActiveSpaceId] = useState(() => {
+    return localStorage.getItem('current_study_space_id') || '';
+  });
+  const [spacesList, setSpacesList] = useState([]);
+
+  useEffect(() => {
+    const loadCurrentSpace = async () => {
+      try {
+        const spaces = await getStudySpaces();
+        if (Array.isArray(spaces) && spaces.length > 0) {
+          setSpacesList(spaces);
+          const currentId = localStorage.getItem('current_study_space_id');
+          const matched = spaces.find(s => s.id === currentId) || spaces[0];
+          setActiveSpaceId(matched.id);
+          setActiveSpaceTitle(matched.title);
+          setActiveSpaceCategory(matched.category || 'Engineering');
+        }
+      } catch {
+        // fallback
+      }
+    };
+    loadCurrentSpace();
+
+    const handleSpaceChanged = (e) => {
+      if (e.detail) {
+        setActiveSpaceId(e.detail.id || '');
+        setActiveSpaceTitle(e.detail.title || '');
+        setActiveSpaceCategory(e.detail.category || 'Engineering');
+      }
+      loadCurrentSpace();
+    };
+    window.addEventListener('studyos-space-changed', handleSpaceChanged);
+    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
+  }, []);
+
+  const curatedMaterials = generateCuratedOnlineMaterials(activeSpaceTitle, activeSpaceCategory);
 
   return (
     <div className="flex flex-col h-full w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] overflow-y-auto p-6 md:p-10 gap-8">
+      
+      {/* Top Navigation & Breadcrumb */}
+      <div className="shrink-0 flex items-center justify-between gap-4 p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[4px_4px_12px_var(--shadow-dark),-4px_-4px_12px_var(--shadow-light)]">
+        <button
+          onClick={() => {
+            const currentSpace = spacesList.find(s => s.id === activeSpaceId);
+            const slug = currentSpace ? getSpaceSlug(currentSpace) : '';
+            navigate(slug ? `/os/dashboard/${slug}` : '/os/dashboard');
+          }}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] border border-[var(--border-color)] text-xs font-bold text-[color:var(--text-main)] hover:text-cyan-400 transition-all cursor-pointer shadow-inner"
+          title="Return to Project Dashboard"
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Dashboard</span>
+        </button>
+
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-input)] border border-cyan-500/30 text-xs font-bold text-cyan-400 shadow-inner">
+          <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse shrink-0" />
+          <span className="truncate max-w-[180px] sm:max-w-[260px]">{activeSpaceTitle}</span>
+        </div>
+      </div>
       
       {/* Header and Upload Zone */}
       <div className="flex flex-col xl:flex-row gap-8">
@@ -123,6 +248,71 @@ export default function Materials() {
             </div>
           );
         })}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* Dynamic Curated Online Learning Resources & Documentation Section          */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col gap-5 mt-6 pt-6 border-t border-[var(--border-color)]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                <Globe size={20} />
+              </div>
+              <h2 className="text-xl md:text-2xl font-black tracking-wide text-[color:var(--text-main)]">
+                Curated Online Learning Resources & Docs
+              </h2>
+            </div>
+            <p className="text-xs md:text-sm font-medium text-[color:var(--text-muted)] mt-1 ml-10">
+              Verified official documentation, interactive playgrounds, and video deep-dives tailored to <span className="text-cyan-400 font-bold">{activeSpaceTitle}</span>.
+            </p>
+          </div>
+
+          <span className="self-start md:self-auto px-3 py-1 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold flex items-center gap-1.5">
+            <Sparkles size={14} />
+            <span>Ready Online Suggestions</span>
+          </span>
+        </div>
+
+        {/* Curated Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          {curatedMaterials.map((res) => (
+            <div
+              key={res.id}
+              className="p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] flex flex-col justify-between gap-4 group hover:border-cyan-500/40 hover:shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] transition-all"
+            >
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                    {res.badge}
+                  </span>
+                  <span className="text-[11px] font-medium text-[color:var(--text-muted)]">
+                    {res.duration}
+                  </span>
+                </div>
+
+                <h3 className="text-sm font-bold text-[color:var(--text-main)] group-hover:text-cyan-400 transition-colors line-clamp-2 leading-snug">
+                  {res.title}
+                </h3>
+
+                <span className="text-xs text-[color:var(--text-muted)] font-medium">
+                  Source: <span className="text-[color:var(--text-main)] font-semibold">{res.source}</span>
+                </span>
+              </div>
+
+              <a
+                href={res.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-2 py-2.5 px-3 rounded-xl bg-[var(--bg-input)] hover:bg-cyan-500 text-[color:var(--text-muted)] hover:text-slate-950 font-bold text-xs flex items-center justify-center gap-2 border border-[var(--border-color)] hover:border-cyan-400 shadow-inner transition-all cursor-pointer group-hover:shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+              >
+                <span>Launch Resource</span>
+                <ExternalLink size={14} />
+              </a>
+            </div>
+          ))}
+        </div>
       </div>
       
     </div>

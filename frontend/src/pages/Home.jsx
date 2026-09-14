@@ -16,10 +16,13 @@ import {
   ChevronRight,
   BookOpen,
   Zap,
-  Check
+  Check,
+  Copy,
+  CheckCircle2
 } from 'lucide-react';
 import { getStudySpaces, generateStudySpace, approveStudySpace } from '../services/api';
 import { getSpaceSlug, slugify } from '../utils/slugify';
+import { generateMasterPrompt, DEFAULT_TOPIC_PLACEHOLDER } from '../utils/masterPrompt';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -43,6 +46,15 @@ export default function Home() {
   const [isApproving, setIsApproving] = useState(false);
   const [generationError, setGenerationError] = useState(null);
   const [previewData, setPreviewData] = useState(null);
+  const [showMasterPromptModal, setShowMasterPromptModal] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+  const handleCopyMasterPrompt = () => {
+    const prompt = generateMasterPrompt(topicName);
+    navigator.clipboard.writeText(prompt);
+    setCopiedPrompt(true);
+    setTimeout(() => setCopiedPrompt(false), 2500);
+  };
 
   const fileInputRef = useRef(null);
 
@@ -359,6 +371,15 @@ export default function Home() {
               <p className="text-[color:var(--text-muted)] text-sm font-medium">
                 Enter a topic name or drop a curriculum file to generate an intelligent roadmap.
               </p>
+              <button
+                type="button"
+                onClick={() => setShowMasterPromptModal(true)}
+                className="mt-2 flex items-center gap-1.5 px-4 py-1.5 rounded-2xl bg-gradient-to-r from-purple-500/20 to-cyan-500/20 border border-purple-500/40 hover:border-cyan-400 text-purple-300 hover:text-cyan-300 text-xs font-bold transition-all shadow-sm cursor-pointer hover:scale-105 active:scale-95"
+                title="View & Copy Master AI Prompt for ChatGPT, Claude or Gemini"
+              >
+                <Sparkles size={14} className="text-cyan-400 animate-pulse" />
+                <span>⚡ Master AI Prompt (Copy for external AI)</span>
+              </button>
             </div>
 
             {generationError && (
@@ -525,6 +546,94 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* MASTER AI PROMPT MODAL (FOR CHATGPT, CLAUDE, GEMINI, DEEPSEEK)           */}
+      {/* ========================================================================= */}
+      {showMasterPromptModal && (
+        <div 
+          onClick={() => setShowMasterPromptModal(false)}
+          className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 select-none text-left"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-3xl rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_1px_1px_2px_rgba(255,255,255,0.1)] p-6 md:p-8 flex flex-col gap-5 max-h-[88vh] overflow-y-auto select-text"
+          >
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                  <Sparkles size={22} className="animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-lg md:text-xl font-black text-[color:var(--text-main)]">
+                    Omnidesk BD Master AI Prompt
+                  </h3>
+                  <p className="text-xs text-[color:var(--text-muted)] font-semibold mt-0.5">
+                    Generate an ultra-detailed, syllabus-complete curriculum from any external AI
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowMasterPromptModal(false)}
+                className="p-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] text-[color:var(--text-muted)] hover:text-white border border-[var(--border-color)] transition-all cursor-pointer"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-xs font-semibold text-cyan-300 flex items-start gap-3">
+              <Sparkles size={18} className="shrink-0 text-cyan-400 mt-0.5" />
+              <div className="leading-relaxed">
+                <span>
+                  <strong>How to use:</strong> Click <strong>Copy Master Prompt</strong> below. We've automatically filled in your topic ({topicName.trim() ? <strong className="text-white">"{topicName.trim()}"</strong> : <em>"your chosen topic"</em>}) at the bottom of the prompt. Paste it into ChatGPT, Claude, Gemini, or DeepSeek. Save the generated reply as a <strong>.md</strong> or <strong>.txt</strong> file, then drop it into the upload box on Omnidesk BD!
+                </span>
+              </div>
+            </div>
+
+            {/* Prompt Preview Box */}
+            <div className="relative rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] p-4 shadow-inner max-h-72 overflow-y-auto font-mono text-xs text-[color:var(--text-main)] leading-relaxed whitespace-pre-wrap select-all scrollbar-thin">
+              {generateMasterPrompt(topicName)}
+            </div>
+
+            {/* Modal Bottom Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-[var(--border-color)]">
+              <span className="text-[11px] font-bold text-[color:var(--text-muted)] truncate max-w-sm">
+                Topic Target: <span className="text-cyan-400 font-mono">"{topicName.trim() || DEFAULT_TOPIC_PLACEHOLDER}"</span>
+              </span>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowMasterPromptModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] text-xs font-bold text-[color:var(--text-muted)] hover:text-white cursor-pointer transition-all border border-[var(--border-color)]"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyMasterPrompt}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 text-xs font-black shadow-[0_0_18px_rgba(6,182,212,0.4)] cursor-pointer transition-all active:scale-95"
+                >
+                  {copiedPrompt ? (
+                    <>
+                      <CheckCircle2 size={16} />
+                      <span>Copied to Clipboard!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={16} />
+                      <span>Copy Master Prompt</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

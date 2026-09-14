@@ -366,24 +366,25 @@ class GeminiProvider(AIProvider):
             effective_title = title or "Curriculum Track"
 
         prompt = (
-            "You are an expert curriculum architect and senior software engineer. "
+            "You are a Principal Curriculum Architect and Staff Systems Engineer. "
             f"{effective_input}\n\n"
-            "Analyze and extract a comprehensive, production-grade learning roadmap.\n\n"
+            "Analyze and synthesize an exhaustive, production-grade learning roadmap with strict DAG prerequisites, "
+            "actionable hands-on competency tasks, and verified documentation references.\n\n"
             "You MUST return a JSON object with this exact structure:\n"
             "{\n"
             f'  "title": "{effective_title}",\n'
             '  "category": "Technology & Engineering",\n'
-            '  "summary": "Concise course overview",\n'
+            '  "summary": "Concise executive overview of the roadmap",\n'
             '  "topics": [\n'
             "    {\n"
             '      "title": "Topic Name",\n'
-            '      "description": "Detailed description of competencies learned",\n'
-            '      "subtopics": ["Subtopic 1", "Subtopic 2"],\n'
+            '      "description": "Detailed description of competencies learned and production context",\n'
+            '      "subtopics": ["Subtopic 1: Concrete hands-on checkpoint", "Subtopic 2: Concrete implementation task"],\n'
             '      "prerequisites": ["Prerequisite Topic Title, or empty if root topic"],\n'
             '      "dependencies": ["Prerequisite Topic Title, or empty if root topic"],\n'
             '      "estimated_minutes": 60,\n'
             '      "difficulty": "BEGINNER" | "INTERMEDIATE" | "ADVANCED",\n'
-            '      "source_reference": "Citation or section heading"\n'
+            '      "source_reference": "Official Docs / Standards Reference / RFC"\n'
             "    }\n"
             "  ]\n"
             "}\n"

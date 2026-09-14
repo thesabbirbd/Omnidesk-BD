@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   GitFork, 
@@ -10,14 +10,19 @@ import {
   Timer, 
   FileText, 
   RotateCcw,
-  HelpCircle,
+  HelpCircle, 
   BarChart2, 
   Bot, 
   Settings,
   Brain,
   Sprout,
-  X
+  X,
+  Plus,
+  ChevronRight,
+  FolderGit2
 } from 'lucide-react';
+import { getStudySpaces } from '../../services/api';
+import { getSpaceSlug } from '../../utils/slugify';
 
 const navItems = [
   { path: '/os/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-cyan-400' },
@@ -36,6 +41,58 @@ const navItems = [
 ];
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
+  const navigate = useNavigate();
+  const [spacesList, setSpacesList] = useState([]);
+  const [activeSpaceId, setActiveSpaceId] = useState(() => {
+    return localStorage.getItem('current_study_space_id') || '';
+  });
+  const [activeSpaceTitle, setActiveSpaceTitle] = useState(() => {
+    return localStorage.getItem('current_study_space_title') || '';
+  });
+
+  const loadSpaces = async () => {
+    try {
+      const data = await getStudySpaces();
+      if (Array.isArray(data) && data.length > 0) {
+        setSpacesList(data);
+        const currentId = localStorage.getItem('current_study_space_id');
+        const matched = data.find(s => s.id === currentId) || data[0];
+        if (matched && !currentId) {
+          setActiveSpaceId(matched.id);
+          setActiveSpaceTitle(matched.title);
+          localStorage.setItem('current_study_space_id', matched.id);
+          localStorage.setItem('current_study_space_title', matched.title);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    loadSpaces();
+    const handleSpaceChanged = (e) => {
+      if (e.detail?.id) {
+        setActiveSpaceId(e.detail.id);
+        setActiveSpaceTitle(e.detail.title || '');
+      }
+      loadSpaces();
+    };
+    window.addEventListener('studyos-space-changed', handleSpaceChanged);
+    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
+  }, []);
+
+  const handleSelectProject = (space) => {
+    localStorage.setItem('current_study_space_id', space.id);
+    localStorage.setItem('current_study_space_title', space.title);
+    setActiveSpaceId(space.id);
+    setActiveSpaceTitle(space.title);
+    window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: space }));
+    const slug = getSpaceSlug(space);
+    navigate(`/os/dashboard/${slug}`);
+    onClose();
+  };
+
   return (
     <>
       {/* Mobile Backdrop Overlay */}
@@ -119,25 +176,72 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
           ))}
         </nav>
 
-        {/* Motivational Card at Bottom */}
-        <div className="p-4 border-t border-[var(--border-color)]">
-          <div className="p-4 rounded-2xl bg-[var(--bg-card)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col gap-2.5">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
-                <Sprout size={18} />
-              </div>
-              <span className="text-xs font-bold text-[color:var(--text-main)] leading-tight">
-                Small steps every day lead to big results.
-              </span>
-            </div>
-
-            <div className="w-full h-2 rounded-full bg-[var(--bg-input)] shadow-[inset_1px_1px_2px_var(--shadow-dark)] overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400 w-2/3 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
-            </div>
-
-            <span className="text-[11px] font-bold text-emerald-400 tracking-wide">
-              Keep going! 💪
+        {/* All Learning Projects Switcher Section */}
+        <div className="p-3 border-t border-[var(--border-color)] bg-[var(--bg-panel)] flex flex-col gap-2 shrink-0">
+          <div className="flex items-center justify-between px-1.5 pt-0.5">
+            <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--text-muted)] flex items-center gap-1.5">
+              <FolderGit2 size={12} className="text-cyan-400" />
+              All Learning Projects
             </span>
+            <button
+              onClick={() => {
+                navigate('/os/dashboard');
+                onClose();
+              }}
+              className="p-1 rounded-lg hover:bg-[var(--bg-input)] text-cyan-400 hover:text-cyan-300 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors"
+              title="Create New Learning Project"
+            >
+              <Plus size={11} />
+              <span>New</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-1 max-h-36 overflow-y-auto pr-0.5 scrollbar-thin">
+            {spacesList.length === 0 ? (
+              <div className="px-2 py-2 text-[11px] text-[color:var(--text-muted)] italic">
+                Loading projects...
+              </div>
+            ) : (
+              spacesList.map((space) => {
+                const isActive = space.id === activeSpaceId || space.title === activeSpaceTitle;
+                return (
+                  <button
+                    key={space.id}
+                    onClick={() => handleSelectProject(space)}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs font-bold transition-all group cursor-pointer ${
+                      isActive
+                        ? 'bg-[var(--bg-card)] text-cyan-400 shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] border border-cyan-500/30'
+                        : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-card)]'
+                    }`}
+                    title={`Switch to: ${space.title}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${
+                        isActive 
+                          ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)] animate-pulse' 
+                          : 'bg-slate-500/50 group-hover:bg-slate-400'
+                      }`} />
+                      <span className="truncate text-[11px]">{space.title}</span>
+                    </div>
+                    {isActive ? (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 shrink-0">
+                        Active
+                      </span>
+                    ) : (
+                      <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-[color:var(--text-muted)] shrink-0" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Compact Encouragement */}
+          <div className="mt-1 pt-2 border-t border-[var(--border-color)]/60 flex items-center justify-between px-1 text-[10px] font-semibold text-[color:var(--text-muted)]">
+            <span className="flex items-center gap-1 text-emerald-400">
+              <Sprout size={12} /> Small daily steps
+            </span>
+            <span className="text-cyan-400 font-bold">Keep going! 💪</span>
           </div>
         </div>
 

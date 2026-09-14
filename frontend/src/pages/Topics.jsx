@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Layers, Search, Play, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Layers, Search, Play, CheckCircle2, Clock, ArrowLeft, ChevronDown, Sparkles, Folder } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TopicQuizVerificationModal from '../components/quiz/TopicQuizVerificationModal';
+import { getStudySpaces, getTopics } from '../services/api';
+import { getSpaceSlug } from '../utils/slugify';
 
 const initialTopics = [
   {
@@ -110,6 +112,83 @@ export default function Topics() {
   const navigate = useNavigate();
   const [quizTopic, setQuizTopic] = useState(null);
 
+  // Active StudySpace synchronization
+  const [spacesList, setSpacesList] = useState([]);
+  const [activeSpaceId, setActiveSpaceId] = useState(() => {
+    return localStorage.getItem('current_study_space_id') || '';
+  });
+  const [activeSpaceTitle, setActiveSpaceTitle] = useState(() => {
+    return localStorage.getItem('current_study_space_title') || '100-Day Backend → DevOps';
+  });
+  const [showSpaceMenu, setShowSpaceMenu] = useState(false);
+  const [isLoadingTopics, setIsLoadingTopics] = useState(false);
+
+  // Load spaces and topics
+  useEffect(() => {
+    const fetchSpacesAndTopics = async () => {
+      try {
+        const spaces = await getStudySpaces();
+        if (Array.isArray(spaces) && spaces.length > 0) {
+          setSpacesList(spaces);
+          const currentId = localStorage.getItem('current_study_space_id');
+          const matched = spaces.find(s => s.id === currentId) || spaces[0];
+          const targetId = matched.id;
+          setActiveSpaceId(targetId);
+          setActiveSpaceTitle(matched.title);
+
+          setIsLoadingTopics(true);
+          const rawTopics = await getTopics(targetId);
+          if (Array.isArray(rawTopics) && rawTopics.length > 0) {
+            const mapped = rawTopics.map((t, idx) => ({
+              id: t.id || idx + 1,
+              title: t.title,
+              category: t.category || matched.title || 'Core Curriculum',
+              status: t.status || 'NORMAL',
+              mastery: t.progress !== undefined ? t.progress : (t.status === 'COMPLETE' ? 100 : t.status === 'LEARNING' ? 50 : 15),
+              prerequisites: t.dependencies || [],
+              checkpoints: Array.isArray(t.competency_tasks) && t.competency_tasks.length > 0
+                ? t.competency_tasks.map(c => ({ name: c.title || c.description, done: Boolean(c.completed) }))
+                : Array.isArray(t.subtopics) && t.subtopics.length > 0
+                  ? t.subtopics.map(st => ({ name: st, done: false }))
+                  : [{ name: `Master core ${t.title} fundamentals`, done: false }, { name: 'Hands-on practical implementation', done: false }],
+              estimatedHours: Math.max(1, Math.round((t.estimated_minutes || 60) / 60))
+            }));
+            setTopics(mapped);
+          } else {
+            // Keep fallback initial topics if newly created empty space
+            setTopics(initialTopics);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch space topics, using cached:", err);
+      } finally {
+        setIsLoadingTopics(false);
+      }
+    };
+
+    fetchSpacesAndTopics();
+
+    const handleSpaceChanged = (e) => {
+      if (e.detail?.id) {
+        setActiveSpaceId(e.detail.id);
+        setActiveSpaceTitle(e.detail.title || '');
+      }
+      fetchSpacesAndTopics();
+    };
+
+    window.addEventListener('studyos-space-changed', handleSpaceChanged);
+    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
+  }, []);
+
+  const handleSwitchProject = (space) => {
+    localStorage.setItem('current_study_space_id', space.id);
+    localStorage.setItem('current_study_space_title', space.title);
+    setActiveSpaceId(space.id);
+    setActiveSpaceTitle(space.title);
+    setShowSpaceMenu(false);
+    window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: space }));
+  };
+
   const categories = ['All', 'Backend Engineering', 'Frontend & UI Architecture', 'Databases & System Design', 'DevOps & Cloud'];
   const statuses = ['ALL', 'NORMAL', 'LEARNING', 'COMPLETE', 'BLOCKED', 'REVIEW', 'MASTERED'];
 
@@ -153,6 +232,58 @@ export default function Topics() {
   return (
     <div className="flex flex-col w-full min-h-full text-[color:var(--text-main)] gap-6 md:gap-8 pb-12">
       
+      {/* Top Navigation & Project Context Switcher Bar */}
+      <div className="shrink-0 flex items-center justify-between gap-4 p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[4px_4px_12px_var(--shadow-dark),-4px_-4px_12px_var(--shadow-light)]">
+        <button
+          onClick={() => {
+            const currentSpace = spacesList.find(s => s.id === activeSpaceId);
+            const slug = currentSpace ? getSpaceSlug(currentSpace) : '';
+            navigate(slug ? `/os/dashboard/${slug}` : '/os/dashboard');
+          }}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] border border-[var(--border-color)] text-xs font-bold text-[color:var(--text-main)] hover:text-cyan-400 transition-all cursor-pointer shadow-inner"
+          title="Return to Project Dashboard"
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Dashboard</span>
+        </button>
+
+        {/* Project Selector Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSpaceMenu(!showSpaceMenu)}
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[var(--bg-input)] border border-cyan-500/30 hover:border-cyan-400 text-xs font-bold text-cyan-400 cursor-pointer shadow-inner transition-all"
+            title="Switch project"
+          >
+            <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse shrink-0" />
+            <span className="truncate max-w-[140px] sm:max-w-[200px]">{activeSpaceTitle}</span>
+            <ChevronDown size={14} className={`text-[color:var(--text-muted)] transition-transform ${showSpaceMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showSpaceMenu && (
+            <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] p-2 z-50 animate-in fade-in zoom-in-95">
+              <span className="block px-3 py-1.5 text-[10px] font-black uppercase text-[color:var(--text-muted)]">
+                Switch Project Topics
+              </span>
+              <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                {spacesList.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => handleSwitchProject(s)}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                      s.id === activeSpaceId
+                        ? 'bg-[var(--bg-input)] text-cyan-400'
+                        : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)]/50'
+                    }`}
+                  >
+                    <span className="truncate block">{s.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Header Section */}
       <div className="shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -161,7 +292,7 @@ export default function Topics() {
             <span>Topics & Knowledge Matrix</span>
           </h1>
           <p className="text-[color:var(--text-muted)] mt-1 font-medium text-sm md:text-base">
-            Explore concepts, track learning lifecycle status, and initiate targeted focus sessions.
+            Exploring {topics.length} topics for <span className="text-cyan-400 font-bold">{activeSpaceTitle}</span>.
           </p>
         </div>
 
