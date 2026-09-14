@@ -1,6 +1,16 @@
 import time
 import json
 import logging
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Explicitly load backend/.env environment variables
+_env_path = Path(__file__).resolve().parent / ".env"
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+else:
+    load_dotenv()
+
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text

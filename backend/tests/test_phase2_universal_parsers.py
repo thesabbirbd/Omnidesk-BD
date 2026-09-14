@@ -138,14 +138,24 @@ def run_universal_parsers_test_suite():
     assert post_topics == init_topics == 0, "Topics were saved to DB during preview!"
     print("✓ Zero DB Mutation Verified: All generation calls returned volatile previews (is_preview=True)")
 
-    # 7. Unit test GeminiProvider.generate_study_topics with topic goal prefix
-    print("\n[Step 7] Testing GeminiProvider.generate_study_topics() prefix logic...")
-    gemini = GeminiProvider(api_key="mock_key_for_offline_test")
-    # Test fallback path
-    curriculum = gemini.generate_study_topics("BBA Finance Basics", is_topic_name=True)
-    assert "BBA Finance Basics" in curriculum["title"]
-    assert len(curriculum["topics"]) >= 2
-    print("✓ GeminiProvider.generate_study_topics() topic goal logic verified")
+    # 7. Unit test GeminiProvider.generate_study_topics with error handling & real key
+    print("\n[Step 7] Testing GeminiProvider.generate_study_topics() error handling and roadmap logic...")
+    from fastapi import HTTPException
+    gemini_invalid = GeminiProvider(api_key="mock_key_for_offline_test")
+    try:
+        gemini_invalid.generate_study_topics("BBA Finance Basics", is_topic_name=True)
+        assert False, "Should have raised 401 for invalid API key"
+    except HTTPException as exc:
+        assert exc.status_code == 401
+        assert "API Key missing or Invalid in .env" in exc.detail
+        print("✓ GeminiProvider invalid key 401 error handling verified")
+
+    gemini_real = GeminiProvider()
+    if gemini_real.api_key:
+        curriculum = gemini_real.generate_study_topics("BBA Finance Basics", is_topic_name=True)
+        assert "BBA Finance Basics" in curriculum["title"]
+        assert len(curriculum["topics"]) >= 2
+        print("✓ GeminiProvider.generate_study_topics() topic goal logic verified")
 
     print("\n" + "=" * 75)
     print("  ALL PHASE 2 (UNIVERSAL INPUT EXPANSION v1.2.6) TESTS PASSED!")

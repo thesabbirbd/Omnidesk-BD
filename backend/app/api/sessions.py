@@ -95,14 +95,19 @@ def stop_session(
     return session
 
 
+from app.api.deps import get_current_user, get_optional_current_user, get_or_create_default_user
+
+
 @router.get("/today", response_model=TodaySessionsResponse)
 def get_today_sessions(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Get all study sessions recorded today for the current user along with total focused minutes.
     """
+    if not current_user:
+        current_user = get_or_create_default_user(db)
     now = datetime.now(timezone.utc)
     today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
 
@@ -127,12 +132,14 @@ def get_today_sessions(
 def get_sessions(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     List study sessions for the authenticated user in reverse chronological order.
     """
+    if not current_user:
+        current_user = get_or_create_default_user(db)
     return (
         db.query(StudySession)
         .filter(StudySession.user_id == current_user.id)

@@ -88,6 +88,24 @@ def get_optional_current_user(
     return None
 
 
+def get_or_create_default_user(db: Session) -> User:
+    """Return an active user from DB or create a default user for guest/demo sessions."""
+    user = db.query(User).filter(User.email == "developer@omnidesk.bd").first()
+    if not user:
+        user = db.query(User).filter(User.is_active == True).first()
+    if not user:
+        user = User(
+            email="developer@omnidesk.bd",
+            hashed_password="hashed_demo_password",
+            full_name="Omnidesk Developer",
+            is_active=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+
 # ==============================================================================
 # USER ISOLATION & RESOURCE OWNERSHIP DEPENDENCIES (Packet 1C)
 # ==============================================================================

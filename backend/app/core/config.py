@@ -1,10 +1,19 @@
 from typing import List, Optional
+from pathlib import Path
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Explicitly ensure backend/.env is loaded
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+else:
+    load_dotenv()
 
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Omnidesk BD API"
-    VERSION: str = "1.2.8"
+    VERSION: str = "1.2.9"
     API_V1_STR: str = "/api"
 
     # Default Database URL (PostgreSQL)
@@ -23,7 +32,7 @@ class Settings(BaseSettings):
 
     # Redis & Task Queue
     REDIS_URL: str = "redis://localhost:6379/0"
-    REDIS_ENABLED: bool = True
+    REDIS_ENABLED: bool = False
 
     # Security & Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 120
@@ -31,11 +40,11 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # Optional AI Adapter
-    AI_PROVIDER: str = "none"
+    AI_PROVIDER: str = "gemini"
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "llama3"
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
 
     # CORS configuration
     BACKEND_CORS_ORIGINS: List[str] = ["*"]

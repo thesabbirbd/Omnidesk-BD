@@ -262,7 +262,7 @@ const INITIAL_EDGES = [
   { id: 'e-root-7', source: 'root', target: '7', animated: true, style: { stroke: '#3b82f6', strokeWidth: 2 } },
 ];
 
-function InnerFlowCanvas() {
+function InnerFlowCanvas({ activeSpace, spaceTopics = [] }) {
   const navigate = useNavigate();
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
@@ -272,6 +272,74 @@ function InnerFlowCanvas() {
   const [zoomLevel, setZoomLevel] = useState(100);
 
   const { zoomIn, zoomOut, fitView, getZoom } = useReactFlow();
+
+  // Dynamically update nodes & edges when active StudySpace or topics change
+  useEffect(() => {
+    if (spaceTopics && spaceTopics.length > 0) {
+      const count = spaceTopics.length;
+      const radiusX = Math.max(260, count * 32);
+      const radiusY = Math.max(160, count * 20);
+      const cx = 350;
+      const cy = 200;
+
+      const dynamicNodes = [
+        {
+          id: 'root',
+          type: 'root',
+          position: { x: cx, y: cy },
+          data: { label: activeSpace?.title || 'Active Track' }
+        },
+        ...spaceTopics.map((t, idx) => {
+          const angle = (idx / count) * 2 * Math.PI - (Math.PI / 2);
+          const x = Math.round(cx + radiusX * Math.cos(angle));
+          const y = Math.round(cy + radiusY * Math.sin(angle));
+          const st = (t.status || 'normal').toLowerCase();
+          const validStatus = ['normal', 'learning', 'complete', 'blocked', 'review', 'mastered'].includes(st) ? st : 'normal';
+          return {
+            id: String(t.id || idx + 1),
+            type: 'custom',
+            position: { x, y },
+            data: {
+              label: `${idx + 1}. ${t.title}`,
+              status: validStatus,
+              progress: t.progress || (validStatus === 'complete' ? 100 : validStatus === 'learning' ? 50 : 0)
+            }
+          };
+        })
+      ];
+
+      const dynamicEdges = spaceTopics.map((t, idx) => {
+        const st = (t.status || 'normal').toLowerCase();
+        const stroke = st === 'complete' ? '#22c55e' : st === 'learning' ? '#eab308' : '#64748b';
+        return {
+          id: `e-root-${t.id || idx + 1}`,
+          source: 'root',
+          target: String(t.id || idx + 1),
+          animated: st === 'learning',
+          style: { stroke, strokeWidth: st === 'learning' || st === 'complete' ? 2.5 : 1.5 }
+        };
+      });
+
+      setNodes(dynamicNodes);
+      setEdges(dynamicEdges);
+      setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 150);
+    } else if (activeSpace && spaceTopics.length === 0) {
+      setNodes([
+        {
+          id: 'root',
+          type: 'root',
+          position: { x: 310, y: 160 },
+          data: { label: activeSpace.title }
+        }
+      ]);
+      setEdges([]);
+      setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 150);
+    } else {
+      setNodes(INITIAL_NODES);
+      setEdges(INITIAL_EDGES);
+      setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 150);
+    }
+  }, [activeSpace, spaceTopics, fitView, setNodes, setEdges]);
 
   // Center nodes on initial mount
   useEffect(() => {
@@ -466,11 +534,11 @@ function InnerFlowCanvas() {
   );
 }
 
-export default function DashboardInteractiveMindMap() {
+export default function DashboardInteractiveMindMap({ activeSpace, spaceTopics = [] }) {
   return (
     <div className="p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col transition-all">
       <ReactFlowProvider>
-        <InnerFlowCanvas />
+        <InnerFlowCanvas activeSpace={activeSpace} spaceTopics={spaceTopics} />
       </ReactFlowProvider>
     </div>
   );

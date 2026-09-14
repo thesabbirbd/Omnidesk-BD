@@ -20,7 +20,7 @@ from app.schemas.topic import (
 )
 from app.services.competency_engine import competency_engine
 from app.services.ai_provider import generate_verification_quiz
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_current_user, get_or_create_default_user
 
 router = APIRouter()
 
@@ -28,12 +28,15 @@ router = APIRouter()
 @router.get("", response_model=List[TopicResponse])
 def list_topics(
     study_space_id: Optional[uuid.UUID] = Query(None, description="Filter by StudySpace ID"),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     List topics for the current user, optionally filtered by StudySpace.
     """
+    if not current_user:
+        current_user = get_or_create_default_user(db)
+
     query = db.query(Topic).filter(Topic.user_id == current_user.id)
     if study_space_id:
         query = query.filter(Topic.study_space_id == study_space_id)

@@ -1,10 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
-  Target
+  Target,
+  Sparkles,
+  Upload,
+  FileText,
+  Plus,
+  Check,
+  ChevronRight,
+  AlertCircle,
+  X,
+  ArrowRight,
+  BookOpen,
+  Layers,
+  Zap,
+  Globe,
+  Code,
+  Video,
+  Server,
+  Shield,
+  Cpu,
+  RefreshCw,
+  FolderOpen
 } from 'lucide-react';
-import { getTopics, getSessions } from '../services/api';
+import { 
+  getTopics, 
+  getSessions, 
+  getStudySpaces, 
+  generateStudySpace, 
+  approveStudySpace 
+} from '../services/api';
 import DashboardInteractiveMindMap from '../components/dashboard/DashboardInteractiveMindMap';
 import DashboardActiveSprintPanel from '../components/dashboard/DashboardActiveSprintPanel';
 import DashboardStudyTimer from '../components/dashboard/DashboardStudyTimer';
@@ -14,60 +40,714 @@ import DashboardStudyPlanWidget from '../components/dashboard/DashboardStudyPlan
 import DashboardMaterialsNotesWidget from '../components/dashboard/DashboardMaterialsNotesWidget';
 import DashboardAiQuickLinksWidget from '../components/dashboard/DashboardAiQuickLinksWidget';
 
+const SUGGESTED_SKILLS = [
+  {
+    id: 'net',
+    title: 'Computer Networking Basics',
+    description: 'OSI 7 Layers, TCP/IP, IPv4 Subnetting & Routing Protocols',
+    icon: Globe,
+    category: 'Computer Science & Networking',
+    gradient: 'from-blue-500/20 to-cyan-500/20 border-cyan-500/40 text-cyan-400'
+  },
+  {
+    id: 'py',
+    title: 'Python Mastery',
+    description: 'AsyncIO, Generators, Metaclasses, OOP & Clean Architecture',
+    icon: Code,
+    category: 'Software Engineering',
+    gradient: 'from-amber-500/20 to-yellow-500/20 border-amber-500/40 text-amber-400'
+  },
+  {
+    id: 'video',
+    title: 'Video Editing & Production',
+    description: 'Storyboarding, Timeline Cutting, Color Grading & Sound FX',
+    icon: Video,
+    category: 'Digital Media & Arts',
+    gradient: 'from-pink-500/20 to-rose-500/20 border-pink-500/40 text-pink-400'
+  },
+  {
+    id: 'k8s',
+    title: 'Kubernetes Architecture',
+    description: 'Pods, Services, Ingress Controllers, Helm & Production Clusters',
+    icon: Server,
+    category: 'DevOps & Cloud Native',
+    gradient: 'from-indigo-500/20 to-blue-500/20 border-indigo-500/40 text-indigo-400'
+  },
+  {
+    id: 'cloud',
+    title: 'Cloud Engineering',
+    description: 'Terraform, AWS VPC/IAM, Multi-Region SRE & High Availability',
+    icon: Cpu,
+    category: 'Infrastructure & SRE',
+    gradient: 'from-teal-500/20 to-emerald-500/20 border-teal-500/40 text-teal-400'
+  },
+  {
+    id: 'sec',
+    title: 'Cybersecurity & Ethical Hacking',
+    description: 'Penetration Testing, OWASP Top 10, Network Defense & CVE Auditing',
+    icon: Shield,
+    category: 'Information Security',
+    gradient: 'from-purple-500/20 to-violet-500/20 border-purple-500/40 text-purple-400'
+  },
+  {
+    id: 'ai',
+    title: 'AI & LLM Engineering',
+    description: 'Prompt Engineering, RAG Architectures, Vector DBs & Multi-Agent SDKs',
+    icon: Sparkles,
+    category: 'Artificial Intelligence',
+    gradient: 'from-emerald-500/20 to-green-500/20 border-emerald-500/40 text-emerald-400'
+  }
+];
+
 export default function Dashboard() {
   const navigate = useNavigate();
+  
+  // Active Space & Topics State
+  const [spaces, setSpaces] = useState([]);
+  const [currentSpace, setCurrentSpace] = useState(null);
   const [topics, setTopics] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [isLoadingSpace, setIsLoadingSpace] = useState(false);
 
-  // Fetch real data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [topicsData, sessionsData] = await Promise.all([
-          getTopics().catch(() => []),
-          getSessions().catch(() => [])
-        ]);
-        setTopics(topicsData || []);
-        setSessions(sessionsData || []);
-      } catch (error) {
-        console.error('Error fetching dashboard data', error);
+  // Creation Input State
+  const [topicInput, setTopicInput] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [dailyMinutes, setDailyMinutes] = useState(60);
+  const [selectedCategory, setSelectedCategory] = useState('Technology & Engineering');
+  
+  // AI Generation & Preview State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [generationError, setGenerationError] = useState(null);
+  const [previewData, setPreviewData] = useState(null);
+  const [activeSuggestion, setActiveSuggestion] = useState(null);
+
+  const fileInputRef = useRef(null);
+  const topicInputRef = useRef(null);
+
+  // 1. Fetch available StudySpaces and active space topics
+  const loadActiveSpaceAndTopics = async () => {
+    setIsLoadingSpace(true);
+    try {
+      const [fetchedSpaces, fetchedSessions] = await Promise.all([
+        getStudySpaces().catch(() => []),
+        getSessions().catch(() => [])
+      ]);
+
+      const spaceList = Array.isArray(fetchedSpaces) ? fetchedSpaces : [];
+      setSpaces(spaceList);
+      setSessions(Array.isArray(fetchedSessions) ? fetchedSessions : []);
+
+      // Determine active space ID from localStorage or first available space
+      const savedSpaceId = localStorage.getItem('current_study_space_id');
+      let active = spaceList.find(s => s.id === savedSpaceId) || spaceList[0] || null;
+
+      if (!active && spaceList.length === 0) {
+        // Fallback placeholder space if no space created yet
+        active = {
+          id: 'default-devops',
+          title: '100-Day Backend → DevOps Engineer',
+          description: 'Build strong backend skills, master DevOps, and grow into a complete engineer.',
+          category: 'Backend / DevOps'
+        };
       }
+
+      setCurrentSpace(active);
+      if (active?.id && active.id !== 'default-devops') {
+        localStorage.setItem('current_study_space_id', active.id);
+        localStorage.setItem('current_study_space_title', active.title);
+        const fetchedTopics = await getTopics(active.id).catch(() => []);
+        setTopics(Array.isArray(fetchedTopics) ? fetchedTopics : []);
+      } else {
+        const fetchedTopics = await getTopics().catch(() => []);
+        setTopics(Array.isArray(fetchedTopics) ? fetchedTopics : []);
+      }
+    } catch (err) {
+      console.error('Error loading dashboard space:', err);
+    } finally {
+      setIsLoadingSpace(false);
+    }
+  };
+
+  useEffect(() => {
+    loadActiveSpaceAndTopics();
+
+    const handleSpaceChanged = (e) => {
+      if (e.detail?.id) {
+        localStorage.setItem('current_study_space_id', e.detail.id);
+        localStorage.setItem('current_study_space_title', e.detail.title);
+      }
+      loadActiveSpaceAndTopics();
     };
-    fetchData();
+
+    window.addEventListener('studyos-space-changed', handleSpaceChanged);
+    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
   }, []);
 
-  // Dynamic calculations
-  const totalTopicsCount = topics.length || 48;
-  const completedTopicsCount = topics.filter((t) => t.status === 'completed').length || 12;
-  const learningTopicsCount = topics.filter((t) => t.status === 'learning' || t.status === 'in_progress').length || 6;
-  const notStartedTopicsCount = totalTopicsCount - completedTopicsCount - learningTopicsCount;
-  const progressPercent = Math.round((completedTopicsCount / totalTopicsCount) * 100) || 28;
+  // 2. File drop handlers
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      validateAndSetFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      validateAndSetFile(e.target.files[0]);
+    }
+  };
+
+  const validateAndSetFile = (file) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['pdf', 'txt', 'md'].includes(ext)) {
+      setGenerationError("Supported file formats are .pdf, .txt, and .md");
+      return;
+    }
+    setSelectedFile(file);
+    setGenerationError(null);
+    if (!customTitle) {
+      setCustomTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+    }
+  };
+
+  // 3. Auto-fill from suggested skills
+  const handleSelectSuggestion = (skill) => {
+    setActiveSuggestion(skill.id);
+    setTopicInput(skill.title);
+    setCustomTitle(skill.title);
+    setSelectedCategory(skill.category);
+    setGenerationError(null);
+    if (topicInputRef.current) {
+      topicInputRef.current.focus();
+    }
+  };
+
+  // 4. Generate StudySpace via Gemini 3.6 Flash
+  const handleGenerateStudySpace = async () => {
+    setGenerationError(null);
+    const hasTopic = topicInput.trim().length > 0;
+    const hasFile = selectedFile !== null;
+
+    if (!hasTopic && !hasFile) {
+      setGenerationError("Please enter a topic/skill goal or upload a document (.pdf, .txt, .md).");
+      if (topicInputRef.current) topicInputRef.current.focus();
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      let preview;
+      if (hasFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        if (customTitle.trim()) formData.append('title', customTitle.trim());
+        formData.append('category', selectedCategory);
+        formData.append('daily_target_minutes', dailyMinutes.toString());
+        preview = await generateStudySpace(formData);
+      } else {
+        const payload = {
+          topic_name: topicInput.trim(),
+          title: customTitle.trim() || topicInput.trim(),
+          category: selectedCategory,
+          daily_target_minutes: parseInt(dailyMinutes, 10) || 60
+        };
+        preview = await generateStudySpace(payload);
+      }
+
+      setPreviewData(preview);
+    } catch (err) {
+      console.error('Generation failure:', err);
+      const detail = err.response?.data?.detail || err.message || "Failed to generate StudySpace with Gemini AI.";
+      setGenerationError(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 5. Approve & Persist StudySpace, dynamically adapting OS
+  const handleApproveStudySpace = async () => {
+    if (!previewData) return;
+    setIsApproving(true);
+    setGenerationError(null);
+
+    try {
+      const approvalPayload = {
+        title: previewData.title,
+        description: previewData.description,
+        category: previewData.category,
+        interface_language: previewData.interface_language || 'en',
+        learning_language: previewData.learning_language || 'en',
+        source_language: previewData.source_language || 'en',
+        daily_target_minutes: dailyMinutes,
+        topics: previewData.topics,
+        study_plan: previewData.study_plan
+      };
+
+      const created = await approveStudySpace(approvalPayload);
+      if (created?.id) {
+        localStorage.setItem('current_study_space_id', created.id);
+        localStorage.setItem('current_study_space_title', created.title);
+        window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: created }));
+      }
+
+      // Reset form and reload space
+      setPreviewData(null);
+      setTopicInput('');
+      setCustomTitle('');
+      setSelectedFile(null);
+      setActiveSuggestion(null);
+      await loadActiveSpaceAndTopics();
+    } catch (err) {
+      console.error('Approval failure:', err);
+      const detail = err.response?.data?.detail || err.message || "Failed to approve and save StudySpace.";
+      setGenerationError(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  // Progress calculations
+  const totalTopicsCount = topics.length || 1;
+  const completedTopicsCount = topics.filter(
+    (t) => (t.status || '').toLowerCase() === 'complete' || (t.status || '').toLowerCase() === 'mastered'
+  ).length;
+  const learningTopicsCount = topics.filter(
+    (t) => (t.status || '').toLowerCase() === 'learning' || (t.status || '').toLowerCase() === 'in_progress'
+  ).length;
+  const notStartedTopicsCount = Math.max(0, totalTopicsCount - completedTopicsCount - learningTopicsCount);
+  const progressPercent = Math.min(100, Math.round((completedTopicsCount / totalTopicsCount) * 100));
+
+  // Compute dynamic weekly study plan representation
+  const computedPlanWeeks = topics.length > 0 
+    ? Array.from({ length: Math.max(1, Math.ceil(topics.length / 4)) }, (_, wIdx) => {
+        const slice = topics.slice(wIdx * 4, (wIdx + 1) * 4);
+        const done = slice.filter(t => (t.status || '').toLowerCase() === 'complete').length;
+        const pct = Math.round((done / Math.max(1, slice.length)) * 100);
+        return {
+          week: `Week ${wIdx + 1}`,
+          title: slice[0]?.title || `Sprint Stage ${wIdx + 1}`,
+          progress: pct,
+          status: pct === 100 ? 'completed' : pct > 0 ? 'in_progress' : 'upcoming',
+          days: `${done}/${slice.length} topics`
+        };
+      })
+    : undefined;
 
   return (
     <div className="flex flex-col h-full w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] overflow-y-auto p-4 md:p-6 lg:p-8 gap-6 transition-colors duration-300">
       
-      {/* 1. TOP HERO: MISSION HEADER */}
+      {/* ========================================================================= */}
+      {/* 1. VERY TOP: PROMINENT, PREMIUM "CREATE NEW PROJECT / STUDYSPACE" INPUT AREA */}
+      {/* ========================================================================= */}
+      <div className="w-full rounded-3xl bg-[var(--bg-card)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] border border-[var(--border-color)] p-6 md:p-8 relative overflow-hidden transition-all">
+        {/* Subtle Ambient Radial Glow */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 relative z-10">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-teal-400/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[inset_2px_2px_4px_rgba(6,182,212,0.2)] shrink-0">
+              <Sparkles size={24} className="animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl md:text-2xl font-black tracking-wide text-[color:var(--text-main)]">
+                  Create New Project / StudySpace
+                </h2>
+                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-cyan-500/15 border border-cyan-500/30 text-cyan-400">
+                  Gemini 3.6 Flash Free Tier
+                </span>
+              </div>
+              <p className="text-xs font-semibold text-[color:var(--text-muted)] mt-0.5">
+                Type any skill goal or drop documentation (.pdf, .txt, .md). The AI generates an instant interactive learning roadmap.
+              </p>
+            </div>
+          </div>
+
+          {/* Daily Study Commitment Quick Selector */}
+          <div className="flex items-center gap-1.5 self-start md:self-auto bg-[var(--bg-input)] px-3 py-1.5 rounded-2xl border border-[var(--border-color)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]">
+            <span className="text-[11px] font-bold text-[color:var(--text-muted)] mr-1">Daily Pace:</span>
+            {[30, 60, 90, 120].map((m) => (
+              <button
+                key={m}
+                onClick={() => setDailyMinutes(m)}
+                className={`px-2 py-0.5 rounded-xl text-[10px] font-black transition-all cursor-pointer ${
+                  dailyMinutes === m
+                    ? 'bg-cyan-400 text-slate-950 shadow-[0_0_8px_rgba(34,211,238,0.6)]'
+                    : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
+                }`}
+              >
+                {m}m
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Unified Input Zone (Text Input + File Drag-and-Drop) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10 items-stretch">
+          
+          {/* Left Column: Topic Goal Input (col-span-7) */}
+          <div className="lg:col-span-7 flex flex-col gap-3">
+            <div className="relative flex items-center">
+              <input
+                ref={topicInputRef}
+                type="text"
+                value={topicInput}
+                onChange={(e) => {
+                  setTopicInput(e.target.value);
+                  setGenerationError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleGenerateStudySpace();
+                }}
+                placeholder="What do you want to learn? (e.g. Computer Networking Basics, Python Mastery, Video Editing...)"
+                className="w-full h-14 bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-cyan-400 text-sm font-semibold text-[color:var(--text-main)] rounded-2xl px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] placeholder:text-[color:var(--text-muted)] transition-all"
+              />
+              {topicInput && (
+                <button
+                  onClick={() => {
+                    setTopicInput('');
+                    setActiveSuggestion(null);
+                  }}
+                  className="absolute right-3 p-1 rounded-lg text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
+                  title="Clear input"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Custom Title (Optional override) */}
+            <input
+              type="text"
+              value={customTitle}
+              onChange={(e) => setCustomTitle(e.target.value)}
+              placeholder="Custom Workspace Title (optional, defaults to goal name)"
+              className="w-full h-10 bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-medium text-[color:var(--text-main)] rounded-xl px-3 focus:outline-none focus:border-cyan-400/60 shadow-[inset_1px_1px_3px_var(--shadow-dark)] placeholder:text-[color:var(--text-muted)]"
+            />
+          </div>
+
+          {/* Right Column: File Drag-and-Drop Area (col-span-5) */}
+          <div className="lg:col-span-5 flex flex-col">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileSelect} 
+              accept=".pdf,.txt,.md" 
+              className="hidden" 
+            />
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleFileDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`h-full min-h-[106px] rounded-2xl border-2 border-dashed p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
+                dragOver 
+                  ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.2)]' 
+                  : selectedFile
+                  ? 'border-emerald-500/50 bg-emerald-500/5 shadow-[inset_2px_2px_4px_var(--shadow-dark)]'
+                  : 'border-[var(--border-color)] hover:border-cyan-500/40 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]'
+              }`}
+            >
+              {selectedFile ? (
+                <div className="flex items-center gap-3 w-full justify-between px-2">
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <FileText size={22} className="text-emerald-400 shrink-0" />
+                    <div className="text-left overflow-hidden">
+                      <div className="text-xs font-bold text-[color:var(--text-main)] truncate max-w-[200px]">
+                        {selectedFile.name}
+                      </div>
+                      <div className="text-[10px] text-emerald-400 font-semibold">
+                        {(selectedFile.size / 1024).toFixed(1)} KB • Click to replace
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFile(null);
+                    }}
+                    className="p-1.5 rounded-lg bg-[var(--bg-card)] text-[color:var(--text-muted)] hover:text-rose-400 transition-colors"
+                    title="Remove file"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1.5">
+                  <Upload size={20} className="text-cyan-400" />
+                  <div className="text-xs font-bold text-[color:var(--text-main)]">
+                    <span>Drop PDF, TXT or Markdown</span>
+                    <span className="text-cyan-400 ml-1 underline">or browse</span>
+                  </div>
+                  <span className="text-[10px] text-[color:var(--text-muted)]">
+                    Max 50MB • Ingests & builds structured DAG roadmap
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Error Notification Banner */}
+        {generationError && (
+          <div className="mt-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-3 text-xs text-rose-400 animate-in fade-in duration-200">
+            <AlertCircle size={18} className="shrink-0 mt-0.5 text-rose-400" />
+            <div className="flex-1">
+              <span className="font-bold">Error: </span>
+              <span>{generationError}</span>
+            </div>
+            <button 
+              onClick={() => setGenerationError(null)}
+              className="p-1 rounded text-rose-400 hover:text-rose-300"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* Generate Action Button */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[var(--border-color)]">
+          <div className="text-xs text-[color:var(--text-muted)] font-medium">
+            {topicInput.trim() 
+              ? <span>Target Goal: <strong className="text-cyan-400">{topicInput}</strong></span>
+              : selectedFile
+              ? <span>Source Document: <strong className="text-emerald-400">{selectedFile.name}</strong></span>
+              : <span>Choose a suggested project below or type your custom goal</span>}
+          </div>
+
+          <button
+            onClick={handleGenerateStudySpace}
+            disabled={isGenerating || (!topicInput.trim() && !selectedFile)}
+            className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl font-black text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] ${
+              isGenerating || (!topicInput.trim() && !selectedFile)
+                ? 'opacity-50 cursor-not-allowed bg-[var(--bg-input)] text-[color:var(--text-muted)]'
+                : 'bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 active:scale-98 shadow-[0_0_15px_rgba(34,211,238,0.4)]'
+            }`}
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw size={16} className="animate-spin text-slate-950" />
+                <span>Synthesizing with Gemini AI...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                <span>Generate StudySpace</span>
+                <ArrowRight size={14} />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. SUGGESTED PROJECTS / SKILLS SECTION (RIGHT BELOW INPUT AREA)             */}
+      {/* ========================================================================= */}
+      <div className="w-full flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen size={16} className="text-cyan-400" />
+            <h3 className="text-xs font-black tracking-wider uppercase text-[color:var(--text-muted)]">
+              Suggested Projects / Skills (Click to Auto-Fill)
+            </h3>
+          </div>
+          <span className="text-[10px] font-bold text-[color:var(--text-muted)]">
+            7 Curated Engineering Domains
+          </span>
+        </div>
+
+        {/* Horizontal Scrolling or Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-3 w-full">
+          {SUGGESTED_SKILLS.map((skill) => {
+            const Icon = skill.icon;
+            const isSelected = activeSuggestion === skill.id || topicInput === skill.title;
+
+            return (
+              <button
+                key={skill.id}
+                onClick={() => handleSelectSuggestion(skill)}
+                className={`p-3.5 rounded-2xl bg-[var(--bg-card)] border text-left flex flex-col justify-between gap-2.5 transition-all duration-200 cursor-pointer group hover:scale-102 ${
+                  isSelected
+                    ? 'border-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.35),inset_2px_2px_4px_var(--shadow-dark)] ring-1 ring-cyan-400'
+                    : 'border-[var(--border-color)] shadow-[4px_4px_10px_var(--shadow-dark),-4px_-4px_10px_var(--shadow-light)] hover:border-cyan-500/40 hover:shadow-[inset_2px_2px_4px_var(--shadow-dark)]'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className={`p-2 rounded-xl bg-gradient-to-br ${skill.gradient} shadow-[inset_1px_1px_3px_rgba(0,0,0,0.3)]`}>
+                    <Icon size={16} />
+                  </div>
+                  {isSelected && (
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-xs font-black text-[color:var(--text-main)] group-hover:text-cyan-400 transition-colors line-clamp-1">
+                    {skill.title}
+                  </div>
+                  <p className="text-[10px] font-medium text-[color:var(--text-muted)] line-clamp-2 mt-0.5">
+                    {skill.description}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1 text-[9px] font-bold text-cyan-400 group-hover:underline pt-1 border-t border-[var(--border-color)]">
+                  <span>Auto-fill</span>
+                  <ArrowRight size={10} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2.5 PREVIEW DRAWER / MODAL: STRICTLY ANALYZE -> PREVIEW -> APPROVE -> PERSIST */}
+      {/* ========================================================================= */}
+      {previewData && (
+        <div className="w-full rounded-3xl bg-[var(--bg-card)] border-2 border-cyan-500/40 shadow-[10px_10px_30px_var(--shadow-dark),-10px_-10px_30px_var(--shadow-light)] p-6 md:p-8 flex flex-col gap-6 animate-in fade-in duration-300">
+          
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-color)] pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <Check size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    Roadmap Preview Ready
+                  </span>
+                  <span className="text-[10px] font-bold text-[color:var(--text-muted)]">
+                    Provider: {previewData.provider_used || 'Gemini 3.6 Flash'}
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-[color:var(--text-main)] mt-1">
+                  {previewData.title}
+                </h3>
+                <p className="text-xs text-[color:var(--text-muted)] mt-0.5">
+                  {previewData.description || previewData.summary}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setPreviewData(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] bg-[var(--bg-input)] border border-[var(--border-color)] cursor-pointer"
+              >
+                Discard
+              </button>
+
+              <button
+                onClick={handleApproveStudySpace}
+                disabled={isApproving}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_0_12px_rgba(52,211,153,0.5)] cursor-pointer transition-all"
+              >
+                {isApproving ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Activating Space...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>Approve & Activate StudySpace</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Topics Grid */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between text-xs font-bold text-[color:var(--text-muted)]">
+              <span>Synthesized Topics ({previewData.topics?.length || 0})</span>
+              <span>Total Estimated Time: {previewData.total_estimated_minutes || 600} minutes</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 max-h-80 overflow-y-auto pr-1">
+              {(previewData.topics || []).map((t, idx) => (
+                <div 
+                  key={idx} 
+                  className="p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] flex flex-col justify-between gap-3 shadow-[inset_1px_1px_3px_var(--shadow-dark)]"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-mono font-bold text-cyan-400">
+                        #{idx + 1}
+                      </span>
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        {t.difficulty || 'INTERMEDIATE'}
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-[color:var(--text-main)] line-clamp-1">
+                      {t.title}
+                    </h4>
+                    <p className="text-[10px] text-[color:var(--text-muted)] line-clamp-2 mt-1">
+                      {t.description}
+                    </p>
+                  </div>
+
+                  {/* Subtopics */}
+                  {t.subtopics && t.subtopics.length > 0 && (
+                    <div className="flex flex-col gap-1 pt-2 border-t border-[var(--border-color)]">
+                      <span className="text-[9px] font-bold text-[color:var(--text-muted)] uppercase">Milestones:</span>
+                      {t.subtopics.slice(0, 2).map((sub, sIdx) => (
+                        <div key={sIdx} className="text-[9px] text-[color:var(--text-muted)] flex items-center gap-1.5 truncate">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 shrink-0" />
+                          <span className="truncate">{sub}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. ACTIVE STUDY SPACE HERO & DYNAMIC MISSION HEADER                        */}
+      {/* ========================================================================= */}
       <div className="w-full p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col lg:flex-row items-center justify-between gap-6 transition-all">
         
-        {/* Left: Mission Identity */}
+        {/* Left: Active Mission Identity */}
         <div className="flex items-center gap-4 w-full lg:w-auto">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[inset_2px_2px_4px_rgba(6,182,212,0.2)]">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[inset_2px_2px_4px_rgba(6,182,212,0.2)] shrink-0">
             <Target size={26} className="drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-xl md:text-2xl font-black tracking-wide text-[color:var(--text-main)]">
-              100-Day Backend → DevOps Engineer
-            </h1>
-            <p className="text-xs font-semibold text-[color:var(--text-muted)]">
-              Build strong backend skills, master DevOps, and grow into a complete engineer.
+          <div className="flex flex-col overflow-hidden">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl md:text-2xl font-black tracking-wide text-[color:var(--text-main)] truncate">
+                {currentSpace?.title || '100-Day Backend → DevOps Engineer'}
+              </h1>
+              {currentSpace?.category && (
+                <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shrink-0">
+                  {currentSpace.category}
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-semibold text-[color:var(--text-muted)] line-clamp-1 mt-0.5">
+              {currentSpace?.description || 'Build strong foundations, master core systems, and verify genuine competence.'}
             </p>
           </div>
         </div>
 
-        {/* Middle: Overall Progress Bar */}
-        <div className="flex flex-col w-full lg:w-72 gap-2">
+        {/* Middle: Dynamic Progress Bar */}
+        <div className="flex flex-col w-full lg:w-72 gap-2 shrink-0">
           <div className="flex justify-between items-center text-xs font-bold">
-            <span className="text-[color:var(--text-muted)]">Overall Progress</span>
+            <span className="text-[color:var(--text-muted)]">Track Progress</span>
             <span className="text-cyan-400 font-black">{progressPercent}%</span>
           </div>
           <div className="w-full h-3 rounded-full bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] p-0.5 overflow-hidden">
@@ -77,17 +757,21 @@ export default function Dashboard() {
             />
           </div>
           <div className="text-[10px] font-bold text-right text-[color:var(--text-muted)]">
-            Day 28 of 100
+            {completedTopicsCount} of {totalTopicsCount} Topics Mastered
           </div>
         </div>
 
-        {/* Right: 100-Day Challenge Card */}
-        <div className="flex items-center justify-between gap-4 w-full lg:w-auto px-5 py-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]">
+        {/* Right: Study Space Quick Switcher */}
+        <div className="flex items-center justify-between gap-4 w-full lg:w-auto px-5 py-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] shrink-0">
           <div className="flex items-center gap-3">
             <Calendar size={20} className="text-amber-400" />
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">100-Day Challenge</span>
-              <span className="text-xs font-black text-[color:var(--text-main)]">72 days remaining</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                Active StudySpace
+              </span>
+              <span className="text-xs font-black text-[color:var(--text-main)]">
+                {spaces.length || 1} Registered Tracks
+              </span>
             </div>
           </div>
 
@@ -116,15 +800,21 @@ export default function Dashboard() {
 
       </div>
 
-      {/* 2. MIDDLE SECTION: INTERACTIVE MIND MAP & SPRINT LAB (LEFT) & TODAY'S ACTIVITY (RIGHT) */}
+      {/* ========================================================================= */}
+      {/* 4. MIDDLE SECTION: DYNAMIC REACT FLOW MIND MAP & ACTIVE SPRINT (LEFT)       */}
+      {/*    AND TODAY'S ACTIVITY & PROGRESS OVERVIEW (RIGHT)                         */}
+      {/* ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
         
         {/* Left Column: Interactive Mind Map + Active Sprint Panel (approx 65% width / col-span-8) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          {/* Fully Interactive React Flow Mind Map */}
-          <DashboardInteractiveMindMap />
+          {/* Dynamic Mind Map passing currently active space and real topics */}
+          <DashboardInteractiveMindMap 
+            activeSpace={currentSpace} 
+            spaceTopics={topics} 
+          />
 
-          {/* Active Sprint & Telemetry Panel (Fills the gap with live, interactive execution) */}
+          {/* Active Sprint & Telemetry Panel */}
           <DashboardActiveSprintPanel />
         </div>
 
@@ -136,18 +826,20 @@ export default function Dashboard() {
               completed: completedTopicsCount, 
               learning: learningTopicsCount, 
               notStarted: notStartedTopicsCount, 
-              blocked: 2 
+              blocked: 0 
             }} 
           />
         </div>
 
       </div>
 
-      {/* 3. BOTTOM ROW: 4 CONTEXTUAL WIDGET CARDS */}
+      {/* ========================================================================= */}
+      {/* 5. BOTTOM ROW: 4 CONTEXTUAL WIDGET CARDS                                   */}
+      {/* ========================================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full items-stretch">
         
         {/* Card 1: Current Study Plan */}
-        <DashboardStudyPlanWidget />
+        <DashboardStudyPlanWidget planWeeks={computedPlanWeeks} />
 
         {/* Card 2: Learning Materials & Recent Notes */}
         <DashboardMaterialsNotesWidget />

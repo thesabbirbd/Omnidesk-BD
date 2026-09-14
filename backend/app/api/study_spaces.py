@@ -31,7 +31,7 @@ from app.services.template_service import template_service
 from app.services.scheduler import scheduler
 from app.ingestion import ingestion_engine
 from app.ai import ai_service
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_current_user, get_or_create_default_user
 
 logger = logging.getLogger("omnidesk.api.study_spaces")
 router = APIRouter()
@@ -115,7 +115,7 @@ def get_curriculum_template_preview(
 @router.post("/generate", response_model=StudySpacePreviewResponse)
 async def generate_study_space_preview(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -124,7 +124,7 @@ async def generate_study_space_preview(
     
     Accepts:
     1. Uploaded PDF file (multipart/form-data): extracts text using PDFParser (up to 10,000 chars),
-       sends to GeminiProvider (gemini-1.5-flash Free Tier with Ollama fallback), and returns parsed JSON.
+       sends to GeminiProvider (gemini-3.6-flash Free Tier), and returns parsed JSON.
     2. JSON payload (application/json): accepts goal, text, material_id, time limits.
     """
     content_type = request.headers.get("content-type", "").lower()
@@ -225,15 +225,15 @@ async def generate_study_space_preview(
             is_topic_name = True
             source_type_tag = "USER_CREATED"
         elif payload.material_id:
-            material_record = (
-                db.query(Material)
-                .filter(Material.id == payload.material_id, Material.user_id == current_user.id)
-                .first()
-            )
+            user_scope_id = current_user.id if current_user else None
+            mat_q = db.query(Material).filter(Material.id == payload.material_id)
+            if user_scope_id:
+                mat_q = mat_q.filter(Material.user_id == user_scope_id)
+            material_record = mat_q.first()
             if not material_record:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Material '{payload.material_id}' not found for current user."
+                    detail=f"Material '{payload.material_id}' not found."
                 )
             if not material_record.storage_path or not os.path.exists(material_record.storage_path):
                 raise HTTPException(
@@ -272,95 +272,52 @@ async def generate_study_space_preview(
     # First 10,000 characters limit
     analysis_text = raw_source_text[:10000]
 
-    # AI Curriculum Synthesis (Gemini 1.5 Flash Free Tier -> Ollama -> Heuristics)
-    from app.services.ai_provider import GeminiProvider, LocalOfflineAIProvider
-    gemini_provider = GeminiProvider()
+    # AI Curriculum Synthesis using Gemini 3.6 Flash Free Tier
+    from app.services.ai_provider import GeminiProvider
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key or not gemini_key.strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API Key missing or Invalid in .env"
+        )
+    gemini_provider = GeminiProvider(gemini_key)
 
     topic_items: List[TopicPreviewItem] = []
     curriculum_summary = ""
-    provider_used = "offline_heuristic"
+    provider_used = "gemini-3.6-flash"
 
     try:
-        if gemini_provider.is_available() and (not preferred_provider or preferred_provider == "gemini"):
-            gemini_data = gemini_provider.generate_study_topics(analysis_text, is_topic_name=is_topic_name, title=source_title)
-            curriculum_summary = gemini_data.get("summary", f"Curriculum synthesized by Gemini 1.5 Flash.")
-            provider_used = gemini_data.get("provider_used", "gemini-1.5-flash")
-            for t in gemini_data.get("topics", []):
-                topic_items.append(
-                    TopicPreviewItem(
-                        title=t.get("title", "Core Topic"),
-                        description=t.get("description", ""),
-                        subtopics=t.get("subtopics", []),
-                        dependencies=t.get("dependencies", t.get("prerequisites", [])),
-                        estimated_minutes=t.get("estimated_minutes", 60),
-                        difficulty=t.get("difficulty", "INTERMEDIATE"),
-                        source_reference=t.get("source_reference", source_filename or "Uploaded Material"),
-                        confidence_score=0.95,
-                        source_type=source_type_tag
-                    )
-                )
-        else:
-            if is_topic_name:
-                offline_data = LocalOfflineAIProvider().generate_study_topics(analysis_text, is_topic_name=True, title=source_title)
-                curriculum_summary = offline_data.get("summary", "")
-                provider_used = "offline_heuristic"
-                for t in offline_data.get("topics", []):
-                    topic_items.append(
-                        TopicPreviewItem(
-                            title=t.get("title", "Core Topic"),
-                            description=t.get("description", ""),
-                            subtopics=t.get("subtopics", []),
-                            dependencies=t.get("dependencies", []),
-                            estimated_minutes=t.get("estimated_minutes", 60),
-                            difficulty=t.get("difficulty", "INTERMEDIATE"),
-                            source_reference=t.get("source_reference", "Topic Goal"),
-                            confidence_score=0.95,
-                            source_type=source_type_tag
-                        )
-                    )
-            else:
-                curriculum = ai_service.analyze_curriculum(
-                    text=analysis_text,
-                    title=source_title,
-                    preferred_provider=preferred_provider
-                )
-                curriculum_summary = curriculum.summary
-                provider_used = curriculum.provider_used
-                for item in curriculum.topics:
-                    topic_items.append(
-                        TopicPreviewItem(
-                            title=item.title,
-                            description=item.description,
-                            subtopics=item.subtopics,
-                            dependencies=item.dependencies,
-                            estimated_minutes=item.estimated_minutes,
-                            difficulty=item.difficulty,
-                            source_reference=item.source_reference or (source_filename or "Document"),
-                            confidence_score=item.confidence_score,
-                            source_type=source_type_tag
-                        )
-                    )
-    except HTTPException:
-        raise
-    except Exception as ai_err:
-        logger.warning("AI generation failed (%s). Falling back to course generator parser.", ai_err)
-        fallback_topics = course_generator.parse_topics_from_text(analysis_text)
-        curriculum_summary = f"Curriculum extracted from input source ({len(fallback_topics)} topics)."
-        provider_used = "offline_heuristic"
-        for t in fallback_topics:
+        gemini_data = gemini_provider.generate_study_topics(analysis_text, is_topic_name=is_topic_name, title=source_title)
+        curriculum_summary = gemini_data.get("summary", "Curriculum synthesized by Gemini 3.6 Flash.")
+        provider_used = gemini_data.get("provider_used", "gemini-3.6-flash")
+        for t in gemini_data.get("topics", []):
             topic_items.append(
                 TopicPreviewItem(
-                    title=t["title"],
-                    description=t["description"],
-                    subtopics=[],
-                    dependencies=[],
-                    estimated_minutes=60,
-                    difficulty="INTERMEDIATE",
-                    source_reference=source_filename or "Emergency Local Fallback",
-                    confidence_score=0.85,
+                    title=t.get("title", "Core Topic"),
+                    description=t.get("description", ""),
+                    subtopics=t.get("subtopics", []),
+                    dependencies=t.get("dependencies", t.get("prerequisites", [])),
+                    estimated_minutes=t.get("estimated_minutes", 60),
+                    difficulty=t.get("difficulty", "INTERMEDIATE"),
+                    source_reference=t.get("source_reference", source_filename or "Uploaded Material"),
+                    confidence_score=0.95,
                     source_type=source_type_tag
                 )
             )
+    except HTTPException:
+        raise
+    except Exception as ai_err:
+        logger.error("AI Generation failed: %s", ai_err)
+        err_msg = str(ai_err).lower()
+        if any(k in err_msg for k in ["api key", "api_key", "unauthorized", "permission_denied", "invalid_argument", "401", "403"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API Key missing or Invalid in .env"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"API Key missing or Invalid in .env ({str(ai_err)})"
+        )
 
     # Time-Aware Scheduling (Packet 1I)
     plan_dict = scheduler.build_study_plan(
@@ -469,7 +426,7 @@ async def generate_study_space_from_file_upload(
 @router.post("/approve", response_model=StudySpaceDetailResponse, status_code=status.HTTP_201_CREATED)
 def approve_and_persist_study_space(
     payload: StudySpaceApproveRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -481,6 +438,9 @@ def approve_and_persist_study_space(
     4. TopicDependency prerequisite graph edges.
     5. StudyPlan, StudyWeeks, and StudyDays if requested.
     """
+    if not current_user:
+        current_user = get_or_create_default_user(db)
+
     if not payload.topics:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -641,12 +601,15 @@ def approve_and_persist_study_space(
 
 @router.get("", response_model=List[StudySpaceDetailResponse])
 def list_study_spaces(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     List all study spaces owned by the current user with topic stats.
     """
+    if not current_user:
+        current_user = get_or_create_default_user(db)
+
     spaces = (
         db.query(StudySpace)
         .filter(StudySpace.user_id == current_user.id, StudySpace.is_archived == False)

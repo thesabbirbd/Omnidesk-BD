@@ -1,8 +1,21 @@
 import os
 import json
 import re
+import logging
+from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
+from dotenv import load_dotenv
+from fastapi import HTTPException, status
+
+# Explicitly ensure backend/.env is loaded
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+else:
+    load_dotenv()
+
+logger = logging.getLogger("studyos.ai")
 
 
 class AIProvider(ABC):
@@ -301,47 +314,49 @@ class GeminiProvider(AIProvider):
     """
     Google Gemini AI Provider utilizing the official `google-generativeai` SDK.
     Targets the 100% Free Tier of Google AI Studio (zero GCP/Vertex billing required).
-    Free Tier Rate Limits: 15 RPM / 1500 RPD.
-    Gracefully falls back to OllamaProvider (if active) or LocalOfflineAIProvider,
-    or returns 429 Too Many Requests when quota is exceeded.
+    Uses gemini-3.6-flash (active free tier model) with fallback to gemini-flash-latest.
     """
 
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-1.5-flash"):
+    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self.model_name = model_name
+        raw_model = model_name or os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+        if "1.5" in raw_model or "2.5" in raw_model:
+            raw_model = "gemini-3.6-flash"
+        self.model_name = raw_model
+        self.candidate_models = [self.model_name, "gemini-flash-latest", "gemini-3.5-flash"]
         self._offline_fallback = LocalOfflineAIProvider()
         self._ollama_fallback = OllamaAIProvider()
-        self._model = None
 
         if self.api_key and self.api_key.strip():
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=self.api_key.strip())
-                self._model = genai.GenerativeModel(
-                    model_name=self.model_name,
-                    generation_config={
-                        "response_mime_type": "application/json",
-                        "temperature": 0.2
-                    }
-                )
-            except Exception:
-                self._model = None
+            except Exception as e:
+                logger.error("Failed to configure Gemini SDK: %s", e)
 
     def is_available(self) -> bool:
-        return bool(self.api_key and self.api_key.strip() and self._model is not None)
+        return bool(self.api_key and self.api_key.strip())
+
+    def _get_model(self, model_name: str, is_json: bool = False):
+        import google.generativeai as genai
+        if is_json:
+            return genai.GenerativeModel(
+                model_name=model_name,
+                generation_config={"response_mime_type": "application/json", "temperature": 0.2}
+            )
+        return genai.GenerativeModel(model_name=model_name)
 
     def generate_study_topics(
         self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Generate study topics using Gemini 1.5 Flash Free Tier.
-        If is_topic_name is True, prefixes:
-        'Create a comprehensive study roadmap for the following topic/goal: [TEXT]'
+        Generate study topics using Gemini 3.6 Flash Free Tier.
         """
-        if not self.is_available():
-            if self._ollama_fallback.is_available():
-                return self._ollama_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
-            return self._offline_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
+        if not self.api_key or not self.api_key.strip():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API Key missing or Invalid in .env"
+            )
 
         if is_topic_name:
             effective_input = f"Create a comprehensive study roadmap for the following topic/goal: {input_text.strip()}"
@@ -375,29 +390,38 @@ class GeminiProvider(AIProvider):
             "Output ONLY valid, parseable JSON."
         )
 
-        try:
-            response = self._model.generate_content(prompt)
-            raw_text = response.text or ""
-            cleaned = raw_text.strip()
-            if cleaned.startswith("```"):
-                cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-                cleaned = re.sub(r"\s*```$", "", cleaned)
-            data = json.loads(cleaned)
-            data["provider_used"] = "gemini-1.5-flash"
-            return data
-        except Exception as err:
-            err_str = str(err).lower()
-            if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
-                if self._ollama_fallback.is_available():
-                    return self._ollama_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
-                from fastapi import HTTPException, status
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly or configure local Ollama."
-                )
-            if self._ollama_fallback.is_available():
-                return self._ollama_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
-            return self._offline_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
+        last_err = None
+        for candidate in self.candidate_models:
+            try:
+                model = self._get_model(candidate, is_json=True)
+                response = model.generate_content(prompt)
+                raw_text = response.text or ""
+                cleaned = raw_text.strip()
+                if cleaned.startswith("```"):
+                    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+                    cleaned = re.sub(r"\s*```$", "", cleaned)
+                data = json.loads(cleaned)
+                data["provider_used"] = candidate
+                return data
+            except Exception as err:
+                err_str = str(err).lower()
+                last_err = err
+                if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly."
+                    )
+                if any(k in err_str for k in ["api key", "api_key", "invalid_argument", "unauthorized", "permission_denied", "403", "400"]):
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="API Key missing or Invalid in .env"
+                    )
+                logger.warning("Gemini model %s error: %s. Trying fallback model...", candidate, err)
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"API Key missing or Invalid in .env ({str(last_err)})"
+        )
 
     def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
         """Backwards compatible wrapper around generate_study_topics."""
@@ -412,10 +436,11 @@ class GeminiProvider(AIProvider):
         - hint: Socratic guiding clues (AI IS NOT A KEYBOARD - never dumps full solutions)
         - debug: Root-cause diagnosis for Engineering Lab
         """
-        if not self.is_available():
-            if self._ollama_fallback.is_available():
-                return self._ollama_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
-            return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+        if not self.api_key or not self.api_key.strip():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API Key missing or Invalid in .env"
+            )
 
         mode_lower = (mode or "explain").lower()
 
@@ -442,39 +467,47 @@ class GeminiProvider(AIProvider):
         topic_ctx = f"Context Topic: {context_topic}\n" if context_topic else ""
         prompt = f"{system_instruction}\n\n{topic_ctx}Learner Message: {message}\n\nResponse:"
 
-        try:
-            import google.generativeai as genai
-            text_model = genai.GenerativeModel(model_name=self.model_name)
-            response = text_model.generate_content(prompt)
-            reply = (response.text or "").strip()
-            return {
-                "reply": reply,
-                "mode": mode_lower,
-                "context_topic": context_topic,
-                "provider": "gemini-1.5-flash"
-            }
-        except Exception as err:
-            err_str = str(err).lower()
-            if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
-                if self._ollama_fallback.is_available():
-                    return self._ollama_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
-                from fastapi import HTTPException, status
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Falling back to offline guidance."
-                )
-            if self._ollama_fallback.is_available():
-                return self._ollama_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
-            return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+        last_err = None
+        for candidate in self.candidate_models:
+            try:
+                model = self._get_model(candidate, is_json=False)
+                response = model.generate_content(prompt)
+                reply = (response.text or "").strip()
+                return {
+                    "reply": reply,
+                    "mode": mode_lower,
+                    "context_topic": context_topic,
+                    "provider": candidate
+                }
+            except Exception as err:
+                err_str = str(err).lower()
+                last_err = err
+                if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly."
+                    )
+                if any(k in err_str for k in ["api key", "api_key", "invalid_argument", "unauthorized", "permission_denied", "403", "400"]):
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="API Key missing or Invalid in .env"
+                    )
+                logger.warning("Gemini model %s error: %s. Trying fallback model...", candidate, err)
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"API Key missing or Invalid in .env ({str(last_err)})"
+        )
 
     def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
         """
-        Anti-Fake-Progress Quiz: Returns a 4-option conceptual JSON question using Gemini 1.5 Flash.
+        Anti-Fake-Progress Quiz: Returns a 4-option conceptual JSON question using Gemini 3.6 Flash.
         """
-        if not self.is_available():
-            if self._ollama_fallback.is_available():
-                return self._ollama_fallback.generate_verification_quiz(subtopic_name)
-            return self._offline_fallback.generate_verification_quiz(subtopic_name)
+        if not self.api_key or not self.api_key.strip():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API Key missing or Invalid in .env"
+            )
 
         prompt = (
             f"Generate a rigorous conceptual verification quiz question to verify genuine engineering understanding "
@@ -490,30 +523,39 @@ class GeminiProvider(AIProvider):
             "Return ONLY the raw JSON object."
         )
 
-        try:
-            response = self._model.generate_content(prompt)
-            raw_text = response.text or ""
-            cleaned = raw_text.strip()
-            if cleaned.startswith("```"):
-                cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-                cleaned = re.sub(r"\s*```$", "", cleaned)
-            quiz_data = json.loads(cleaned)
-            quiz_data["subtopic"] = subtopic_name
-            quiz_data["provider"] = "gemini-1.5-flash"
-            return quiz_data
-        except Exception as err:
-            err_str = str(err).lower()
-            if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
-                if self._ollama_fallback.is_available():
-                    return self._ollama_fallback.generate_verification_quiz(subtopic_name)
-                from fastapi import HTTPException, status
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly."
-                )
-            if self._ollama_fallback.is_available():
-                return self._ollama_fallback.generate_verification_quiz(subtopic_name)
-            return self._offline_fallback.generate_verification_quiz(subtopic_name)
+        last_err = None
+        for candidate in self.candidate_models:
+            try:
+                model = self._get_model(candidate, is_json=True)
+                response = model.generate_content(prompt)
+                raw_text = response.text or ""
+                cleaned = raw_text.strip()
+                if cleaned.startswith("```"):
+                    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+                    cleaned = re.sub(r"\s*```$", "", cleaned)
+                quiz_data = json.loads(cleaned)
+                quiz_data["subtopic"] = subtopic_name
+                quiz_data["provider"] = candidate
+                return quiz_data
+            except Exception as err:
+                err_str = str(err).lower()
+                last_err = err
+                if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly."
+                    )
+                if any(k in err_str for k in ["api key", "api_key", "invalid_argument", "unauthorized", "permission_denied", "403", "400"]):
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="API Key missing or Invalid in .env"
+                    )
+                logger.warning("Gemini model %s error: %s. Trying fallback model...", candidate, err)
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"API Key missing or Invalid in .env ({str(last_err)})"
+        )
 
     def generate_completion(self, prompt: str) -> str:
         if not self.is_available():
@@ -762,23 +804,22 @@ OllamaProvider = OllamaAIProvider
 def get_ai_provider() -> AIProvider:
     """
     Factory returning active AIProvider based on environment configuration.
-    Supports Ollama (local offline GPU/CPU LLMs), Gemini (online free tier),
-    and LocalOfflineAIProvider (100% free deterministic heuristic engine).
+    Supports Gemini (online free tier), Ollama (local offline LLMs),
+    and LocalOfflineAIProvider (deterministic heuristic engine).
     """
-    provider_type = os.getenv("AI_PROVIDER", "local").lower()
+    provider_type = os.getenv("AI_PROVIDER", "gemini").lower()
+    gemini_key = os.getenv("GEMINI_API_KEY")
+
+    if provider_type == "gemini" or gemini_key:
+        if not gemini_key or not gemini_key.strip():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API Key missing or Invalid in .env"
+            )
+        return GeminiProvider(gemini_key)
 
     if provider_type == "ollama":
         return OllamaAIProvider()
-
-    if provider_type == "gemini":
-        gemini_key = os.getenv("GEMINI_API_KEY")
-        if gemini_key and gemini_key.strip():
-            try:
-                provider = GeminiProvider(gemini_key)
-                if provider.is_available():
-                    return provider
-            except Exception:
-                pass
 
     return LocalOfflineAIProvider()
 

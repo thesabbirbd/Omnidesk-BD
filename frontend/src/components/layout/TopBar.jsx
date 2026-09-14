@@ -20,6 +20,7 @@ import { useTimer } from '../../context/TimerContext';
 import NotificationCenterModal from '../notifications/NotificationCenterModal';
 import UserProfileModal from '../profile/UserProfileModal';
 import { offlineSyncService } from '../../services/offlineSync';
+import { getStudySpaces } from '../../services/api';
 
 export default function TopBar({ onToggleSidebar = () => {} }) {
   const navigate = useNavigate();
@@ -128,6 +129,53 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
     }
   };
 
+  // Dynamic Active StudySpace state
+  const [activeSpaceTitle, setActiveSpaceTitle] = useState(() => {
+    return localStorage.getItem('current_study_space_title') || '100-Day Backend → DevOps';
+  });
+  const [availableSpaces, setAvailableSpaces] = useState([]);
+
+  // Load available spaces and listen for updates
+  useEffect(() => {
+    const loadSpaces = async () => {
+      try {
+        const spaces = await getStudySpaces();
+        if (Array.isArray(spaces) && spaces.length > 0) {
+          setAvailableSpaces(spaces);
+          const currentId = localStorage.getItem('current_study_space_id');
+          const matched = spaces.find(s => s.id === currentId);
+          if (matched) {
+            setActiveSpaceTitle(matched.title);
+            localStorage.setItem('current_study_space_title', matched.title);
+          }
+        }
+      } catch {
+        // fallback
+      }
+    };
+    loadSpaces();
+
+    const handleSpaceChanged = (e) => {
+      if (e.detail?.title) {
+        setActiveSpaceTitle(e.detail.title);
+        localStorage.setItem('current_study_space_title', e.detail.title);
+      }
+      loadSpaces();
+    };
+
+    window.addEventListener('studyos-space-changed', handleSpaceChanged);
+    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
+  }, []);
+
+  const handleSelectSpace = (space) => {
+    localStorage.setItem('current_study_space_id', space.id);
+    localStorage.setItem('current_study_space_title', space.title);
+    setActiveSpaceTitle(space.title);
+    setShowProjectMenu(false);
+    window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: space }));
+    navigate('/os/dashboard');
+  };
+
   const unreadNotificationsCount = notificationsList.filter((n) => !n.read).length;
 
   return (
@@ -154,39 +202,66 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
           >
             <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse shrink-0" />
             <span className="text-xs font-bold text-[color:var(--text-main)] tracking-wide group-hover:text-cyan-400 transition-colors hidden sm:inline truncate max-w-[150px] md:max-w-[180px]">
-              100-Day Backend → DevOps
+              {activeSpaceTitle}
             </span>
-            <span className="text-xs font-bold text-[color:var(--text-main)] tracking-wide group-hover:text-cyan-400 sm:hidden">
-              100-Day
+            <span className="text-xs font-bold text-[color:var(--text-main)] tracking-wide group-hover:text-cyan-400 sm:hidden truncate max-w-[80px]">
+              {activeSpaceTitle}
             </span>
             <ChevronDown size={14} className={`text-[color:var(--text-muted)] transition-transform duration-200 shrink-0 ${showProjectMenu ? 'rotate-180' : ''}`} />
           </button>
 
           {showProjectMenu && (
-            <div className="absolute left-0 mt-2 w-64 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[color:var(--text-muted)]">
-                Active Spaces
+            <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[color:var(--text-muted)] flex items-center justify-between">
+                <span>Active Study Spaces</span>
+                <span className="text-cyan-400">{availableSpaces.length || 1} available</span>
               </div>
-              <button
-                onClick={() => {
-                  setShowProjectMenu(false);
-                  navigate('/os/dashboard');
-                }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs font-bold text-cyan-400 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] mb-1"
-              >
-                <span>100-Day Backend → DevOps</span>
-                <Check size={14} />
-              </button>
-              <button
-                onClick={() => {
-                  setShowProjectMenu(false);
-                  navigate('/');
-                }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs font-medium text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)] transition-all"
-              >
-                <span>Switch / All Spaces</span>
-                <span className="text-[10px] uppercase font-bold text-slate-500">Go to Home</span>
-              </button>
+
+              <div className="flex flex-col gap-1 max-h-60 overflow-y-auto pr-1">
+                {availableSpaces.map((space) => {
+                  const isCurrent = space.title === activeSpaceTitle;
+                  return (
+                    <button
+                      key={space.id}
+                      onClick={() => handleSelectSpace(space)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold transition-all ${
+                        isCurrent
+                          ? 'text-cyan-400 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]'
+                          : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)]/50'
+                      }`}
+                    >
+                      <span className="truncate pr-2">{space.title}</span>
+                      {isCurrent && <Check size={14} className="shrink-0 text-cyan-400" />}
+                    </button>
+                  );
+                })}
+
+                {availableSpaces.length === 0 && (
+                  <button
+                    onClick={() => {
+                      setShowProjectMenu(false);
+                      navigate('/os/dashboard');
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold text-cyan-400 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]"
+                  >
+                    <span className="truncate">100-Day Backend → DevOps</span>
+                    <Check size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-2 pt-2 border-t border-[var(--border-color)]">
+                <button
+                  onClick={() => {
+                    setShowProjectMenu(false);
+                    navigate('/');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-medium text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)] transition-all"
+                >
+                  <span>Switch / All Spaces</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-500">Go to Home</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
