@@ -3,7 +3,8 @@ import uuid
 from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from app.models.study_space import StudySpace
-from app.models.topic import Topic, SourceType
+from app.models.topic import Topic
+from app.models.enums import GenerationType
 from app.models.dependency import TopicDependency
 from app.models.competency import CompetencyItem
 from app.models.study_plan import StudyPlan, StudyWeek, StudyDay
@@ -300,13 +301,13 @@ class CourseGenerator:
 
             # Determine provenance source type and confidence score
             if material:
-                st = SourceType.SOURCE_EXTRACTED
+                st = GenerationType.SOURCE_EXTRACTED
                 conf = 0.95
             elif raw_topics:
-                st = SourceType.AI_INFERRED
+                st = GenerationType.AI_INFERRED
                 conf = 0.88
             else:
-                st = SourceType.USER_CREATED
+                st = GenerationType.USER_CREATED
                 conf = 1.0
 
             topic = Topic(
@@ -314,7 +315,7 @@ class CourseGenerator:
                 study_space_id=space.id,
                 title=t_data["title"],
                 description=topic_desc,
-                source_type=st,
+                generation_type=st,
                 source_reference=source_ref,
                 source_material_id=material.id if material else None,
                 confidence_score=conf,

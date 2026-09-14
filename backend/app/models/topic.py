@@ -21,11 +21,7 @@ if TYPE_CHECKING:
     from app.models.project import DebugJournal
 
 
-class SourceType(str, enum.Enum):
-    USER_CREATED = "USER_CREATED"
-    SOURCE_EXTRACTED = "SOURCE_EXTRACTED"
-    AI_INFERRED = "AI_INFERRED"
-    MIXED = "MIXED"
+from app.models.enums import GenerationType
 
 
 class Topic(Base):
@@ -54,14 +50,14 @@ class Topic(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Data Provenance Metadata (Packet 1D)
-    source_type: Mapped[SourceType] = mapped_column(
-        sa.Enum(SourceType, name="source_type_enum"),
-        default=SourceType.USER_CREATED,
+    generation_type: Mapped[GenerationType] = mapped_column(
+        sa.Enum(GenerationType, name="generation_type_enum"),
+        default=GenerationType.USER_CREATED,
         nullable=False,
         index=True
     )
     source_reference: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    source_material_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    source_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("materials.id", ondelete="SET NULL"),
         nullable=True,
@@ -96,7 +92,7 @@ class Topic(Base):
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="topics")
     study_space: Mapped["StudySpace"] = relationship("StudySpace", back_populates="topics")
-    source_material: Mapped[Optional["Material"]] = relationship("Material")
+    source_material: Mapped[Optional["Material"]] = relationship("Material", foreign_keys=[source_id])
     tasks: Mapped[List["Task"]] = relationship(
         "Task",
         back_populates="topic",

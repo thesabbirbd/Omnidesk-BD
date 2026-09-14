@@ -1,0 +1,23 @@
+{
+  "id": "tpl-academic-study",
+  "title": "Academic Study Methodology",
+  "category": "Academic",
+  "description": "General purpose blueprint utilizing Feynman Technique, Spaced Repetition, and Active Recall for academia.",
+  "interface_language": "en",
+  "source_language": "en",
+  "learning_output_language": "en",
+  "topics": [
+    {
+      "title": "The Feynman Technique",
+      "difficulty": "beginner",
+      "estimated_minutes": 30,
+      "order": 1
+    },
+    {
+      "title": "Spaced Repetition Systems (SRS)",
+      "difficulty": "intermediate",
+      "estimated_minutes": 60,
+      "order": 2
+    }
+  ]
+}

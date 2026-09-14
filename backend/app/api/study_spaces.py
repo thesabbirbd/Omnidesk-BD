@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
 from app.models.study_space import StudySpace
-from app.models.topic import Topic, SourceType
+from app.models.topic import Topic
+from app.models.enums import GenerationType
 from app.models.dependency import TopicDependency
 from app.models.task import Task
 from app.models.study_plan import StudyPlan, StudyWeek, StudyDay
@@ -78,7 +79,7 @@ def get_curriculum_template_preview(
             difficulty=t.get("difficulty", "INTERMEDIATE"),
             source_reference=t.get("source_reference", f"Template: {template_id}"),
             confidence_score=1.0,
-            source_type="USER_CREATED"
+            generation_type="USER_CREATED"
         )
         for t in raw_topics
     ]
@@ -136,7 +137,7 @@ async def generate_study_space_preview(
     preferred_provider: Optional[str] = None
     material_id: Optional[uuid.UUID] = None
     raw_source_text: str = ""
-    source_type_tag: str = "AI_INFERRED"
+    generation_type_tag: str = "AI_INFERRED"
     source_filename: Optional[str] = None
 
     interface_language: str = "en"
@@ -187,7 +188,7 @@ async def generate_study_space_preview(
                 from app.ingestion.parsers import PDFParser
                 raw_source_text = await PDFParser.extract_text_async(file_bytes, max_chars=10000)
 
-            source_type_tag = "SOURCE_EXTRACTED"
+            generation_type_tag = "SOURCE_EXTRACTED"
         else:
             raw_source_text = str(form.get("topic_name") or form.get("text") or form.get("goal") or "")
             if form.get("topic_name"):
@@ -223,7 +224,7 @@ async def generate_study_space_preview(
             raw_source_text = payload.topic_name.strip()
             source_title = payload.title or raw_source_text
             is_topic_name = True
-            source_type_tag = "USER_CREATED"
+            generation_type_tag = "USER_CREATED"
         elif payload.material_id:
             user_scope_id = current_user.id if current_user else None
             mat_q = db.query(Material).filter(Material.id == payload.material_id)
@@ -254,15 +255,15 @@ async def generate_study_space_preview(
 
             source_title = material_record.title
             source_filename = material_record.original_filename
-            source_type_tag = "SOURCE_EXTRACTED"
+            generation_type_tag = "SOURCE_EXTRACTED"
         elif payload.text and payload.text.strip():
             raw_source_text = payload.text.strip()
             is_topic_name = len(raw_source_text) < 100 and "\n" not in raw_source_text
-            source_type_tag = "AI_INFERRED"
+            generation_type_tag = "AI_INFERRED"
         elif payload.goal and payload.goal.strip():
             raw_source_text = payload.goal.strip()
             is_topic_name = True
-            source_type_tag = "AI_INFERRED"
+            generation_type_tag = "AI_INFERRED"
         else:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -301,7 +302,7 @@ async def generate_study_space_preview(
                     difficulty=t.get("difficulty", "INTERMEDIATE"),
                     source_reference=t.get("source_reference", source_filename or "Uploaded Material"),
                     confidence_score=0.95,
-                    source_type=source_type_tag
+                    generation_type=generation_type_tag
                 )
             )
     except HTTPException:
@@ -390,7 +391,7 @@ async def generate_study_space_from_file_upload(
             difficulty=item.difficulty,
             source_reference=f"File: {file.filename}",
             confidence_score=item.confidence_score,
-            source_type="SOURCE_EXTRACTED"
+            generation_type="SOURCE_EXTRACTED"
         )
         for item in curriculum.topics
     ]
@@ -463,7 +464,7 @@ def approve_and_persist_study_space(
 
     # 2. Persist Topics
     created_topics = {}
-    st_enum = SourceType.SOURCE_EXTRACTED if payload.material_id else SourceType.AI_INFERRED
+    st_enum = GenerationType.SOURCE_EXTRACTED if payload.material_id else GenerationType.AI_INFERRED
 
     for idx, t_in in enumerate(payload.topics):
         col = idx % 3
@@ -471,14 +472,14 @@ def approve_and_persist_study_space(
         pos_x = 100.0 + (col * 320.0)
         pos_y = 100.0 + (row * 240.0)
 
-        topic_st = SourceType.SOURCE_EXTRACTED if t_in.source_type == "SOURCE_EXTRACTED" else st_enum
+        topic_st = GenerationType.SOURCE_EXTRACTED if t_in.generation_type == "SOURCE_EXTRACTED" else st_enum
 
         topic = Topic(
             user_id=current_user.id,
             study_space_id=space.id,
             title=t_in.title,
             description=t_in.description,
-            source_type=topic_st,
+            generation_type=topic_st,
             source_reference=t_in.source_reference,
             source_material_id=payload.material_id,
             confidence_score=t_in.confidence_score,
@@ -511,7 +512,7 @@ def approve_and_persist_study_space(
                 estimated_minutes=task_min,
                 is_completed=False,
                 priority=1,
-                source_type=topic_st,
+                generation_type=topic_st,
                 confidence_score=t_in.confidence_score
             )
             db.add(task)

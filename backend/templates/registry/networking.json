@@ -1,0 +1,23 @@
+{
+  "id": "tpl-networking",
+  "title": "Computer Networking",
+  "category": "Networking",
+  "description": "Blueprint for understanding the OSI Model, TCP/IP, subnetting, and advanced routing protocols.",
+  "interface_language": "en",
+  "source_language": "en",
+  "learning_output_language": "en",
+  "topics": [
+    {
+      "title": "OSI & TCP/IP Models",
+      "difficulty": "beginner",
+      "estimated_minutes": 45,
+      "order": 1
+    },
+    {
+      "title": "BGP & Advanced Routing",
+      "difficulty": "advanced",
+      "estimated_minutes": 90,
+      "order": 2
+    }
+  ]
+}

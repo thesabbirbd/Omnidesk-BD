@@ -40,7 +40,7 @@ class StudySpace(Base):
 
     # Multilingual Architecture
     interface_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
-    learning_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+    learning_output_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
     source_language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(

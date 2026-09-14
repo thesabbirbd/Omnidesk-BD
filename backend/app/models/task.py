@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy import String, Text, Boolean, Integer, Float, ForeignKey, DateTime, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
-from app.models.topic import SourceType
+from app.models.enums import GenerationType
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -45,9 +45,9 @@ class Task(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Data Provenance Metadata (Packet 1D)
-    source_type: Mapped[SourceType] = mapped_column(
-        sa.Enum(SourceType, name="source_type_enum"),
-        default=SourceType.USER_CREATED,
+    generation_type: Mapped[GenerationType] = mapped_column(
+        sa.Enum(GenerationType, name="generation_type_enum"),
+        default=GenerationType.USER_CREATED,
         nullable=False,
         index=True
     )
