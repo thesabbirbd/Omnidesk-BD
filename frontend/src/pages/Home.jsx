@@ -19,6 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { getStudySpaces, generateStudySpace, approveStudySpace } from '../services/api';
+import { getSpaceSlug, slugify } from '../utils/slugify';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -154,8 +155,12 @@ export default function Home() {
       const created = await approveStudySpace(approvalPayload);
       if (created?.id) {
         localStorage.setItem('current_study_space_id', created.id);
+        localStorage.setItem('current_study_space_title', created.title);
+        const slug = getSpaceSlug(created);
+        navigate(`/os/dashboard/${slug}`);
+      } else {
+        navigate('/os/dashboard');
       }
-      navigate('/os/dashboard');
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || "Failed to approve study space.";
       setGenerationError(typeof msg === 'string' ? msg : JSON.stringify(msg));
@@ -194,7 +199,9 @@ export default function Home() {
               key={space.id} 
               onClick={() => {
                 localStorage.setItem('current_study_space_id', space.id);
-                navigate('/os/dashboard');
+                localStorage.setItem('current_study_space_title', space.title);
+                const slug = getSpaceSlug(space);
+                navigate(`/os/dashboard/${slug}`);
               }}
               className="p-8 rounded-[36px] bg-[var(--bg-card)] shadow-[10px_10px_20px_var(--shadow-dark),-10px_-10px_20px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col items-center justify-center text-center gap-5 cursor-pointer group hover:shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)] transition-all duration-300 relative overflow-hidden"
             >

@@ -30,6 +30,8 @@ export default function App() {
         <Route path="/os" element={<AppShell />}>
           <Route index element={<Navigate to="/os/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboard/:spaceSlug" element={<Dashboard />} />
+          <Route path="space/:spaceSlug" element={<Dashboard />} />
           <Route path="mindmap" element={<MindMap />} />
           <Route path="study-plan" element={<StudyPlan />} />
           <Route path="study-engine" element={<StudyEngine />} />

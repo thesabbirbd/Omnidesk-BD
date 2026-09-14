@@ -1,7 +1,8 @@
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, computed_field
 
 
 class StudySpaceBase(BaseModel):
@@ -146,6 +147,12 @@ class StudySpaceResponse(StudySpaceBase):
     is_archived: bool
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def slug(self) -> str:
+        s = re.sub(r'[^\w\s-]', '', self.title or '').strip().lower()
+        return re.sub(r'[-\s]+', '-', s)
 
     model_config = ConfigDict(from_attributes=True)
 

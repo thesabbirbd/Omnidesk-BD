@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { slugify, matchesSlug, getSpaceSlug } from '../utils/slugify';
 import { 
   Calendar, 
   Target,
@@ -101,6 +102,8 @@ const SUGGESTED_SKILLS = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { spaceSlug } = useParams();
+  const [searchParams] = useSearchParams();
   
   // Active Space & Topics State
   const [spaces, setSpaces] = useState([]);
@@ -127,8 +130,8 @@ export default function Dashboard() {
   const fileInputRef = useRef(null);
   const topicInputRef = useRef(null);
 
-  // 1. Fetch available StudySpaces and active space topics
-  const loadActiveSpaceAndTopics = async () => {
+  // 1. Fetch available StudySpaces and active space topics with dynamic slug matching
+  const loadActiveSpaceAndTopics = async (targetSlugOverride) => {
     setIsLoadingSpace(true);
     try {
       const [fetchedSpaces, fetchedSessions] = await Promise.all([
@@ -140,12 +143,29 @@ export default function Dashboard() {
       setSpaces(spaceList);
       setSessions(Array.isArray(fetchedSessions) ? fetchedSessions : []);
 
-      // Determine active space ID from localStorage or first available space
+      const activeSlug = targetSlugOverride !== undefined 
+        ? targetSlugOverride 
+        : (spaceSlug || searchParams.get('space') || searchParams.get('project'));
       const savedSpaceId = localStorage.getItem('current_study_space_id');
-      let active = spaceList.find(s => s.id === savedSpaceId) || spaceList[0] || null;
 
-      if (!active && spaceList.length === 0) {
-        // Fallback placeholder space if no space created yet
+      let active = null;
+      // 1. Prioritize URL slug/ID match
+      if (activeSlug) {
+        active = spaceList.find(s => matchesSlug(s, activeSlug));
+      }
+
+      // 2. Fall back to localStorage space
+      if (!active && savedSpaceId) {
+        active = spaceList.find(s => matchesSlug(s, savedSpaceId));
+      }
+
+      // 3. Fall back to first space in DB
+      if (!active && spaceList.length > 0) {
+        active = spaceList[0];
+      }
+
+      // 4. Default fallback placeholder
+      if (!active) {
         active = {
           id: 'default-devops',
           title: '100-Day Backend → DevOps Engineer',
@@ -158,6 +178,13 @@ export default function Dashboard() {
       if (active?.id && active.id !== 'default-devops') {
         localStorage.setItem('current_study_space_id', active.id);
         localStorage.setItem('current_study_space_title', active.title);
+
+        // Keep URL in sync with active space slug
+        const canonicalSlug = getSpaceSlug(active);
+        if (canonicalSlug && spaceSlug !== canonicalSlug) {
+          navigate(`/os/dashboard/${canonicalSlug}`, { replace: true });
+        }
+
         const fetchedTopics = await getTopics(active.id).catch(() => []);
         setTopics(Array.isArray(fetchedTopics) ? fetchedTopics : []);
       } else {
@@ -172,19 +199,23 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    loadActiveSpaceAndTopics();
+    loadActiveSpaceAndTopics(spaceSlug);
 
     const handleSpaceChanged = (e) => {
       if (e.detail?.id) {
         localStorage.setItem('current_study_space_id', e.detail.id);
         localStorage.setItem('current_study_space_title', e.detail.title);
+        const newSlug = getSpaceSlug(e.detail);
+        if (newSlug) {
+          navigate(`/os/dashboard/${newSlug}`, { replace: true });
+        }
       }
-      loadActiveSpaceAndTopics();
+      loadActiveSpaceAndTopics(e.detail ? getSpaceSlug(e.detail) : undefined);
     };
 
     window.addEventListener('studyos-space-changed', handleSpaceChanged);
     return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
-  }, []);
+  }, [spaceSlug]);
 
   // 2. File drop handlers
   const handleFileDrop = (e) => {
@@ -290,9 +321,13 @@ export default function Dashboard() {
 
       const created = await approveStudySpace(approvalPayload);
       if (created?.id) {
+        const newSlug = getSpaceSlug(created);
         localStorage.setItem('current_study_space_id', created.id);
         localStorage.setItem('current_study_space_title', created.title);
         window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: created }));
+        if (newSlug) {
+          navigate(`/os/dashboard/${newSlug}`);
+        }
       }
 
       // Reset form and reload space
@@ -339,12 +374,12 @@ export default function Dashboard() {
     : undefined;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] overflow-y-auto p-4 md:p-6 lg:p-8 gap-6 transition-colors duration-300">
+    <div className="flex flex-col w-full min-h-full text-[color:var(--text-main)] gap-6 pb-12 transition-colors duration-300">
       
       {/* ========================================================================= */}
       {/* 1. VERY TOP: PROMINENT, PREMIUM "CREATE NEW PROJECT / STUDYSPACE" INPUT AREA */}
       {/* ========================================================================= */}
-      <div className="w-full rounded-3xl bg-[var(--bg-card)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] border border-[var(--border-color)] p-6 md:p-8 relative overflow-hidden transition-all">
+      <div className="w-full shrink-0 rounded-3xl bg-[var(--bg-card)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] border border-[var(--border-color)] p-6 md:p-8 relative overflow-hidden transition-all">
         {/* Subtle Ambient Radial Glow */}
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -393,7 +428,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10 items-stretch">
           
           {/* Left Column: Topic Goal Input (col-span-7) */}
-          <div className="lg:col-span-7 flex flex-col gap-3">
+          <div className="lg:col-span-7 flex flex-col gap-3 justify-between">
             <div className="relative flex items-center">
               <input
                 ref={topicInputRef}
@@ -429,7 +464,7 @@ export default function Dashboard() {
               value={customTitle}
               onChange={(e) => setCustomTitle(e.target.value)}
               placeholder="Custom Workspace Title (optional, defaults to goal name)"
-              className="w-full h-10 bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-medium text-[color:var(--text-main)] rounded-xl px-3 focus:outline-none focus:border-cyan-400/60 shadow-[inset_1px_1px_3px_var(--shadow-dark)] placeholder:text-[color:var(--text-muted)]"
+              className="w-full h-11 bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-medium text-[color:var(--text-main)] rounded-xl px-3 focus:outline-none focus:border-cyan-400/60 shadow-[inset_1px_1px_3px_var(--shadow-dark)] placeholder:text-[color:var(--text-muted)]"
             />
           </div>
 
@@ -552,7 +587,7 @@ export default function Dashboard() {
       {/* ========================================================================= */}
       {/* 2. SUGGESTED PROJECTS / SKILLS SECTION (RIGHT BELOW INPUT AREA)             */}
       {/* ========================================================================= */}
-      <div className="w-full flex flex-col gap-3">
+      <div className="w-full shrink-0 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen size={16} className="text-cyan-400" />
@@ -613,7 +648,7 @@ export default function Dashboard() {
       {/* 2.5 PREVIEW DRAWER / MODAL: STRICTLY ANALYZE -> PREVIEW -> APPROVE -> PERSIST */}
       {/* ========================================================================= */}
       {previewData && (
-        <div className="w-full rounded-3xl bg-[var(--bg-card)] border-2 border-cyan-500/40 shadow-[10px_10px_30px_var(--shadow-dark),-10px_-10px_30px_var(--shadow-light)] p-6 md:p-8 flex flex-col gap-6 animate-in fade-in duration-300">
+        <div className="w-full shrink-0 rounded-3xl bg-[var(--bg-card)] border-2 border-cyan-500/40 shadow-[10px_10px_30px_var(--shadow-dark),-10px_-10px_30px_var(--shadow-light)] p-6 md:p-8 flex flex-col gap-6 animate-in fade-in duration-300">
           
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-color)] pb-4">
@@ -720,7 +755,7 @@ export default function Dashboard() {
       {/* ========================================================================= */}
       {/* 3. ACTIVE STUDY SPACE HERO & DYNAMIC MISSION HEADER                        */}
       {/* ========================================================================= */}
-      <div className="w-full p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col lg:flex-row items-center justify-between gap-6 transition-all">
+      <div className="w-full shrink-0 p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col lg:flex-row items-center justify-between gap-6 transition-all">
         
         {/* Left: Active Mission Identity */}
         <div className="flex items-center gap-4 w-full lg:w-auto">
@@ -804,7 +839,7 @@ export default function Dashboard() {
       {/* 4. MIDDLE SECTION: DYNAMIC REACT FLOW MIND MAP & ACTIVE SPRINT (LEFT)       */}
       {/*    AND TODAY'S ACTIVITY & PROGRESS OVERVIEW (RIGHT)                         */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full shrink-0 items-start">
         
         {/* Left Column: Interactive Mind Map + Active Sprint Panel (approx 65% width / col-span-8) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
@@ -836,7 +871,7 @@ export default function Dashboard() {
       {/* ========================================================================= */}
       {/* 5. BOTTOM ROW: 4 CONTEXTUAL WIDGET CARDS                                   */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full shrink-0 items-stretch">
         
         {/* Card 1: Current Study Plan */}
         <DashboardStudyPlanWidget planWeeks={computedPlanWeeks} />

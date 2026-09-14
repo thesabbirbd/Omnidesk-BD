@@ -21,6 +21,7 @@ import NotificationCenterModal from '../notifications/NotificationCenterModal';
 import UserProfileModal from '../profile/UserProfileModal';
 import { offlineSyncService } from '../../services/offlineSync';
 import { getStudySpaces } from '../../services/api';
+import { getSpaceSlug, slugify } from '../../utils/slugify';
 
 export default function TopBar({ onToggleSidebar = () => {} }) {
   const navigate = useNavigate();
@@ -173,7 +174,8 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
     setActiveSpaceTitle(space.title);
     setShowProjectMenu(false);
     window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: space }));
-    navigate('/os/dashboard');
+    const slug = getSpaceSlug(space);
+    navigate(`/os/dashboard/${slug}`);
   };
 
   const unreadNotificationsCount = notificationsList.filter((n) => !n.read).length;
