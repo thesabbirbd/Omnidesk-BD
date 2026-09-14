@@ -127,6 +127,8 @@ export default function Dashboard() {
   const [dragOver, setDragOver] = useState(false);
   const [dailyMinutes, setDailyMinutes] = useState(60);
   const [selectedCategory, setSelectedCategory] = useState('Technology & Engineering');
+  const [inputMode, setInputMode] = useState('auto'); // 'auto' or 'json'
+  const [jsonInput, setJsonInput] = useState('');
   
   // AI Generation & Preview State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -294,6 +296,59 @@ export default function Dashboard() {
       setGenerationError("Failed to load local template. " + (err.response?.data?.detail || err.message));
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleLoadJsonStructure = () => {
+    setGenerationError(null);
+    if (!jsonInput.trim()) {
+      setGenerationError("Please paste a valid JSON structure.");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(jsonInput);
+      if (!parsed.title || !Array.isArray(parsed.topics)) {
+        throw new Error("JSON must contain 'title' and 'topics' array.");
+      }
+      
+      // Calculate total time
+      let totalTime = 0;
+      const formattedTopics = parsed.topics.map((t, idx) => {
+        if (!Array.isArray(t.dependencies)) {
+          throw new Error(`Topic at index ${idx} is missing a 'dependencies' array.`);
+        }
+        const est = parseInt(t.estimated_minutes) || 60;
+        totalTime += est;
+        return {
+          ...t,
+          estimated_minutes: est,
+          difficulty: t.difficulty || 'INTERMEDIATE',
+          dependencies: t.dependencies,
+          subtopics: Array.isArray(t.subtopics) ? t.subtopics : [],
+          source_reference: t.source_reference || 'Pasted JSON Import',
+          source_type: 'USER_CREATED',
+          generation_type: 'USER_CREATED'
+        };
+      });
+
+      // Construct a valid PreviewData object
+      const preview = {
+        title: parsed.title,
+        description: parsed.description || "Custom imported curriculum.",
+        category: parsed.category || selectedCategory,
+        interface_language: parsed.interface_language || 'en',
+        learning_language: parsed.learning_language || 'en',
+        source_language: parsed.source_language || 'en',
+        provider_used: 'Offline JSON Import',
+        total_estimated_minutes: totalTime,
+        topics: formattedTopics,
+        study_plan: parsed.study_plan || { weeks: [] }, // Mock or use parsed
+        is_preview: true
+      };
+
+      setPreviewData(preview);
+    } catch (e) {
+      setGenerationError("Invalid JSON structure: " + e.message);
     }
   };
 
@@ -476,113 +531,153 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Unified Input Zone (Text Input + File Drag-and-Drop) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10 items-stretch">
-          
-          {/* Left Column: Topic Goal Input (col-span-7) */}
-          <div className="lg:col-span-7 flex flex-col gap-3 justify-between">
-            <div className="relative flex items-center">
-              <input
-                ref={topicInputRef}
-                type="text"
-                value={topicInput}
-                onChange={(e) => {
-                  setTopicInput(e.target.value);
-                  setGenerationError(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleGenerateStudySpace();
-                }}
-                placeholder="What do you want to learn? (e.g. Computer Networking Basics, Python Mastery, Video Editing...)"
-                className="w-full h-14 bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-cyan-400 text-sm font-semibold text-[color:var(--text-main)] rounded-2xl px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] placeholder:text-[color:var(--text-muted)] transition-all"
-              />
-              {topicInput && (
-                <button
-                  onClick={() => {
-                    setTopicInput('');
-                    setActiveSuggestion(null);
-                  }}
-                  className="absolute right-3 p-1 rounded-lg text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
-                  title="Clear input"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-
-            {/* Custom Title (Optional override) */}
-            <input
-              type="text"
-              value={customTitle}
-              onChange={(e) => setCustomTitle(e.target.value)}
-              placeholder="Custom Workspace Title (optional, defaults to goal name)"
-              className="w-full h-11 bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-medium text-[color:var(--text-main)] rounded-xl px-3 focus:outline-none focus:border-cyan-400/60 shadow-[inset_1px_1px_3px_var(--shadow-dark)] placeholder:text-[color:var(--text-muted)]"
-            />
-          </div>
-
-          {/* Right Column: File Drag-and-Drop Area (col-span-5) */}
-          <div className="lg:col-span-5 flex flex-col">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileSelect} 
-              accept=".pdf,.txt,.md" 
-              className="hidden" 
-            />
-
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleFileDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`h-full min-h-[106px] rounded-2xl border-2 border-dashed p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
-                dragOver 
-                  ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.2)]' 
-                  : selectedFile
-                  ? 'border-emerald-500/50 bg-emerald-500/5 shadow-[inset_2px_2px_4px_var(--shadow-dark)]'
-                  : 'border-[var(--border-color)] hover:border-cyan-500/40 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]'
-              }`}
-            >
-              {selectedFile ? (
-                <div className="flex items-center gap-3 w-full justify-between px-2">
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    <FileText size={22} className="text-emerald-400 shrink-0" />
-                    <div className="text-left overflow-hidden">
-                      <div className="text-xs font-bold text-[color:var(--text-main)] truncate max-w-[200px]">
-                        {selectedFile.name}
-                      </div>
-                      <div className="text-[10px] text-emerald-400 font-semibold">
-                        {(selectedFile.size / 1024).toFixed(1)} KB • Click to replace
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedFile(null);
-                    }}
-                    className="p-1.5 rounded-lg bg-[var(--bg-card)] text-[color:var(--text-muted)] hover:text-rose-400 transition-colors"
-                    title="Remove file"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1.5">
-                  <Upload size={20} className="text-cyan-400" />
-                  <div className="text-xs font-bold text-[color:var(--text-main)]">
-                    <span>Drop PDF, TXT or Markdown</span>
-                    <span className="text-cyan-400 ml-1 underline">or browse</span>
-                  </div>
-                  <span className="text-[10px] text-[color:var(--text-muted)]">
-                    Max 50MB • Ingests & builds structured DAG roadmap
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
+        {/* Input Mode Selector */}
+        <div className="flex gap-4 mb-4 border-b border-[var(--border-color)] pb-2">
+          <button
+            onClick={() => setInputMode('auto')}
+            className={`text-xs font-black uppercase tracking-wider pb-2 border-b-2 transition-all ${
+              inputMode === 'auto'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
+            }`}
+          >
+            AI Generation / Upload
+          </button>
+          <button
+            onClick={() => setInputMode('json')}
+            className={`text-xs font-black uppercase tracking-wider pb-2 border-b-2 transition-all ${
+              inputMode === 'json'
+                ? 'border-purple-400 text-purple-400'
+                : 'border-transparent text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
+            }`}
+          >
+            Paste JSON Structure
+          </button>
         </div>
+
+        {inputMode === 'auto' ? (
+          <>
+            {/* Unified Input Zone (Text Input + File Drag-and-Drop) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10 items-stretch">
+              
+              {/* Left Column: Topic Goal Input (col-span-7) */}
+              <div className="lg:col-span-7 flex flex-col gap-3 justify-between">
+                <div className="relative flex items-center">
+                  <input
+                    ref={topicInputRef}
+                    type="text"
+                    value={topicInput}
+                    onChange={(e) => {
+                      setTopicInput(e.target.value);
+                      setGenerationError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleGenerateStudySpace();
+                    }}
+                    placeholder="What do you want to learn? (e.g. Computer Networking Basics, Python Mastery...)"
+                    className="w-full h-14 bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-cyan-400 text-sm font-semibold text-[color:var(--text-main)] rounded-2xl px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] placeholder:text-[color:var(--text-muted)] transition-all"
+                  />
+                  {topicInput && (
+                    <button
+                      onClick={() => {
+                        setTopicInput('');
+                        setActiveSuggestion(null);
+                      }}
+                      className="absolute right-3 p-1 rounded-lg text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
+                      title="Clear input"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Custom Title (Optional override) */}
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder="Custom Workspace Title (optional, defaults to goal name)"
+                  className="w-full h-11 bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-medium text-[color:var(--text-main)] rounded-xl px-3 focus:outline-none focus:border-cyan-400/60 shadow-[inset_1px_1px_3px_var(--shadow-dark)] placeholder:text-[color:var(--text-muted)]"
+                />
+              </div>
+
+              {/* Right Column: File Drag-and-Drop Area (col-span-5) */}
+              <div className="lg:col-span-5 flex flex-col">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileSelect} 
+                  accept=".pdf,.txt,.md" 
+                  className="hidden" 
+                />
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleFileDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`h-full min-h-[106px] rounded-2xl border-2 border-dashed p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
+                    dragOver 
+                      ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.2)]' 
+                      : selectedFile
+                      ? 'border-emerald-500/50 bg-emerald-500/5 shadow-[inset_2px_2px_4px_var(--shadow-dark)]'
+                      : 'border-[var(--border-color)] hover:border-cyan-500/40 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]'
+                  }`}
+                >
+                  {selectedFile ? (
+                    <div className="flex items-center gap-3 w-full justify-between px-2">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <FileText size={22} className="text-emerald-400 shrink-0" />
+                        <div className="text-left overflow-hidden">
+                          <div className="text-xs font-bold text-[color:var(--text-main)] truncate max-w-[200px]">
+                            {selectedFile.name}
+                          </div>
+                          <div className="text-[10px] text-emerald-400 font-semibold">
+                            {(selectedFile.size / 1024).toFixed(1)} KB • Click to replace
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                        }}
+                        className="p-1.5 rounded-lg bg-[var(--bg-card)] text-[color:var(--text-muted)] hover:text-rose-400 transition-colors"
+                        title="Remove file"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Upload size={20} className="text-cyan-400" />
+                      <div className="text-xs font-bold text-[color:var(--text-main)]">
+                        <span>Drop PDF, TXT or Markdown</span>
+                        <span className="text-cyan-400 ml-1 underline">or browse</span>
+                      </div>
+                      <span className="text-[10px] text-[color:var(--text-muted)]">
+                        Max 50MB • Ingests & builds structured DAG roadmap
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </>
+        ) : (
+          <div className="relative z-10 w-full h-48">
+            <textarea
+              value={jsonInput}
+              onChange={(e) => {
+                setJsonInput(e.target.value);
+                setGenerationError(null);
+              }}
+              placeholder={'Paste JSON Structure here. E.g.\n{\n  "title": "Computer Networking",\n  "topics": [\n    { "title": "OSI Model", "estimated_minutes": 60, "dependencies": [] }\n  ]\n}'}
+              className="w-full h-full bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-purple-400/80 text-xs font-mono text-[color:var(--text-main)] rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-purple-400/20 shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] placeholder:text-[color:var(--text-muted)]/50 transition-all resize-none"
+            />
+          </div>
+        )}
 
         {/* Error Notification Banner */}
         {generationError && (
@@ -601,38 +696,58 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Generate Action Button */}
+        {/* Generate / Load Action Button */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[var(--border-color)]">
           <div className="text-xs text-[color:var(--text-muted)] font-medium">
-            {topicInput.trim() 
-              ? <span>Target Goal: <strong className="text-cyan-400">{topicInput}</strong></span>
-              : selectedFile
-              ? <span>Source Document: <strong className="text-emerald-400">{selectedFile.name}</strong></span>
-              : <span>Choose a suggested project below or type your custom goal</span>}
+            {inputMode === 'auto' ? (
+              topicInput.trim() 
+                ? <span>Target Goal: <strong className="text-cyan-400">{topicInput}</strong></span>
+                : selectedFile
+                ? <span>Source Document: <strong className="text-emerald-400">{selectedFile.name}</strong></span>
+                : <span>Choose a suggested project below or type your custom goal</span>
+            ) : (
+              <span>Import curriculum directly from standard JSON structure</span>
+            )}
           </div>
 
-          <button
-            onClick={handleGenerateStudySpace}
-            disabled={isGenerating || (!topicInput.trim() && !selectedFile)}
-            className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl font-black text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] ${
-              isGenerating || (!topicInput.trim() && !selectedFile)
-                ? 'opacity-50 cursor-not-allowed bg-[var(--bg-input)] text-[color:var(--text-muted)]'
-                : 'bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 active:scale-98 shadow-[0_0_15px_rgba(34,211,238,0.4)]'
-            }`}
-          >
-            {isGenerating ? (
-              <>
-                <RefreshCw size={16} className="animate-spin text-slate-950" />
-                <span>Synthesizing with Gemini AI...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={16} />
-                <span>Generate StudySpace</span>
-                <ArrowRight size={14} />
-              </>
-            )}
-          </button>
+          {inputMode === 'auto' ? (
+            <button
+              onClick={handleGenerateStudySpace}
+              disabled={isGenerating || (!topicInput.trim() && !selectedFile)}
+              className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl font-black text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] ${
+                isGenerating || (!topicInput.trim() && !selectedFile)
+                  ? 'opacity-50 cursor-not-allowed bg-[var(--bg-input)] text-[color:var(--text-muted)]'
+                  : 'bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 active:scale-98 shadow-[0_0_15px_rgba(34,211,238,0.4)]'
+              }`}
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin text-slate-950" />
+                  <span>Synthesizing with Gemini AI...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  <span>Generate StudySpace</span>
+                  <ArrowRight size={14} />
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={handleLoadJsonStructure}
+              disabled={!jsonInput.trim()}
+              className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl font-black text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] ${
+                !jsonInput.trim()
+                  ? 'opacity-50 cursor-not-allowed bg-[var(--bg-input)] text-[color:var(--text-muted)]'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white active:scale-98 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+              }`}
+            >
+              <Code size={16} />
+              <span>Load Structure</span>
+              <ArrowRight size={14} />
+            </button>
+          )}
         </div>
       </div>
 
