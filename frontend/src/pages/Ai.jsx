@@ -72,7 +72,8 @@ export default function Ai() {
       const response = await sendAiChat({
         message: textToSend,
         mode: currentMode,
-        context_topic: contextTopic
+        context_topic: contextTopic,
+        current_study_space: localStorage.getItem('current_study_space_title')
       });
 
       setMessages(prev => [

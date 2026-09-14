@@ -55,7 +55,7 @@ class AIProvider(ABC):
 
     @abstractmethod
     def chat_assistant(
-        self, message: str, mode: str = "explain", context_topic: Optional[str] = None
+        self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None
     ) -> Dict[str, Any]:
         """Pedagogical interactive assistant adhering to modes: explain, hint, or debug."""
         pass
@@ -257,7 +257,7 @@ class LocalOfflineAIProvider(AIProvider):
         return self.extract_curriculum(input_text, title=effective_title)
 
     def chat_assistant(
-        self, message: str, mode: str = "explain", context_topic: Optional[str] = None
+        self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None
     ) -> Dict[str, Any]:
         mode_lower = (mode or "explain").lower()
         ctx_str = f" for '{context_topic}'" if context_topic else ""
@@ -429,7 +429,7 @@ class GeminiProvider(AIProvider):
         return self.generate_study_topics(text, is_topic_name=False, title=title)
 
     def chat_assistant(
-        self, message: str, mode: str = "explain", context_topic: Optional[str] = None
+        self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Interactive AI Assistant adhering strictly to teaching modes:
@@ -465,7 +465,12 @@ class GeminiProvider(AIProvider):
                 "and verify understanding with a quick conceptual check. Prioritize clarity over jargon."
             )
 
-        topic_ctx = f"Context Topic: {context_topic}\n" if context_topic else ""
+        topic_ctx = ""
+        if current_study_space:
+            topic_ctx += f"Active Study Space: {current_study_space}\n"
+        if context_topic:
+            topic_ctx += f"Specific Topic Context: {context_topic}\n"
+            
         prompt = f"{system_instruction}\n\n{topic_ctx}Learner Message: {message}\n\nResponse:"
 
         last_err = None
@@ -678,10 +683,10 @@ class OllamaAIProvider(AIProvider):
         return self.generate_study_topics(text, is_topic_name=False, title=title)
 
     def chat_assistant(
-        self, message: str, mode: str = "explain", context_topic: Optional[str] = None
+        self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None
     ) -> Dict[str, Any]:
         if not self.is_available():
-            return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+            return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic, current_study_space=current_study_space)
         try:
             import httpx
             topic_ctx = f"Context Topic: {context_topic}\n" if context_topic else ""
@@ -701,7 +706,7 @@ class OllamaAIProvider(AIProvider):
                 }
         except Exception:
             pass
-        return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic)
+        return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic, current_study_space=current_study_space)
 
     def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
         if not self.is_available():
@@ -846,12 +851,12 @@ def generate_study_topics(input_text: str, is_topic_name: bool = False, title: O
     return LocalOfflineAIProvider().generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
 
 
-def chat_assistant(message: str, mode: str = "explain", context_topic: Optional[str] = None) -> Dict[str, Any]:
+def chat_assistant(message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None) -> Dict[str, Any]:
     """
     Top-level helper function for interactive AI chat assistant.
     """
     provider = get_ai_provider()
     if hasattr(provider, "chat_assistant"):
-        return provider.chat_assistant(message, mode=mode, context_topic=context_topic)
-    return LocalOfflineAIProvider().chat_assistant(message, mode=mode, context_topic=context_topic)
+        return provider.chat_assistant(message, mode=mode, context_topic=context_topic, current_study_space=current_study_space)
+    return LocalOfflineAIProvider().chat_assistant(message, mode=mode, context_topic=context_topic, current_study_space=current_study_space)
 

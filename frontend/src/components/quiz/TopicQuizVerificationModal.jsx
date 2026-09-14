@@ -68,20 +68,11 @@ export default function TopicQuizVerificationModal({
       setQuizData(data);
     } catch (err) {
       console.warn("Error fetching verification quiz:", err);
-      // Fallback local quiz structure
+      // Graceful fallback to simple confirmation dialog
       setQuizData({
+        fallbackMode: true,
         topic_id: topicId,
-        topic_title: activeTopic?.title || 'Engineering Architecture',
-        question: `In ${activeTopic?.title || 'this engineering domain'}, which fundamental architectural principle guarantees consistency and fault isolation?`,
-        options: [
-          'Strict boundary enforcement and idempotency checks',
-          'Disabling error boundaries to accelerate throughput',
-          'Eliminating database connection pooling',
-          'Hardcoding static credentials across all instances'
-        ],
-        correct_answer_index: 0,
-        explanation: 'Boundary enforcement and idempotency isolate failures and maintain state consistency during transient faults.',
-        provider: 'offline_heuristic'
+        topic_title: activeTopic?.title || 'Topic'
       });
     } finally {
       setLoadingQuiz(false);
@@ -89,17 +80,19 @@ export default function TopicQuizVerificationModal({
   };
 
   const handleVerify = async () => {
-    if (selectedIdx === null || !quizData || submitting) return;
+    if ((selectedIdx === null && !quizData?.fallbackMode) || !quizData || submitting) return;
     setSubmitting(true);
 
-    const isCorrect = selectedIdx === quizData.correct_answer_index;
+    const isCorrect = quizData.fallbackMode ? true : (selectedIdx === quizData.correct_answer_index);
 
     if (isCorrect) {
       setResultState('correct');
       try {
         await updateTopicStatus(activeTopic.id, 'COMPLETE', 100, {
           quiz_verified: true,
-          evidence_notes: `Verified via Gemini Anti-Fake-Progress challenge: "${quizData.question.slice(0, 50)}..."`
+          evidence_notes: quizData.fallbackMode 
+            ? `Verified via Fallback Confirmation.` 
+            : `Verified via Gemini Anti-Fake-Progress challenge: "${quizData.question.slice(0, 50)}..."`
         });
 
         window.dispatchEvent(new CustomEvent('studyos-show-toast', {
@@ -119,24 +112,16 @@ export default function TopicQuizVerificationModal({
           handleClose();
         }, 1800);
       } catch (err) {
-        console.warn("Status update error:", err);
+        console.error("Verification update failed:", err);
+      } finally {
+        setSubmitting(false);
       }
     } else {
       setResultState('incorrect');
       setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 700);
-
-      try {
-        // Keep status as LEARNING
-        await updateTopicStatus(activeTopic.id, 'LEARNING', 50);
-        window.dispatchEvent(new CustomEvent('studyos-topic-status-updated', {
-          detail: { id: activeTopic.id, status: 'LEARNING', progress: 50 }
-        }));
-      } catch (err) {
-        // ignore
-      }
+      setTimeout(() => setIsShaking(false), 500);
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   const handleRequestHint = async () => {
@@ -216,6 +201,17 @@ export default function TopicQuizVerificationModal({
               </p>
               <p className="text-xs text-[color:var(--text-muted)]">
                 Testing genuine engineering reasoning, not rote memorization.
+              </p>
+            </div>
+          ) : quizData?.fallbackMode ? (
+            <div className="py-8 flex flex-col items-center justify-center gap-4 text-center">
+              <AlertCircle size={48} className="text-amber-400" />
+              <h3 className="text-lg font-bold text-[color:var(--text-main)]">Verification Temporarily Unavailable</h3>
+              <p className="text-sm text-[color:var(--text-muted)] max-w-sm">
+                The Gemini AI Engine failed to generate a verification challenge (API rate limit or network error).
+              </p>
+              <p className="text-sm font-bold text-cyan-400 mt-2">
+                Would you like to manually confirm completion of "{activeTopic?.title}"?
               </p>
             </div>
           ) : quizData ? (
@@ -345,7 +341,7 @@ export default function TopicQuizVerificationModal({
 
             <button
               type="button"
-              disabled={selectedIdx === null || submitting || resultState === 'correct'}
+              disabled={(selectedIdx === null && !quizData?.fallbackMode) || submitting || resultState === 'correct'}
               onClick={handleVerify}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
             >

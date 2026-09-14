@@ -22,6 +22,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, description="The user's query or problem description")
     mode: str = Field("explain", description="'explain' (Feynman), 'hint' (Socratic), or 'debug' (Engineering Lab)")
     context_topic: Optional[str] = Field(None, description="Active topic or concept from the Mind Map or workspace")
+    current_study_space: Optional[str] = Field(None, description="The name of the currently active Study Space")
 
 
 class ChatResponse(BaseModel):
@@ -55,7 +56,8 @@ def chat_with_assistant(
     return chat_assistant(
         message=payload.message.strip(),
         mode=mode,
-        context_topic=payload.context_topic.strip() if payload.context_topic else None
+        context_topic=payload.context_topic.strip() if payload.context_topic else None,
+        current_study_space=payload.current_study_space.strip() if payload.current_study_space else None
     )
 
 

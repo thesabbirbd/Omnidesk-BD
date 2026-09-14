@@ -736,7 +736,7 @@ export default function Dashboard() {
                 ) : (
                   <>
                     <Check size={14} />
-                    <span>Approve & Activate StudySpace</span>
+                    <span>Approve & Create</span>
                   </>
                 )}
               </button>
