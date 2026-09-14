@@ -476,7 +476,7 @@ export default function Home() {
             className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-200 hover:text-white hover:border-cyan-400 text-xs font-bold transition-all hover:scale-105"
             title="Visit GitHub Repository"
           >
-            <Github size={15} />
+            <GithubIcon size={15} />
             <span>GitHub</span>
           </a>
         </div>

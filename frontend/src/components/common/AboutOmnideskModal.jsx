@@ -224,7 +224,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] border border-[var(--border-color)] hover:border-cyan-400/50 text-[color:var(--text-main)] font-semibold transition-all hover:scale-105"
           >
-            <Github size={15} />
+            <GithubIcon size={15} />
             <span>View GitHub Repository</span>
             <ExternalLink size={12} className="text-[color:var(--text-muted)]" />
           </a>

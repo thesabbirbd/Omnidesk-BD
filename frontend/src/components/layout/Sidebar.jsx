@@ -195,78 +195,8 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
           ))}
         </nav>
 
-        {/* All Learning Projects Switcher Section */}
+        {/* Bottom Actions Section */}
         <div className="p-3 border-t border-[var(--border-color)] bg-[var(--bg-panel)] flex flex-col gap-2 shrink-0">
-          <div className="flex items-center justify-between px-1.5 pt-0.5">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--text-muted)] flex items-center gap-1.5">
-              <FolderGit2 size={12} className="text-cyan-400" />
-              All Learning Projects
-            </span>
-            <button
-              onClick={() => {
-                navigate('/os/dashboard');
-                onClose();
-              }}
-              className="p-1 rounded-lg hover:bg-[var(--bg-input)] text-cyan-400 hover:text-cyan-300 text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors"
-              title="Create New Learning Project"
-            >
-              <Plus size={11} />
-              <span>New</span>
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-1 max-h-36 overflow-y-auto pr-0.5 scrollbar-thin">
-            {spacesList.length === 0 ? (
-              <div className="px-2 py-2 text-[11px] text-[color:var(--text-muted)] italic">
-                Loading projects...
-              </div>
-            ) : (
-              spacesList.map((space) => {
-                const isActive = space.id === activeSpaceId || space.title === activeSpaceTitle;
-                return (
-                  <button
-                    key={space.id}
-                    onClick={() => handleSelectProject(space)}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs font-bold transition-all group cursor-pointer ${
-                      isActive
-                        ? 'bg-[var(--bg-card)] text-cyan-400 shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] border border-cyan-500/30'
-                        : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-card)]'
-                    }`}
-                    title={`Switch to: ${space.title}`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-2 h-2 rounded-full shrink-0 ${
-                        isActive 
-                          ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)] animate-pulse' 
-                          : 'bg-slate-500/50 group-hover:bg-slate-400'
-                      }`} />
-                      <span className="truncate text-[11px]">{space.title}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProjectToDelete(space);
-                        }}
-                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-all cursor-pointer"
-                        title={`Delete ${space.title} (Admin protected)`}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                      {isActive ? (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 shrink-0">
-                          Active
-                        </span>
-                      ) : (
-                        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-[color:var(--text-muted)] shrink-0" />
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
 
           {/* About Omnidesk BD Option */}
           <button
