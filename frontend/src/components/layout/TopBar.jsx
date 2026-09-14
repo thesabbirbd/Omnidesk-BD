@@ -21,6 +21,7 @@ import NotificationCenterModal from '../notifications/NotificationCenterModal';
 import UserProfileModal from '../profile/UserProfileModal';
 import { offlineSyncService } from '../../services/offlineSync';
 import { getStudySpaces } from '../../services/api';
+import { getAvatarColor, getInitials } from '../../utils/avatar';
 import { getSpaceSlug, slugify } from '../../utils/slugify';
 
 export default function TopBar({ onToggleSidebar = () => {} }) {
@@ -226,13 +227,20 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
                     <button
                       key={space.id}
                       onClick={() => handleSelectSpace(space)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold transition-all ${
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all ${
                         isCurrent
-                          ? 'text-cyan-400 bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]'
-                          : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)]/50'
+                          ? 'bg-[var(--bg-input)] shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)]'
+                          : 'hover:bg-[var(--bg-input)]/50'
                       }`}
                     >
-                      <span className="truncate pr-2">{space.title}</span>
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className={`w-6 h-6 shrink-0 rounded-md flex items-center justify-center text-[10px] font-black text-white shadow-sm ${getAvatarColor(space.title)}`}>
+                          {getInitials(space.title)}
+                        </div>
+                        <span className={`truncate text-xs font-bold ${isCurrent ? 'text-cyan-400' : 'text-[color:var(--text-muted)] group-hover:text-[color:var(--text-main)]'}`}>
+                          {space.title}
+                        </span>
+                      </div>
                       {isCurrent && <Check size={14} className="shrink-0 text-cyan-400" />}
                     </button>
                   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { 
   Play, 
   Pause, 
@@ -168,6 +168,16 @@ export default function AppShell() {
 
       {/* Global StudyOS Floating Timer Widget */}
       <FloatingTimer />
+
+            {/* Global AI Assistant Floating Button */}
+      <button
+        onClick={() => window.location.href = '/os/ai-assistant'}
+        className="fixed bottom-6 right-6 z-[90] p-4 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_10px_30px_rgba(6,182,212,0.4)] hover:shadow-[0_15px_40px_rgba(6,182,212,0.6)] transition-all hover:scale-110 active:scale-95 group flex items-center justify-center"
+        title="Omni AI Assistant"
+      >
+        <Bot size={28} className="group-hover:animate-pulse" />
+        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse" />
+      </button>
 
       {/* Global 'I'm Stuck' Debug Lab Modal */}
       <ImStuckModal />

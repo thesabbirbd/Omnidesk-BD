@@ -539,8 +539,10 @@ function MindMapFlow() {
 
   useEffect(() => {
     const fetchTopics = async () => {
+      const spaceId = localStorage.getItem('current_study_space_id');
+      if (!spaceId) return;
       try {
-        const graph = await getMindMap();
+        const graph = await getMindMap(spaceId);
         if (graph && graph.nodes && graph.nodes.length > 0) {
           setNodes(graph.nodes);
           setEdges(graph.edges);
@@ -552,7 +554,7 @@ function MindMapFlow() {
       }
 
       try {
-        const topics = await getTopics();
+        const topics = await getTopics(spaceId);
         if (topics && topics.length > 0) {
           const fetchedNodes = topics.map((t, index) => ({
             id: t.id.toString(),

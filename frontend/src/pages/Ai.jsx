@@ -257,15 +257,29 @@ export default function Ai() {
           ))}
 
           {isLoading && (
-            <div className="flex gap-4 flex-row">
-              <div className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center bg-[var(--bg-card)] shadow-[3px_3px_6px_var(--shadow-dark),-3px_-3px_6px_var(--shadow-light)] text-sky-400 border border-sky-500/30">
-                <Bot size={18} />
+            <div className="flex gap-4 flex-row animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="w-10 h-10 flex-shrink-0 rounded-2xl flex items-center justify-center bg-gradient-to-br from-cyan-500/20 to-blue-500/20 shadow-[0_0_15px_rgba(6,182,212,0.3)] text-cyan-400 border border-cyan-400/40 relative">
+                <Bot size={20} className="relative z-10" />
+                <div className="absolute inset-0 rounded-2xl border-2 border-dashed border-cyan-400/50 animate-[spin_4s_linear_infinite]" />
               </div>
-              <div className="p-4 rounded-2xl bg-[var(--bg-card)] shadow-[4px_4px_8px_var(--shadow-dark),-4px_-4px_8px_var(--shadow-light)] rounded-tl-xs flex items-center gap-3 border border-sky-500/20">
-                <Loader2 className="animate-spin text-sky-400" size={18} />
-                <span className="text-xs text-sky-400 font-bold animate-pulse">
-                  Gemini 1.5 Flash analyzing in {activeMode} mode...
-                </span>
+              <div className="p-4 rounded-3xl rounded-tl-sm bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-cyan-500/30 flex flex-col gap-3 min-w-[280px]">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex items-center justify-center w-6 h-6">
+                    <div className="absolute inset-0 rounded-full border border-cyan-400/40 animate-ping" />
+                    <div className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#22d3ee]" />
+                  </div>
+                  <span className="text-sm text-cyan-300 font-black tracking-wide uppercase bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
+                    Cognitive Engine Active
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 ml-9">
+                  <span className="text-xs font-mono text-slate-400">Synthesizing {activeMode} payload</span>
+                  <span className="flex gap-0.5">
+                    <span className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
+                </div>
               </div>
             </div>
           )}

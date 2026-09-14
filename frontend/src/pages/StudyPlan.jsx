@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getTopics } from '../services/api';
 import { Calendar, CheckCircle2, Clock, AlertTriangle, Play, Flame } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
 import { useNavigate } from 'react-router-dom';
@@ -58,8 +59,54 @@ export default function StudyPlan() {
   const [weeks, setWeeks] = useState(initialWeeks);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
   const { setTopic, startTimer } = useTimer();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+      setIsLoading(true);
+      const spaceId = localStorage.getItem('current_study_space_id');
+      if (!spaceId) {
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const topics = await getTopics(spaceId);
+        if (topics && topics.length > 0) {
+          const generatedWeeks = [];
+          for (let i = 0; i < topics.length; i += 4) {
+            const chunk = topics.slice(i, i + 4);
+            generatedWeeks.push({
+              weekNumber: Math.floor(i / 4) + 1,
+              title: `Module ${Math.floor(i / 4) + 1}`,
+              days: `Days ${i + 1} - ${i + chunk.length}`,
+              summary: `Mastering concepts from ${chunk[0].title} and beyond.`,
+              topics: chunk.map(t => ({
+                id: t.id,
+                title: t.title,
+                hours: Math.floor(Math.random() * 3) + 2,
+                difficulty: 'Intermediate',
+                status: (t.status || 'scheduled').toLowerCase(),
+                overdue: false
+              }))
+            });
+          }
+          setWeeks(generatedWeeks);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      setIsLoading(false);
+    };
+    fetchPlan();
+
+    const handleSpaceChanged = () => {
+      fetchPlan();
+    };
+    window.addEventListener('studyos-space-changed', handleSpaceChanged);
+    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
+  }, []);
 
   const currentWeekData = weeks.find((w) => w.weekNumber === selectedWeek) || weeks[0];
 
