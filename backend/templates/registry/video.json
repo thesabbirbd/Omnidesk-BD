@@ -1,0 +1,29 @@
+{
+  "id": "video",
+  "title": "Video Editing & Production",
+  "category": "Digital Media & Arts",
+  "description": "Storyboarding, Timeline Cutting, Color Grading & Sound FX",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Storyboarding and Pre-production",
+      "description": "Planning out scenes, scriptwriting, and setting up the project.",
+      "subtopics": ["Scripting", "Shot lists", "Storyboards"],
+      "dependencies": [],
+      "estimated_minutes": 60,
+      "difficulty": "BEGINNER",
+      "source_reference": "Omnidesk Official Template: Video"
+    },
+    {
+      "title": "Timeline Cutting and Transitions",
+      "description": "Basic cutting, pacing, and adding smooth transitions.",
+      "subtopics": ["J and L cuts", "Crossfades", "Pacing"],
+      "dependencies": ["Storyboarding and Pre-production"],
+      "estimated_minutes": 90,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Video"
+    }
+  ]
+}

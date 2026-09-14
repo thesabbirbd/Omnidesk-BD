@@ -1,0 +1,29 @@
+{
+  "id": "ai",
+  "title": "AI & LLM Engineering",
+  "category": "Artificial Intelligence",
+  "description": "Prompt Engineering, RAG Architectures, Vector DBs & Multi-Agent SDKs",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Prompt Engineering Fundamentals",
+      "description": "Designing effective prompts and understanding LLM behavior.",
+      "subtopics": ["Few-shot learning", "Chain of thought", "Context windows"],
+      "dependencies": [],
+      "estimated_minutes": 60,
+      "difficulty": "BEGINNER",
+      "source_reference": "Omnidesk Official Template: AI"
+    },
+    {
+      "title": "RAG Architectures and Vector Databases",
+      "description": "Building Retrieval-Augmented Generation pipelines.",
+      "subtopics": ["Embeddings", "Vector search", "ChromaDB/Pinecone"],
+      "dependencies": ["Prompt Engineering Fundamentals"],
+      "estimated_minutes": 120,
+      "difficulty": "ADVANCED",
+      "source_reference": "Omnidesk Official Template: AI"
+    }
+  ]
+}

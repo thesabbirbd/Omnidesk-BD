@@ -273,24 +273,33 @@ async def generate_study_space_preview(
     # First 10,000 characters limit
     analysis_text = raw_source_text[:10000]
 
-    # AI Curriculum Synthesis using Gemini 3.6 Flash Free Tier
-    from app.services.ai_provider import GeminiProvider
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if not gemini_key or not gemini_key.strip():
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API Key missing or Invalid in .env"
-        )
-    gemini_provider = GeminiProvider(gemini_key)
+    # AI Curriculum Synthesis using the unified AIService facade
+    from app.services.ai_provider import get_ai_provider
+    import asyncio
+    import json
+    
+    ai_provider = get_ai_provider()
 
     topic_items: List[TopicPreviewItem] = []
     curriculum_summary = ""
     provider_used = "gemini-3.6-flash"
 
     try:
-        gemini_data = gemini_provider.generate_study_topics(analysis_text, is_topic_name=is_topic_name, title=source_title)
-        curriculum_summary = gemini_data.get("summary", "Curriculum synthesized by Gemini 3.6 Flash.")
-        provider_used = gemini_data.get("provider_used", "gemini-3.6-flash")
+        # We need a timeout. Since generate_study_topics is synchronous, we run it in a thread
+        loop = asyncio.get_event_loop()
+        gemini_data = await asyncio.wait_for(
+            loop.run_in_executor(
+                None, 
+                ai_provider.generate_study_topics, 
+                analysis_text, 
+                is_topic_name, 
+                source_title
+            ),
+            timeout=30.0
+        )
+        
+        curriculum_summary = gemini_data.get("summary", "Curriculum synthesized by AI.")
+        provider_used = gemini_data.get("provider_used", "AI Provider")
         for t in gemini_data.get("topics", []):
             topic_items.append(
                 TopicPreviewItem(
@@ -305,6 +314,12 @@ async def generate_study_space_preview(
                     generation_type=generation_type_tag
                 )
             )
+    except asyncio.TimeoutError:
+        logger.error("AI Generation failed: Request timed out")
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="AI Provider request timed out."
+        )
     except HTTPException:
         raise
     except Exception as ai_err:
@@ -317,7 +332,7 @@ async def generate_study_space_preview(
             )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"API Key missing or Invalid in .env ({str(ai_err)})"
+            detail=f"AI Provider error ({str(ai_err)})"
         )
 
     # Time-Aware Scheduling (Packet 1I)

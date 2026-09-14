@@ -94,6 +94,11 @@ export const approveStudySpace = async (approvalData) => {
   return response.data;
 };
 
+export const getTemplatePreview = async (templateId) => {
+  const response = await api.get(`/study-spaces/templates/${templateId}`);
+  return response.data;
+};
+
 // Mind Map APIs (React Flow synchronization)
 export const getMindMap = async (studySpaceId) => {
   const params = studySpaceId ? { study_space_id: studySpaceId } : {};

@@ -1,0 +1,29 @@
+{
+  "id": "sec",
+  "title": "Cybersecurity & Ethical Hacking",
+  "category": "Information Security",
+  "description": "Penetration Testing, OWASP Top 10, Network Defense & CVE Auditing",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Network Defense & Analysis",
+      "description": "Understanding network protocols, packets, and defensive postures.",
+      "subtopics": ["Packet analysis", "Firewalls", "IDS/IPS"],
+      "dependencies": [],
+      "estimated_minutes": 60,
+      "difficulty": "BEGINNER",
+      "source_reference": "Omnidesk Official Template: Security"
+    },
+    {
+      "title": "OWASP Top 10 & Web Exploitation",
+      "description": "Finding and mitigating the most critical web vulnerabilities.",
+      "subtopics": ["SQL Injection", "XSS", "CSRF"],
+      "dependencies": ["Network Defense & Analysis"],
+      "estimated_minutes": 90,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Security"
+    }
+  ]
+}

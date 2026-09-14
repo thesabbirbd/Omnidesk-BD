@@ -1,0 +1,29 @@
+{
+  "id": "cloud",
+  "title": "Cloud Engineering",
+  "category": "Infrastructure & SRE",
+  "description": "Terraform, AWS VPC/IAM, Multi-Region SRE & High Availability",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Cloud Fundamentals & AWS Core",
+      "description": "EC2, S3, IAM, and basic cloud networking concepts.",
+      "subtopics": ["IAM roles", "VPC basics", "S3 buckets"],
+      "dependencies": [],
+      "estimated_minutes": 60,
+      "difficulty": "BEGINNER",
+      "source_reference": "Omnidesk Official Template: Cloud"
+    },
+    {
+      "title": "Infrastructure as Code with Terraform",
+      "description": "Writing declarative infrastructure and managing state.",
+      "subtopics": ["HCL syntax", "State management", "Modules"],
+      "dependencies": ["Cloud Fundamentals & AWS Core"],
+      "estimated_minutes": 90,
+      "difficulty": "INTERMEDIATE",
+      "source_reference": "Omnidesk Official Template: Cloud"
+    }
+  ]
+}

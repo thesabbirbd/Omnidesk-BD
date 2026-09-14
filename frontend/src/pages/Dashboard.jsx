@@ -29,12 +29,14 @@ import {
   Trash2
 } from 'lucide-react';
 import { generateMasterPrompt, DEFAULT_TOPIC_PLACEHOLDER } from '../utils/masterPrompt';
+import WikipediaTooltip from '../components/WikipediaTooltip';
 import { 
   getTopics, 
   getSessions, 
   getStudySpaces, 
   generateStudySpace, 
-  approveStudySpace 
+  approveStudySpace,
+  getTemplatePreview
 } from '../services/api';
 import DeleteProjectModal from '../components/projects/DeleteProjectModal';
 import DashboardInteractiveMindMap from '../components/dashboard/DashboardInteractiveMindMap';
@@ -49,7 +51,7 @@ import DashboardAiQuickLinksWidget from '../components/dashboard/DashboardAiQuic
 
 const SUGGESTED_SKILLS = [
   {
-    id: 'net',
+    id: 'networking',
     title: 'Computer Networking Basics',
     description: 'OSI 7 Layers, TCP/IP, IPv4 Subnetting & Routing Protocols',
     icon: Globe,
@@ -57,7 +59,7 @@ const SUGGESTED_SKILLS = [
     gradient: 'from-blue-500/20 to-cyan-500/20 border-cyan-500/40 text-cyan-400'
   },
   {
-    id: 'py',
+    id: 'python',
     title: 'Python Mastery',
     description: 'AsyncIO, Generators, Metaclasses, OOP & Clean Architecture',
     icon: Code,
@@ -73,7 +75,7 @@ const SUGGESTED_SKILLS = [
     gradient: 'from-pink-500/20 to-rose-500/20 border-pink-500/40 text-pink-400'
   },
   {
-    id: 'k8s',
+    id: 'cloud-native',
     title: 'Kubernetes Architecture',
     description: 'Pods, Services, Ingress Controllers, Helm & Production Clusters',
     icon: Server,
@@ -275,14 +277,23 @@ export default function Dashboard() {
   };
 
   // 3. Auto-fill from suggested skills
-  const handleSelectSuggestion = (skill) => {
+  const handleSelectSuggestion = async (skill) => {
     setActiveSuggestion(skill.id);
     setTopicInput(skill.title);
     setCustomTitle(skill.title);
     setSelectedCategory(skill.category);
     setGenerationError(null);
-    if (topicInputRef.current) {
-      topicInputRef.current.focus();
+    setIsGenerating(true);
+    try {
+      // Map the skill.id to template_id if needed. The SUGGESTED_SKILLS ids are like 'net', 'py', 'video', 'k8s', 'cloud', 'sec', 'ai'
+      // We will just use skill.id as the template ID.
+      const preview = await getTemplatePreview(skill.id);
+      setPreviewData(preview);
+    } catch (err) {
+      console.error('Failed to load template:', err);
+      setGenerationError("Failed to load local template. " + (err.response?.data?.detail || err.message));
+    } finally {
+      setIsGenerating(false);
     }
   };
 
