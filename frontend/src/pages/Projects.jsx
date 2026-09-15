@@ -113,7 +113,8 @@ export default function Projects() {
           stage: p.progress >= 100 ? 'Deployed' : (p.progress > 0 ? 'In Progress' : 'Idea'),
           progress: p.progress || 0,
           tags: [p.category || 'Engineering', 'React Flow', 'FastAPI'],
-          slug: p.slug
+          slug: p.slug,
+          milestones: p.milestones || []
         })));
       } else {
         setProjects([]);

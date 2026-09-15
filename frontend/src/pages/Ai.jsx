@@ -23,21 +23,39 @@ import { sendAiChat } from '../services/api';
 
 export default function Ai() {
   const [activeMode, setActiveMode] = useState('explain'); // 'explain' | 'hint' | 'debug'
+  const [activeProvider, setActiveProvider] = useState(() => localStorage.getItem('studyos_ai_provider') || 'gemini'); // 'gemini' | 'ollama' | 'none'
+  
   const [contextTopic, setContextTopic] = useState(() => {
     return localStorage.getItem('studyos_active_topic') || 'PostgreSQL Architecture';
   });
-  const [messages, setMessages] = useState([
-    { 
-      role: 'ai', 
-      content: "Hello! I am your Omni-AI Mentor powered by Gemini 1.5 Flash. I operate in 3 specialized modes:\n\n• **Explain**: Feynman technique breakdowns with intuitive analogies.\n• **Hint**: Socratic guidance—I guide your reasoning without dumping full solutions.\n• **Debug**: Engineering Lab root-cause analysis and structured hypotheses.\n\nSelect a mode or quick-action chip below to begin!",
-      mode: 'explain',
-      provider: 'gemini-1.5-flash'
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem('studyos_ai_messages');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return [
+      { 
+        role: 'ai', 
+        content: "Hello! I am your Omni-AI Mentor powered by Gemini 1.5 Flash. I operate in 3 specialized modes:\n\n• **Explain**: Feynman technique breakdowns with intuitive analogies.\n• **Hint**: Socratic guidance—I guide your reasoning without dumping full solutions.\n• **Debug**: Engineering Lab root-cause analysis and structured hypotheses.\n\nSelect a mode or quick-action chip below to begin!",
+        mode: 'explain',
+        provider: 'gemini'
+      }
+    ];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    localStorage.setItem('studyos_ai_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('studyos_ai_provider', activeProvider);
+  }, [activeProvider]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -72,6 +90,12 @@ export default function Ai() {
     const textToSend = messageText.trim();
     if (!textToSend || isLoading) return;
 
+    if (activeProvider === 'none') {
+      setMessages(prev => [...prev, { role: 'user', content: textToSend, mode: activeMode, contextTopic }, { role: 'ai', content: 'AI is currently disabled (No AI provider selected).', isError: true }]);
+      setInput('');
+      return;
+    }
+
     const currentMode = modeOverride || activeMode;
     const userMsg = { 
       role: 'user', 
@@ -83,13 +107,14 @@ export default function Ai() {
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsLoading(true);
+    window.dispatchEvent(new CustomEvent('studyos-ai-loading', { detail: true }));
 
     try {
       const response = await sendAiChat({
         message: textToSend,
         mode: currentMode,
         context_topic: contextTopic,
-        current_study_space: localStorage.getItem('current_study_space_title')
+        provider: activeProvider
       });
 
       setMessages(prev => [
@@ -98,10 +123,11 @@ export default function Ai() {
           role: 'ai', 
           content: response.reply,
           mode: response.mode || currentMode,
-          provider: response.provider || 'gemini-1.5-flash',
+          provider: response.provider || activeProvider,
           citations: response.citations || []
         }
       ]);
+      window.dispatchEvent(new CustomEvent('studyos-ai-notification'));
     } catch (err) {
       const errorDetail = err.response?.data?.detail || "Could not connect to AI Assistant.";
       setMessages(prev => [
@@ -112,8 +138,10 @@ export default function Ai() {
           isError: true
         }
       ]);
+      window.dispatchEvent(new CustomEvent('studyos-ai-notification'));
     } finally {
       setIsLoading(false);
+      window.dispatchEvent(new CustomEvent('studyos-ai-loading', { detail: false }));
     }
   };
 
@@ -134,17 +162,47 @@ export default function Ai() {
       
       {/* Header & Mode Selectors */}
       <div className="flex flex-col items-center justify-center text-center gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-sky-500/10 text-sky-400 shadow-[inset_2px_2px_4px_var(--shadow-dark)]">
-            <Bot size={28} />
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-sky-500/10 text-sky-400 shadow-[inset_2px_2px_4px_var(--shadow-dark)]">
+              <Bot size={28} />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+                Omni-AI Assistant & Debug Lab
+              </h1>
+              <p className="text-[color:var(--text-muted)] text-xs font-medium">
+                {activeProvider === 'gemini' ? 'Gemini 1.5 Flash' : activeProvider === 'ollama' ? 'Ollama Local LLM' : 'AI Offline'} • Socratic & Feynman Active Learning
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
-              Omni-AI Assistant & Debug Lab
-            </h1>
-            <p className="text-[color:var(--text-muted)] text-xs font-medium">
-              Gemini 1.5 Flash Free Tier • Socratic & Feynman Active Learning
-            </p>
+          
+          {/* Provider Switcher */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)]">
+            <button
+              onClick={() => setActiveProvider('gemini')}
+              className={`px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-lg transition-colors ${
+                activeProvider === 'gemini' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
+              }`}
+            >
+              Gemini
+            </button>
+            <button
+              onClick={() => setActiveProvider('ollama')}
+              className={`px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-lg transition-colors ${
+                activeProvider === 'ollama' ? 'bg-cyan-500 text-slate-900 shadow-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
+              }`}
+            >
+              Ollama
+            </button>
+            <button
+              onClick={() => setActiveProvider('none')}
+              className={`px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-lg transition-colors ${
+                activeProvider === 'none' ? 'bg-rose-500 text-white shadow-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
+              }`}
+            >
+              No AI
+            </button>
           </div>
         </div>
 

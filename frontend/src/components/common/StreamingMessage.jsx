@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
-export default function StreamingMessage({ content, isStreamingEnabled = true }) {
-  const [displayedText, setDisplayedText] = useState(isStreamingEnabled ? '' : content);
+export default function StreamingMessage({ content = '', isStreamingEnabled = true }) {
+  const safeContent = content || '';
+  const [displayedText, setDisplayedText] = useState(isStreamingEnabled ? '' : safeContent);
   const [isStreaming, setIsStreaming] = useState(isStreamingEnabled);
 
   useEffect(() => {
     if (!isStreamingEnabled) {
-      setDisplayedText(content);
+      setDisplayedText(safeContent);
       setIsStreaming(false);
       return;
     }
@@ -14,12 +15,12 @@ export default function StreamingMessage({ content, isStreamingEnabled = true })
     setDisplayedText('');
     setIsStreaming(true);
     let currentIndex = 0;
-    const chunkSize = Math.max(2, Math.floor(content.length / 60));
+    const chunkSize = Math.max(2, Math.floor(safeContent.length / 60));
 
     const interval = setInterval(() => {
-      if (currentIndex < content.length) {
-        currentIndex = Math.min(currentIndex + chunkSize, content.length);
-        setDisplayedText(content.slice(0, currentIndex));
+      if (currentIndex < safeContent.length) {
+        currentIndex = Math.min(currentIndex + chunkSize, safeContent.length);
+        setDisplayedText(safeContent.slice(0, currentIndex));
       } else {
         setIsStreaming(false);
         clearInterval(interval);
@@ -27,7 +28,7 @@ export default function StreamingMessage({ content, isStreamingEnabled = true })
     }, 18);
 
     return () => clearInterval(interval);
-  }, [content, isStreamingEnabled]);
+  }, [safeContent, isStreamingEnabled]);
 
   // Simple inline markdown renderer (no external deps)
   const renderMarkdown = (text) => {

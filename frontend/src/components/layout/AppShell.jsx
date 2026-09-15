@@ -16,13 +16,22 @@ import ImStuckModal from '../debug/ImStuckModal';
 import DevOpsTerminalModal from '../terminal/DevOpsTerminalModal';
 import BottomNav from './BottomNav';
 import ScrollToTop from '../common/ScrollToTop';
+import CommandPalette from '../common/CommandPalette';
 import { useTimer } from '../../context/TimerContext';
 
 export default function AppShell() {
   const location = useLocation();
   const mainRef = useRef(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const { lastNotification, clearNotification } = useTimer();
+  const { lastNotification, clearNotification, isRunning } = useTimer();
+  
+  // Focus Mode State
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
+  // Auto-disable focus mode when timer stops
+  useEffect(() => {
+    if (!isRunning) setIsFocusMode(false);
+  }, [isRunning]);
 
   // Active Glass Gradient state (aurora | sunset | emerald)
   const [glassGradient, setGlassGradient] = useState(() => {
@@ -32,6 +41,28 @@ export default function AppShell() {
     }
     return saved;
   });
+
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [hasAiNotification, setHasAiNotification] = useState(false);
+
+  useEffect(() => {
+    const handleAiLoading = (e) => setIsAiLoading(e.detail);
+    const handleAiNotify = () => {
+      setHasAiNotification(true);
+      setTimeout(() => setHasAiNotification(false), 5000);
+    };
+    const handleToggleFocus = () => setIsFocusMode((prev) => !prev);
+    
+    window.addEventListener('studyos-ai-loading', handleAiLoading);
+    window.addEventListener('studyos-ai-notification', handleAiNotify);
+    window.addEventListener('studyos-toggle-focus', handleToggleFocus);
+    
+    return () => {
+      window.removeEventListener('studyos-ai-loading', handleAiLoading);
+      window.removeEventListener('studyos-ai-notification', handleAiNotify);
+      window.removeEventListener('studyos-toggle-focus', handleToggleFocus);
+    };
+  }, []);
 
   // Listen for dynamic glass gradient changes
   useEffect(() => {
@@ -67,16 +98,20 @@ export default function AppShell() {
       }}
     >
       {/* Responsive Sidebar Drawer */}
-      <Sidebar 
-        isOpen={isMobileSidebarOpen} 
-        onClose={() => setIsMobileSidebarOpen(false)} 
-      />
+      {!isFocusMode && (
+        <Sidebar 
+          isOpen={isMobileSidebarOpen} 
+          onClose={() => setIsMobileSidebarOpen(false)} 
+        />
+      )}
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 overflow-hidden relative min-w-0">
-        <TopBar 
-          onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} 
-        />
+        {!isFocusMode && (
+          <TopBar 
+            onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)} 
+          />
+        )}
         
         {/* Global OS Toast Notification Banner (Visible across ALL routes) */}
         {lastNotification && (
@@ -180,8 +215,10 @@ export default function AppShell() {
         <ScrollToTop targetRef={mainRef} />
         
         {/* Mobile Bottom Navigation (Hidden on Desktop) */}
-        <BottomNav />
+        {!isFocusMode && <BottomNav />}
       </div>
+
+      <CommandPalette />
 
       {/* Global StudyOS Floating Timer Widget */}
       <FloatingTimer />
@@ -189,11 +226,25 @@ export default function AppShell() {
             {/* Global AI Assistant Floating Button */}
       <button
         onClick={() => window.location.href = '/os/ai-assistant'}
-        className="fixed bottom-24 lg:bottom-6 right-6 z-[90] p-4 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_10px_30px_rgba(6,182,212,0.4)] hover:shadow-[0_15px_40px_rgba(6,182,212,0.6)] transition-all hover:scale-110 active:scale-95 group flex items-center justify-center hidden lg:flex"
+        className={`fixed bottom-24 lg:bottom-6 right-6 z-[90] p-4 rounded-full text-white shadow-[0_10px_30px_rgba(6,182,212,0.4)] transition-all group flex items-center justify-center hidden lg:flex ${
+          isAiLoading 
+            ? 'bg-slate-800 border border-cyan-500/50 hover:scale-105' 
+            : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-[0_15px_40px_rgba(6,182,212,0.6)] hover:scale-110 active:scale-95'
+        }`}
         title="Omni AI Assistant"
       >
-        <Bot size={28} className="group-hover:animate-pulse" />
-        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse" />
+        {isAiLoading ? (
+          <div className="relative flex items-center justify-center w-7 h-7">
+            <Bot size={20} className="text-cyan-400 absolute z-10" />
+            <div className="absolute inset-0 rounded-full border-2 border-dashed border-cyan-400 animate-[spin_3s_linear_infinite]" />
+          </div>
+        ) : (
+          <Bot size={28} className="group-hover:animate-pulse" />
+        )}
+        
+        {hasAiNotification && !isAiLoading && (
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 border-2 border-[var(--bg-canvas)] rounded-full animate-pulse" />
+        )}
       </button>
 
       {/* Global 'I'm Stuck' Debug Lab Modal */}

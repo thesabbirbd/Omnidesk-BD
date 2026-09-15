@@ -278,8 +278,15 @@ export default function FloatingTimer() {
               <Minus size={12} />
             </button>
             <button
+              onClick={() => window.dispatchEvent(new CustomEvent('studyos-toggle-focus'))}
+              className="p-1 rounded-full hover:bg-white/15 text-[color:var(--text-muted)] hover:text-cyan-400 transition-colors cursor-pointer"
+              title="Toggle Focus Mode"
+            >
+              <Eye size={12} />
+            </button>
+            <button
               onClick={hideFloatingTimer}
-              className="p-1 rounded-full hover:bg-white/15 text-[color:var(--text-muted)] hover:text-red-400 transition-colors cursor-pointer"
+              className="p-1 rounded-full hover:bg-white/15 text-[color:var(--text-muted)] hover:text-red-400 transition-colors cursor-pointer ml-1"
               title="Dismiss"
             >
               <X size={12} />

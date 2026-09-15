@@ -224,11 +224,12 @@ export const getDebugHypothesis = async (payload) => {
 };
 
 // Omni-AI Assistant Chat API (Phase 3 / v1.2.7)
-export const sendAiChat = async ({ message, mode = 'explain', context_topic = null }) => {
+export const sendAiChat = async ({ message, mode = 'explain', context_topic = null, provider = 'gemini' }) => {
   const response = await api.post('/ai/chat', {
     message,
     mode,
-    context_topic
+    context_topic,
+    provider
   });
   return response.data;
 };
