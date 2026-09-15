@@ -13,8 +13,12 @@ import {
   Hash,
   AlertCircle,
   Copy,
-  Check
+  Check,
+  FileText,
+  Info,
+  RefreshCw
 } from 'lucide-react';
+import StreamingMessage from '../components/common/StreamingMessage';
 import { sendAiChat } from '../services/api';
 
 export default function Ai() {

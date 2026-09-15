@@ -3,6 +3,7 @@ import { getTopics } from '../services/api';
 import { Calendar, CheckCircle2, Clock, AlertTriangle, Play, Flame } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
 import { useNavigate } from 'react-router-dom';
+import { StudySpaceSkeleton } from '../components/common/Skeletons';
 
 const initialWeeks = [
   {
@@ -105,7 +106,6 @@ export default function StudyPlan() {
       fetchPlan();
     };
     window.addEventListener('studyos-space-changed', handleSpaceChanged);
-    if (isLoading) return <StudySpaceSkeleton />;
 
   return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
   }, []);
@@ -146,6 +146,7 @@ export default function StudyPlan() {
     if (filterStatus === 'overdue') return topic.overdue && topic.status !== 'complete';
     return topic.status === filterStatus;
   });
+
 
   if (isLoading) return <StudySpaceSkeleton />;
 
@@ -226,7 +227,6 @@ export default function StudyPlan() {
         {weeks.map((week) => {
           const isSelected = week.weekNumber === selectedWeek;
           const weekCompleted = week.topics.every((t) => t.status === 'complete');
-          if (isLoading) return <StudySpaceSkeleton />;
 
   return (
             <button
@@ -288,7 +288,6 @@ export default function StudyPlan() {
             const isCompleted = topic.status === 'complete';
             const isOverdue = topic.overdue && !isCompleted;
 
-            if (isLoading) return <StudySpaceSkeleton />;
 
   return (
               <div

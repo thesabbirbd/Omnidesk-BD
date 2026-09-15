@@ -3,6 +3,7 @@ import { Layers, Search, Play, CheckCircle2, Clock, ArrowLeft, ChevronDown, Spar
 import { useTimer } from '../context/TimerContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import TopicQuizVerificationModal from '../components/quiz/TopicQuizVerificationModal';
+import { StudySpaceSkeleton } from '../components/common/Skeletons';
 import { getStudySpaces, getTopics } from '../services/api';
 import { getSpaceSlug } from '../utils/slugify';
 
@@ -177,9 +178,7 @@ export default function Topics() {
     };
 
     window.addEventListener('studyos-space-changed', handleSpaceChanged);
-    if (isLoadingTopics) return <StudySpaceSkeleton />;
-
-  return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
+    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
   }, []);
 
   const handleSwitchProject = (space) => {
@@ -317,9 +316,7 @@ export default function Topics() {
       <div className="shrink-0 flex flex-wrap items-center gap-2.5 w-full">
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat;
-          if (isLoadingTopics) return <StudySpaceSkeleton />;
-
-  return (
+          return (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -340,9 +337,7 @@ export default function Topics() {
         {statuses.map((status) => {
           const isSelected = selectedStatus === status;
           const conf = statusStyles[status];
-          if (isLoadingTopics) return <StudySpaceSkeleton />;
-
-  return (
+          return (
             <button
               key={status}
               onClick={() => setSelectedStatus(status)}
@@ -379,9 +374,7 @@ export default function Topics() {
             const conf = statusStyles[topic.status] || statusStyles.NORMAL;
             const completedCount = topic.checkpoints.filter((c) => c.done).length;
 
-            if (isLoadingTopics) return <StudySpaceSkeleton />;
-
-  return (
+            return (
               <div
                 key={topic.id}
                 className="p-6 md:p-7 rounded-[32px] bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[var(--card-shadow)] flex flex-col justify-between gap-6 hover:border-purple-500/40 transition-all duration-300 group"

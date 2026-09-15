@@ -42,6 +42,7 @@ import { getTopics, updateTopic, getMindMap, updateNodePosition, updateTopicStat
 import { useTimer } from '../context/TimerContext';
 import KnowledgeGraphModal from '../components/knowledge/KnowledgeGraphModal';
 import TopicQuizVerificationModal from '../components/quiz/TopicQuizVerificationModal';
+import { MindMapSkeleton } from '../components/common/Skeletons';
 
 export const statusConfig = {
   normal: { color: '#64748b', label: 'Normal', bg: 'rgba(100, 116, 139, 0.14)', border: 'rgba(100, 116, 139, 0.45)', glow: 'rgba(100, 116, 139, 0.3)', icon: Circle },
@@ -249,7 +250,6 @@ const CustomNode = ({ id, data, selected }) => {
     setShowMoreMenu(false);
   };
 
-  if (isLoading) return <MindMapSkeleton />;
 
   return (
     <div 
@@ -345,7 +345,6 @@ const CustomNode = ({ id, data, selected }) => {
               {Object.entries(statusConfig).map(([statusKey, cfg]) => {
                 const Icon = cfg.icon;
                 const isActive = data.status === statusKey;
-                if (isLoading) return <MindMapSkeleton />;
 
   return (
                   <button
@@ -540,7 +539,6 @@ function MindMapFlow() {
       }
     };
     window.addEventListener('studyos-topic-status-updated', handleStatusSync);
-    if (isLoading) return <MindMapSkeleton />;
 
   return () => window.removeEventListener('studyos-topic-status-updated', handleStatusSync);
   }, [setNodes]);
@@ -632,7 +630,6 @@ function MindMapFlow() {
       }
     };
     window.addEventListener('studyos-open-node-drawer', handleDrawerEvent);
-    if (isLoading) return <MindMapSkeleton />;
 
   return () => window.removeEventListener('studyos-open-node-drawer', handleDrawerEvent);
   }, []);
@@ -660,6 +657,7 @@ function MindMapFlow() {
     );
     setTimeout(() => fitView({ duration: 600, padding: 0.2 }), 100);
   };
+
 
   if (isLoading) return <MindMapSkeleton />;
 
@@ -903,7 +901,6 @@ function MindMapFlow() {
 }
 
 export default function MindMap() {
-  if (isLoading) return <MindMapSkeleton />;
 
   return (
     <ReactFlowProvider>

@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 export default function StreamingMessage({ content, isStreamingEnabled = true }) {
-  const [displayedText, setDisplayedText] = useState('');
+  const [displayedText, setDisplayedText] = useState(isStreamingEnabled ? '' : content);
   const [isStreaming, setIsStreaming] = useState(isStreamingEnabled);
 
   useEffect(() => {
     if (!isStreamingEnabled) {
       setDisplayedText(content);
+      setIsStreaming(false);
       return;
     }
-    
+
+    setDisplayedText('');
+    setIsStreaming(true);
     let currentIndex = 0;
-    // Chunk size allows faster perceived rendering for long texts without jumping
-    const chunkSize = Math.max(1, Math.floor(content.length / 50)); 
-    
+    const chunkSize = Math.max(2, Math.floor(content.length / 60));
+
     const interval = setInterval(() => {
       if (currentIndex < content.length) {
         currentIndex = Math.min(currentIndex + chunkSize, content.length);
@@ -24,18 +24,39 @@ export default function StreamingMessage({ content, isStreamingEnabled = true })
         setIsStreaming(false);
         clearInterval(interval);
       }
-    }, 15);
-    
+    }, 18);
+
     return () => clearInterval(interval);
   }, [content, isStreamingEnabled]);
 
+  // Simple inline markdown renderer (no external deps)
+  const renderMarkdown = (text) => {
+    return text
+      .split('\n')
+      .map((line, i) => {
+        // Bold
+        line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Italic
+        line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        // Inline code
+        line = line.replace(/`([^`]+)`/g, '<code class="bg-slate-800 px-1 py-0.5 rounded text-cyan-300 text-xs font-mono">$1</code>');
+        // Bullet points
+        if (line.match(/^[•\-\*] /)) {
+          line = `<span class="flex gap-2"><span class="text-cyan-400 mt-1 shrink-0">•</span><span>${line.slice(2)}</span></span>`;
+        }
+        return `<p key="${i}" class="mb-1 last:mb-0">${line || '&nbsp;'}</p>`;
+      })
+      .join('');
+  };
+
   return (
-    <div className="prose prose-sm prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[var(--bg-panel)] prose-pre:border prose-pre:border-[var(--border-color)]">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-        {displayedText}
-      </ReactMarkdown>
+    <div className="text-sm leading-relaxed font-sans w-full">
+      <div
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(displayedText) }}
+        className="[&>p]:mb-1 [&>p:last-child]:mb-0"
+      />
       {isStreaming && (
-        <span className="inline-block w-2 h-4 ml-1 bg-cyan-400 animate-pulse align-middle" />
+        <span className="inline-block w-1.5 h-4 ml-0.5 bg-cyan-400 animate-pulse align-middle rounded-sm" />
       )}
     </div>
   );

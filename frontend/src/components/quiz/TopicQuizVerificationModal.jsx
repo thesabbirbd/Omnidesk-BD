@@ -11,6 +11,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { getTopicVerificationQuiz, updateTopicStatus, sendAiChat } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 export default function TopicQuizVerificationModal({
   topic = null,
