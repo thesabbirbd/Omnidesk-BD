@@ -49,6 +49,29 @@ jobs:
       - name: Install Root Dependencies
         run: npm install
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Build Python Backend Sidecar
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+          pyinstaller --name backend --onefile --hidden-import="app" main.py
+          mkdir -p ../src-tauri/bin
+        shell: bash
+
+      - name: Move Sidecar (Linux)
+        if: matrix.platform == 'ubuntu-latest'
+        run: mv backend/dist/backend src-tauri/bin/backend-x86_64-unknown-linux-gnu
+
+      - name: Move Sidecar (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: mv backend/dist/backend.exe src-tauri/bin/backend-x86_64-pc-windows-msvc.exe
+
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:

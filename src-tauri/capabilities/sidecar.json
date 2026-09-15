@@ -1,0 +1,16 @@
+{
+  "identifier": "sidecar-access",
+  "windows": ["*"],
+  "permissions": [
+    "shell:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "backend",
+          "sidecar": true
+        }
+      ]
+    }
+  ]
+}
