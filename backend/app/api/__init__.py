@@ -15,6 +15,7 @@ from app.api.sync import router as sync_router
 from app.api.analytics import router as analytics_router
 from app.api.lab import router as lab_router
 from app.api.ai import router as ai_router
+from app.api.system import router as system_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["Auth"])
@@ -32,7 +33,8 @@ api_router.include_router(knowledge_graph_router, prefix="/knowledge-graph", tag
 api_router.include_router(sync_router, prefix="/sync", tags=["Offline Sync"])
 api_router.include_router(analytics_router, prefix="/analytics", tags=["Analytics Engine"])
 api_router.include_router(lab_router, prefix="/lab", tags=["DevOps Lab Terminal"])
-api_router.include_router(ai_router, prefix="/ai", tags=["AI Engine & Verification Quiz"])
+api_router.include_router(ai_router, prefix="/ai", tags=["AI Engine api_router.include_router(ai_router, prefix="/ai", tags=["AI Engine & Verification Quiz"]) Verification Quiz"])
+api_router.include_router(system_router, prefix="/system", tags=["System api_router.include_router(ai_router, prefix="/ai", tags=["AI Engine & Verification Quiz"]) Upgrades"])
 
 __all__ = [
     "api_router",

@@ -106,6 +106,9 @@ jobs:
           mkdir -p artifacts
           
           find src-tauri/target/release/bundle/appimage -name "*.AppImage" -exec cp {} artifacts/Omnidesk-BD-v${VERSION}-linux-x64.AppImage \; || true
+          find src-tauri/target/release/bundle -name "*.tar.gz" -exec cp {} artifacts/Omnidesk-BD-v${VERSION}-linux-x64.AppImage.tar.gz \; || true
+          find src-tauri/target/release/bundle -name "*.tar.gz.sig" -exec cp {} artifacts/Omnidesk-BD-v${VERSION}-linux-x64.AppImage.tar.gz.sig \; || true
+          find src-tauri/target/release/bundle -name "*.AppImage.sig" -exec cp {} artifacts/Omnidesk-BD-v${VERSION}-linux-x64.AppImage.sig \; || true
           find src-tauri/target/release/bundle/deb -name "*.deb" -exec cp {} artifacts/Omnidesk-BD-v${VERSION}-linux-x64.deb \; || true
           find src-tauri/target/release/bundle/rpm -name "*.rpm" -exec cp {} artifacts/Omnidesk-BD-v${VERSION}-linux-x64.rpm \; || true
           
@@ -122,6 +125,15 @@ jobs:
           Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter *.exe -Recurse | ForEach-Object {
             Copy-Item $_.FullName -Destination "artifacts/Omnidesk-BD-v${VERSION}-windows-x64-setup.exe"
           }
+          Get-ChildItem -Path src-tauri/target/release/bundle -Filter *.exe.zip -Recurse | ForEach-Object {
+            Copy-Item $_.FullName -Destination "artifacts/Omnidesk-BD-v${VERSION}-windows-x64-setup.exe.zip"
+          }
+          Get-ChildItem -Path src-tauri/target/release/bundle -Filter *.zip.sig -Recurse | ForEach-Object {
+            Copy-Item $_.FullName -Destination "artifacts/Omnidesk-BD-v${VERSION}-windows-x64-setup.exe.zip.sig"
+          }
+          Get-ChildItem -Path src-tauri/target/release/bundle -Filter *.exe.sig -Recurse | ForEach-Object {
+            Copy-Item $_.FullName -Destination "artifacts/Omnidesk-BD-v${VERSION}-windows-x64-setup.exe.sig"
+          }
           
           Get-ChildItem -Path src-tauri/target/release/bundle/msi -Filter *.msi -Recurse | ForEach-Object {
             Copy-Item $_.FullName -Destination "artifacts/Omnidesk-BD-v${VERSION}-windows-x64.msi"
@@ -136,12 +148,6 @@ jobs:
           Set-Content -Path checksums-windows.txt -Value $hash_content
         shell: pwsh
 
-      - name: Generate Updater Manifest (Linux Only for now)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          node scripts/generate_manifest.js ${{ github.ref_name }}
-          cp latest.json artifacts/latest.json || true
-        shell: bash
 
       - name: Upload Release Artifacts
         uses: softprops/action-gh-release@v1
@@ -154,3 +160,32 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: "Omnidesk BD ${{ github.ref_name }} (Draft Release)"
           body: "Automated desktop release. Please verify artifacts before publishing."
+
+  publish-manifest:
+    name: Generate Updater Manifest
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download Artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p downloaded_artifacts
+          gh release download ${{ github.ref_name }} -D downloaded_artifacts --pattern "*.sig"
+      - name: Generate Manifest
+        run: node scripts/generate_manifest.js ${{ github.ref_name }} downloaded_artifacts
+      - name: Upload Manifest
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: latest.json
+          tag_name: ${{ github.ref_name }}

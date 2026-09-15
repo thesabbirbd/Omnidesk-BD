@@ -32,6 +32,7 @@ from app.api.knowledge_graph import router as knowledge_graph_router
 from app.api.sync import router as sync_router
 from app.api.analytics import router as analytics_router
 from app.api.lab import router as lab_router, lab_terminal_websocket
+from app.api.system import router as system_router
 from app.api.ai import router as ai_router
 from app.core.auth_middleware import UserIsolationMiddleware
 from app.api import api_router
@@ -171,6 +172,7 @@ app.include_router(knowledge_graph_router, prefix="/knowledge-graph", tags=["Kno
 app.include_router(sync_router, prefix="/sync", tags=["Offline Sync Direct"])
 app.include_router(analytics_router, prefix="/analytics", tags=["Analytics Direct"])
 app.include_router(lab_router, prefix="/lab", tags=["DevOps Lab Direct"])
+app.include_router(system_router, prefix="/system", tags=["System Direct"])
 app.include_router(ai_router, prefix="/ai", tags=["AI Direct"])
 
 # Explicit WebSocket routes for DevOps Lab Terminal

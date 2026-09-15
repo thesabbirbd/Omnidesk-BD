@@ -28,6 +28,22 @@ export default function Settings() {
   const handleCheckUpdate = async () => {
     try {
       setUpdaterStatus('checking');
+      
+      // Phase 29: Update Safety Gates
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/system/pre-update-check');
+        const data = await response.json();
+        if (!data.safe_to_update) {
+          console.error("Update Blocked: Unsafe condition.", data.errors);
+          setUpdaterStatus('error');
+          alert(`Cannot safely update:\n- ${data.errors.join('\n- ')}`);
+          setTimeout(() => setUpdaterStatus(null), 3000);
+          return;
+        }
+      } catch (e) {
+        console.warn("Backend pre-update check failed or unreachable, proceeding with caution...", e);
+      }
+
       const update = await check();
       if (update) {
         setUpdaterStatus('downloading');

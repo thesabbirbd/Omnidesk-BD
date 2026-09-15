@@ -1,35 +1,44 @@
 const fs = require('fs');
 const path = require('path');
 
-// Run this script to generate latest.json for Tauri updater
-// Usage: node scripts/generate_manifest.js <version> <win-sig-path> <linux-sig-path>
+// Usage: node scripts/generate_manifest.js <version> <artifacts-dir>
 
-const version = process.argv[2] || process.env.GITHUB_REF_NAME || '1.3.14';
-const winSigPath = process.argv[3];
-const linuxSigPath = process.argv[4];
+const versionRaw = process.argv[2] || process.env.GITHUB_REF_NAME || '1.3.24';
+const version = versionRaw.replace(/^v/, '');
+const artifactsDir = process.argv[3] || '.';
 
 const manifest = {
-  version: version.replace(/^v/, ''),
-  notes: "Minor bug fixes and performance improvements.",
+  version: version,
+  notes: "Security and stability updates.",
   pub_date: new Date().toISOString(),
-  platforms: {}
+  platforms: {
+    "linux-x86_64": {
+      signature: "",
+      url: `https://github.com/thesabbirbd/Omnidesk-BD/releases/download/v${version}/Omnidesk-BD-v${version}-linux-x64.AppImage.tar.gz`
+    },
+    "windows-x86_64": {
+      signature: "",
+      url: `https://github.com/thesabbirbd/Omnidesk-BD/releases/download/v${version}/Omnidesk-BD-v${version}-windows-x64-setup.exe.zip`
+    }
+  }
 };
 
 try {
-  if (winSigPath && fs.existsSync(winSigPath)) {
-    const winSig = fs.readFileSync(winSigPath, 'utf8').trim();
-    manifest.platforms["windows-x86_64"] = {
-      signature: winSig,
-      url: `https://github.com/thesabbirbd/Omnidesk-BD/releases/download/${version}/OmnideskBD_${version}_x64_en-US.msi.zip`
-    };
+  // Find signatures in artifacts dir
+  const files = fs.readdirSync(artifactsDir);
+  
+  const winSigFile = files.find(f => f.includes('windows') && f.endsWith('.zip.sig') || f.endsWith('.tar.gz.sig'));
+  const linuxSigFile = files.find(f => f.includes('linux') && f.endsWith('.zip.sig') || f.endsWith('.tar.gz.sig'));
+
+  if (winSigFile) {
+    manifest.platforms["windows-x86_64"].signature = fs.readFileSync(path.join(artifactsDir, winSigFile), 'utf8').trim();
+    // Tauri updater expects the updater bundle format, which is .zip for Windows and .tar.gz for Linux
+    manifest.platforms["windows-x86_64"].url = `https://github.com/thesabbirbd/Omnidesk-BD/releases/download/v${version}/${winSigFile.replace('.sig', '')}`;
   }
 
-  if (linuxSigPath && fs.existsSync(linuxSigPath)) {
-    const linuxSig = fs.readFileSync(linuxSigPath, 'utf8').trim();
-    manifest.platforms["linux-x86_64"] = {
-      signature: linuxSig,
-      url: `https://github.com/thesabbirbd/Omnidesk-BD/releases/download/${version}/omnidesk-bd_${version}_amd64.AppImage.tar.gz`
-    };
+  if (linuxSigFile) {
+    manifest.platforms["linux-x86_64"].signature = fs.readFileSync(path.join(artifactsDir, linuxSigFile), 'utf8').trim();
+    manifest.platforms["linux-x86_64"].url = `https://github.com/thesabbirbd/Omnidesk-BD/releases/download/v${version}/${linuxSigFile.replace('.sig', '')}`;
   }
 
   const outputPath = path.join(__dirname, '..', 'latest.json');
