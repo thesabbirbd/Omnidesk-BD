@@ -233,7 +233,7 @@ export default function Timer() {
 
         <div className="flex flex-col gap-3">
           {(!history || history.length === 0) ? (
-            <p className="text-center text-[color:var(--text-muted)] py-4 text-xs">No sessions yet. Start focusing!</p>
+            <EmptyState icon={PlayCircle} title="No sessions recorded" description="Your focus sessions will appear here once you complete them." actionText="Start Timer" onAction={startTimer} />
           ) : (
             history.slice(0, 6).map((session, idx) => (
               <div key={session.id || idx} className="flex justify-between items-center p-3 md:p-4 bg-[var(--bg-input)] rounded-2xl shadow-[inset_2px_2px_6px_var(--shadow-dark),inset_-2px_-2px_6px_var(--shadow-light)]">

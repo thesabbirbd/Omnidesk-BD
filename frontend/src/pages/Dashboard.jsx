@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import SignatureLoader from "../components/common/SignatureLoader";
 import { DashboardSkeleton } from "../components/common/Skeletons";
+import EmptyState from "../components/common/EmptyState";
+import IntelligentErrorBanner from "../components/common/IntelligentErrorBanner";
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { slugify, matchesSlug, getSpaceSlug } from '../utils/slugify';
 import { 
@@ -419,6 +421,7 @@ export default function Dashboard() {
       const created = await approveStudySpace(approvalPayload);
       if (created?.id) {
         const newSlug = getSpaceSlug(created);
+        addToast("StudySpace activated successfully!", "success");
         localStorage.setItem('current_study_space_id', created.id);
         localStorage.setItem('current_study_space_title', created.title);
         window.dispatchEvent(new CustomEvent('studyos-space-changed', { detail: created }));
@@ -689,21 +692,7 @@ export default function Dashboard() {
         )}
 
         {/* Error Notification Banner */}
-        {generationError && (
-          <div className="mt-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-3 text-xs text-rose-400 animate-in fade-in duration-200">
-            <AlertCircle size={18} className="shrink-0 mt-0.5 text-rose-400" />
-            <div className="flex-1">
-              <span className="font-bold">Error: </span>
-              <span>{generationError}</span>
-            </div>
-            <button 
-              onClick={() => setGenerationError(null)}
-              className="p-1 rounded text-rose-400 hover:text-rose-300"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
+        {generationError && <IntelligentErrorBanner error={generationError} onDismiss={() => setGenerationError(null)} onRetry={inputMode === 'auto' ? handleGenerateStudySpace : handleLoadJsonStructure} />}
 
         {/* Generate / Load Action Button */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[var(--border-color)]">
@@ -930,6 +919,8 @@ export default function Dashboard() {
       )}
 
       {/* ========================================================================= */}
+        {!previewData && spaces.length === 0 ? <EmptyState type="ai" icon={Sparkles} title="Start with a skill or book" description="Your journey starts here. Type a goal above or select a curated project to auto-generate your first StudySpace." /> : (
+    <>
       {/* 3. ACTIVE STUDY SPACE HERO & DYNAMIC MISSION HEADER                        */}
       {/* ========================================================================= */}
       <div className="w-full shrink-0 p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col lg:flex-row items-center justify-between gap-6 transition-all">
@@ -1079,6 +1070,9 @@ export default function Dashboard() {
       </div>
 
       {/* ========================================================================= */}
+          </>
+  )}
+
       {/* 6. MASTER AI PROMPT MODAL (FOR CHATGPT, CLAUDE, GEMINI, DEEPSEEK)           */}
       {/* ========================================================================= */}
       {showMasterPromptModal && (

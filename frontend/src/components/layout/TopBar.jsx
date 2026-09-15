@@ -17,6 +17,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useTimer } from '../../context/TimerContext';
+import Tooltip from '../common/Tooltip';
 import NotificationCenterModal from '../notifications/NotificationCenterModal';
 import UserProfileModal from '../profile/UserProfileModal';
 import { offlineSyncService } from '../../services/offlineSync';

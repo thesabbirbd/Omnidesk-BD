@@ -216,7 +216,11 @@ export default function Materials() {
 
       {/* Materials Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-4">
-        {mockMaterials.filter(m => activeFilter === 'all' || m.type === activeFilter).map((material) => {
+                {mockMaterials.filter(m => activeFilter === 'all' || m.type === activeFilter).length === 0 ? (
+          <div className="col-span-full">
+            <EmptyState icon={Folder} title="Your knowledge base is empty" description="No materials match your current filter. Drag and drop files to add them." actionText="Upload Document" onAction={() => {}} />
+          </div>
+        ) : mockMaterials.filter(m => activeFilter === 'all' || m.type === activeFilter).map((material) => {
           const config = typeConfig[material.type];
           return (
             <div key={material.id} className="p-6 rounded-3xl overflow-hidden bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col gap-4 group cursor-pointer hover:border-purple-500/40 hover:shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] transition-all">

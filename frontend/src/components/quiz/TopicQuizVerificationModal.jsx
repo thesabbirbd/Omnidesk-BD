@@ -106,6 +106,7 @@ export default function TopicQuizVerificationModal({
         window.dispatchEvent(new CustomEvent('studyos-topic-status-updated', {
           detail: { id: activeTopic.id, status: 'COMPLETE', progress: 100 }
         }));
+        addToast(`Verified Mastery! Topic marked as COMPLETE`, 'success');
 
         setTimeout(() => {
           onVerified(activeTopic.id);
