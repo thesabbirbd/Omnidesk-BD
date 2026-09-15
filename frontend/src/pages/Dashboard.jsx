@@ -714,10 +714,10 @@ export default function Dashboard() {
             <button
               onClick={handleGenerateStudySpace}
               disabled={isGenerating || (!topicInput.trim() && !selectedFile)}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl font-black text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] ${
+              className={`btn px-6 py-3 rounded-xl font-black text-xs tracking-wider uppercase ${
                 isGenerating || (!topicInput.trim() && !selectedFile)
-                  ? 'opacity-50 cursor-not-allowed bg-[var(--bg-input)] text-[color:var(--text-muted)]'
-                  : 'bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 active:scale-98 shadow-[0_0_15px_rgba(34,211,238,0.4)]'
+                  ? 'opacity-50 bg-[var(--bg-input)] text-[color:var(--text-muted)]'
+                  : 'bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 shadow-[0_4px_14px_rgba(34,211,238,0.4)] hover:shadow-[0_6px_20px_rgba(34,211,238,0.6)]'
               }`}
             >
               {isGenerating ? (
@@ -737,9 +737,9 @@ export default function Dashboard() {
             <button
               onClick={handleLoadJsonStructure}
               disabled={!jsonInput.trim()}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl font-black text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] ${
+              className={`btn px-6 py-3 rounded-xl font-black text-xs tracking-wider uppercase ${
                 !jsonInput.trim()
-                  ? 'opacity-50 cursor-not-allowed bg-[var(--bg-input)] text-[color:var(--text-muted)]'
+                  ? 'opacity-50 bg-[var(--bg-input)] text-[color:var(--text-muted)]'
                   : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white active:scale-98 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
               }`}
             >
@@ -777,7 +777,7 @@ export default function Dashboard() {
               <button
                 key={skill.id}
                 onClick={() => handleSelectSuggestion(skill)}
-                className={`p-3.5 rounded-2xl bg-[var(--bg-card)] border text-left flex flex-col justify-between gap-2.5 transition-all duration-200 cursor-pointer group hover:scale-102 ${
+                className={`card-interactive p-3.5 text-left flex flex-col justify-between gap-2.5 group ${
                   isSelected
                     ? 'border-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.35),inset_2px_2px_4px_var(--shadow-dark)] ring-1 ring-cyan-400'
                     : 'border-[var(--border-color)] shadow-[4px_4px_10px_var(--shadow-dark),-4px_-4px_10px_var(--shadow-light)] hover:border-cyan-500/40 hover:shadow-[inset_2px_2px_4px_var(--shadow-dark)]'

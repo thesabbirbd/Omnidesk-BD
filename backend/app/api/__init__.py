@@ -33,8 +33,8 @@ api_router.include_router(knowledge_graph_router, prefix="/knowledge-graph", tag
 api_router.include_router(sync_router, prefix="/sync", tags=["Offline Sync"])
 api_router.include_router(analytics_router, prefix="/analytics", tags=["Analytics Engine"])
 api_router.include_router(lab_router, prefix="/lab", tags=["DevOps Lab Terminal"])
-api_router.include_router(ai_router, prefix="/ai", tags=["AI Engine api_router.include_router(ai_router, prefix="/ai", tags=["AI Engine & Verification Quiz"]) Verification Quiz"])
-api_router.include_router(system_router, prefix="/system", tags=["System api_router.include_router(ai_router, prefix="/ai", tags=["AI Engine & Verification Quiz"]) Upgrades"])
+api_router.include_router(ai_router, prefix="/ai", tags=["AI Engine & Verification Quiz"])
+api_router.include_router(system_router, prefix="/system", tags=["System & Upgrades"])
 
 __all__ = [
     "api_router",

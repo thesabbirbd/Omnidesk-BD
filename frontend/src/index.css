@@ -538,3 +538,64 @@ textarea,
     scroll-behavior: auto !important;
   }
 }
+
+/* ==========================================================================
+   PHASE 3 & 17: OMNIDESK DESIGN SYSTEM (TOKENS & COMPONENTS)
+   ========================================================================== */
+@layer components {
+
+/* Phase 2: Every Button Audit - Global Button Standardization */
+button, 
+[role="button"] {
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg-main)] focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none transition-all duration-200 cursor-pointer;
+}
+button:active:not(:disabled),
+[role="button"]:active:not(:disabled) {
+  @apply scale-95;
+}
+
+
+  /* Button Base */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg-main)] disabled:opacity-50 disabled:pointer-events-none active:scale-95 cursor-pointer;
+  }
+  
+  /* Button Sizes */
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .btn-md { @apply px-4 py-2 text-sm; }
+  .btn-lg { @apply px-6 py-3 text-base; }
+  .btn-icon { @apply p-2; }
+
+  /* Button Variants */
+  .btn-primary {
+    @apply bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_4px_14px_rgba(6,182,212,0.3)] hover:shadow-[0_6px_20px_rgba(6,182,212,0.4)] focus:ring-cyan-500 border border-transparent;
+  }
+  .btn-secondary {
+    @apply bg-[var(--bg-input)] hover:bg-[var(--border-color)] text-[color:var(--text-main)] border border-[var(--border-color)] shadow-sm hover:shadow focus:ring-[var(--border-color)];
+  }
+  .btn-danger {
+    @apply bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/50 hover:border-rose-500 shadow-sm focus:ring-rose-500;
+  }
+  .btn-ghost {
+    @apply bg-transparent hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] border border-transparent focus:ring-[var(--border-color)];
+  }
+
+  /* Interactive Cards */
+  .card-premium {
+    @apply rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[var(--card-shadow)] transition-all duration-300;
+  }
+  
+  .card-interactive {
+    @apply rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[var(--card-shadow)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-cyan-500/40 cursor-pointer;
+  }
+
+  /* Status Badges */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-success { @apply bg-emerald-500/10 text-emerald-500 border border-emerald-500/20; }
+  .badge-warning { @apply bg-amber-500/10 text-amber-500 border border-amber-500/20; }
+  .badge-danger { @apply bg-rose-500/10 text-rose-500 border border-rose-500/20; }
+  .badge-info { @apply bg-cyan-500/10 text-cyan-500 border border-cyan-500/20; }
+  .badge-neutral { @apply bg-[var(--bg-input)] text-[color:var(--text-muted)] border border-[var(--border-color)]; }
+}

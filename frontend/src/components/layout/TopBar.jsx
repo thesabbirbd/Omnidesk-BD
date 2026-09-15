@@ -403,7 +403,7 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
         {/* Light / Dark Mode Toggle Button */}
         <button 
           onClick={toggleThemeMode} 
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--bg-card)] shadow-[3px_3px_6px_var(--shadow-dark),-3px_-3px_6px_var(--shadow-light)] active:shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] flex items-center justify-center text-[color:var(--text-muted)] hover:text-cyan-400 transition-all cursor-pointer shrink-0"
+          className="btn btn-icon btn-ghost hover:text-cyan-400"
           title={`Switch to ${themeMode === 'dark' ? 'Light' : 'Dark'} Mode`}
         >
           {themeMode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
@@ -412,7 +412,7 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
         {/* Notifications Bell */}
         <button 
           onClick={() => setIsNotificationCenterOpen(true)}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--bg-card)] shadow-[3px_3px_6px_var(--shadow-dark),-3px_-3px_6px_var(--shadow-light)] active:shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] hidden sm:flex items-center justify-center text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-all relative cursor-pointer shrink-0"
+          className="btn btn-icon btn-ghost hidden sm:inline-flex relative"
           title="Open Notifications Center & Desktop Push"
         >
           <Bell size={16} />
@@ -424,7 +424,7 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
         {/* Settings Shortcut */}
         <button 
           onClick={() => navigate('/os/settings')}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--bg-card)] shadow-[3px_3px_6px_var(--shadow-dark),-3px_-3px_6px_var(--shadow-light)] active:shadow-[inset_2px_2px_4px_var(--shadow-dark),inset_-2px_-2px_4px_var(--shadow-light)] flex items-center justify-center text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-all cursor-pointer shrink-0"
+          className="btn btn-icon btn-ghost"
           title="Settings"
         >
           <Settings size={16} />
@@ -433,7 +433,7 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
         {/* DevOps Lab Terminal Launcher */}
         <button 
           onClick={() => window.dispatchEvent(new CustomEvent('studyos-launch-terminal', { detail: { topic: 'DevOps & Linux Shell' } }))}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/25 transition-all cursor-pointer text-xs font-bold shrink-0 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+          className="btn btn-sm bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/25 shrink-0 focus:ring-cyan-500"
           title="Launch Browser DevOps Lab Shell (WebSocket PTY)"
         >
           <Terminal size={14} />
@@ -479,7 +479,7 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
         {/* "I'm Stuck" Debug Lab Shortcut */}
         <button 
           onClick={() => window.dispatchEvent(new CustomEvent('studyos-open-im-stuck'))}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-orange-500/15 border border-orange-500/30 text-orange-400 hover:text-orange-300 hover:bg-orange-500/25 transition-all cursor-pointer text-xs font-bold shrink-0 shadow-[0_0_10px_rgba(249,115,22,0.2)]"
+          className="btn btn-sm bg-orange-500/15 border border-orange-500/30 text-orange-400 hover:bg-orange-500/25 shrink-0 focus:ring-orange-500"
           title="Open 'I'm Stuck' Debug Journal"
         >
           <Bug size={14} />

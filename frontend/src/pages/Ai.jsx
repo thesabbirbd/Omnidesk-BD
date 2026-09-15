@@ -148,7 +148,7 @@ export default function Ai() {
           <button
             type="button"
             onClick={() => setActiveMode('explain')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`btn px-4 py-2 text-xs ${
               activeMode === 'explain'
                 ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(0,240,255,0.4)]'
                 : 'text-[color:var(--text-muted)] hover:text-cyan-400'
@@ -159,24 +159,24 @@ export default function Ai() {
           <button
             type="button"
             onClick={() => setActiveMode('hint')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`btn px-4 py-2 text-xs ${
               activeMode === 'hint'
                 ? 'bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
                 : 'text-[color:var(--text-muted)] hover:text-amber-400'
             }`}
           >
-            <HelpCircle size={14} /> Give Hint (Socratic)
+            <HelpCircle size={14} /> <HelpCircle size={12} className="inline mr-1" /> Give Hint (Socratic)
           </button>
           <button
             type="button"
             onClick={() => setActiveMode('debug')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`btn px-4 py-2 text-xs ${
               activeMode === 'debug'
                 ? 'bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.4)]'
                 : 'text-[color:var(--text-muted)] hover:text-rose-400'
             }`}
           >
-            <Wrench size={14} /> Debug Error (Lab)
+            <Wrench size={14} /> <Wrench size={12} className="inline mr-1" /> Debug Error (Lab)
           </button>
         </div>
 
@@ -211,19 +211,19 @@ export default function Ai() {
               onClick={() => triggerQuickAction('explain', "Explain the core mechanics and fundamentals of '{TOPIC}' simply with a real-world analogy.")}
               className="px-3 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 text-xs font-medium transition-all"
             >
-              💡 Explain Topic
+              <Lightbulb size={12} className="inline mr-1" /> Explain Topic
             </button>
             <button
               onClick={() => triggerQuickAction('hint', "I am solving an issue with '{TOPIC}'. Give me a guiding clue or question without giving away the full answer.")}
               className="px-3 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-medium transition-all"
             >
-              🔍 Give Hint
+              <HelpCircle size={12} className="inline mr-1" /> Give Hint
             </button>
             <button
               onClick={() => triggerQuickAction('debug', "I'm experiencing an unexpected failure in '{TOPIC}'. What are the 3 most likely root causes and how do I inspect them?")}
               className="px-3 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-medium transition-all"
             >
-              🛠️ Debug Error
+              <Wrench size={12} className="inline mr-1" /> Debug Error
             </button>
           </div>
         </div>
@@ -328,7 +328,7 @@ export default function Ai() {
             <button 
               type="submit"
               disabled={!input.trim() || isLoading || !isOnline}
-              className="p-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+              className="btn p-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,240,255,0.4)]"
               title={!isOnline ? "Offline" : "Send prompt"}
             >
               <Send size={18} />

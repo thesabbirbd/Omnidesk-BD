@@ -197,7 +197,7 @@ export default function DashboardTodaysStudy({
           <Flame size={14} className="text-amber-400 mb-1" />
           <span className="text-[9px] text-[color:var(--text-muted)] font-semibold">Focus Presence</span>
           <span className="text-xs font-black text-amber-400">
-            {weeklyRetro ? `${weeklyRetro.focus_accuracy_pct}% 👁️` : '100% 👁️'}
+            {weeklyRetro ? `${weeklyRetro.focus_accuracy_pct}% Focus` : '100% Focus'}
           </span>
         </div>
         <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)]">
