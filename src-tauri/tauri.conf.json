@@ -9,16 +9,6 @@
     "frontendDist": "../frontend/dist",
     "devUrl": "http://localhost:5173"
   },
-  "tauri": {
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://raw.githubusercontent.com/thesabbirbd/Omnidesk-BD/main/latest.json"
-      ],
-      "dialog": false,
-      "pubkey": "%TAURI_UPDATER_PUBLIC_KEY%"
-    }
-  },
   "plugins": {
     "updater": {
       "endpoints": [
