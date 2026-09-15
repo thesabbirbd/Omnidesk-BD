@@ -75,4 +75,4 @@ jobs:
         with:
           files: latest.json
           draft: true
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'nightly' }}
