@@ -28,8 +28,11 @@ class GeminiProvider(AIProvider):
         return self.api_key is not None and self.client is not None
 
     def _handle_rate_limit(self, exc: Exception):
-        if "429" in str(exc) or "Quota" in str(exc):
+        exc_str = str(exc)
+        if "429" in exc_str or "Quota" in exc_str:
             raise HTTPException(status_code=429, detail="Gemini rate limit exceeded.")
+        if "503" in exc_str or "UNAVAILABLE" in exc_str or "high demand" in exc_str:
+            raise HTTPException(status_code=503, detail="Gemini service currently experiencing high demand. Please try again.")
         raise exc
 
     def _parse_json_response(self, text: str) -> Dict[str, Any]:
@@ -50,15 +53,31 @@ class GeminiProvider(AIProvider):
     def generate_completion(self, prompt: str) -> str:
         if not self.is_available():
             raise HTTPException(status_code=503, detail="Gemini API key missing.")
-        try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt
-            )
-            return response.text or ""
-        except Exception as e:
-            self._handle_rate_limit(e)
-            return ""
+        
+        models_to_try = [self.model, "gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest"]
+        last_error = None
+
+        for model_name in models_to_try:
+            if not model_name:
+                continue
+            try:
+                response = self.client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                last_error = e
+                err_str = str(e).lower()
+                logger.warning(f"Gemini model '{model_name}' failed: {e}. Trying fallback model...")
+                if any(auth_kw in err_str for auth_kw in ["401", "unauthorized", "api_key", "invalid_argument"]):
+                    break
+                continue
+
+        if last_error:
+            self._handle_rate_limit(last_error)
+        return ""
 
     def generate_with_prompt(self, prompt: str) -> Dict[str, Any]:
         """Used by the new AIService architecture in ai_provider.py."""

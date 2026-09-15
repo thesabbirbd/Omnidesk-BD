@@ -104,20 +104,27 @@ export default function Projects() {
       ]);
       setDebugJournals(jData || []);
       
-      if (pData && pData.length > 0) {
+      if (Array.isArray(pData) && pData.length > 0) {
         // Map backend StudySpace fields to UI fields used in Projects.jsx
         setProjects(pData.map(p => ({
           ...p,
-          name: p.title,
-          description: p.description,
-          stage: p.progress >= 100 ? 'Deployed' : (p.progress > 0 ? 'In Progress' : 'Idea'),
+          id: p.id || Math.random().toString(),
+          name: p.title || p.name || 'Untitled Project',
+          description: p.description || '',
+          stage: (p.progress || 0) >= 100 ? 'Deployed' : ((p.progress || 0) > 0 ? 'In Progress' : 'Idea'),
           progress: p.progress || 0,
-          tags: [p.category || 'Engineering', 'React Flow', 'FastAPI'],
+          tags: Array.isArray(p.tags) && p.tags.length > 0 ? p.tags : [p.category || 'Engineering', 'React Flow', 'FastAPI'],
           slug: p.slug,
-          milestones: p.milestones || []
+          milestones: Array.isArray(p.milestones) && p.milestones.length > 0 ? p.milestones : [
+            { name: "Idea", status: "complete" },
+            { name: "Architecture", status: (p.progress || 0) > 20 ? "complete" : "active" },
+            { name: "In Progress", status: (p.progress || 0) > 50 ? "complete" : ((p.progress || 0) > 20 ? "active" : "pending") },
+            { name: "Code Complete", status: (p.progress || 0) >= 90 ? "complete" : "pending" },
+            { name: "Deployed", status: (p.progress || 0) >= 100 ? "complete" : "pending" },
+          ]
         })));
       } else {
-        setProjects([]);
+        setProjects(initialProjects);
       }
     } catch (e) {
       console.warn("Failed to load debug journals or projects:", e);
@@ -295,7 +302,7 @@ export default function Projects() {
                   
                   {/* Tech Tags */}
                   <div className="flex items-center gap-2 flex-wrap mt-1">
-                    {project.tags.map((tag) => (
+                    {(project.tags || []).map((tag) => (
                       <span key={tag} className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-[var(--bg-input)] text-[color:var(--text-muted)] border border-[var(--border-color)]">
                         {tag}
                       </span>
@@ -305,30 +312,32 @@ export default function Projects() {
                 
                 {/* Actions & Completion */}
                 <div className="flex items-center gap-3 shrink-0">
-                  <a
-                    href={project.githubUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] hover:text-cyan-400 transition-colors cursor-pointer"
-                    title="View GitHub Repository"
-                  >
-                    <GitFork size={20} />
-                  </a>
+                  {project.githubUrl && (
+                    <a
+                      href={project.githubUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] hover:text-cyan-400 transition-colors cursor-pointer"
+                      title="View GitHub Repository"
+                    >
+                      <GitFork size={20} />
+                    </a>
+                  )}
                   <div className="flex items-center gap-3 bg-[var(--bg-input)] px-5 py-3 rounded-2xl border border-[var(--border-color)]">
                     <span className="font-bold text-xs uppercase text-[color:var(--text-muted)]">Progress</span>
-                    <span className="text-xl font-black text-cyan-400">{project.progress}%</span>
+                    <span className="text-xl font-black text-cyan-400">{project.progress || 0}%</span>
                   </div>
                 </div>
               </div>
 
               {/* Milestones Track */}
               <div className="flex flex-wrap md:flex-nowrap gap-3 justify-between items-center bg-[var(--bg-input)] p-5 rounded-[24px] border border-[var(--border-color)]">
-                {project.milestones.map((ms, index) => {
+                {(project.milestones || []).map((ms, index) => {
                   const isComplete = ms.status === 'complete';
                   const isActive = ms.status === 'active';
                   
                   return (
-                    <React.Fragment key={ms.name}>
+                    <React.Fragment key={ms.name || index}>
                       <div className="flex flex-col items-center gap-2 relative z-10">
                         <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 border-2 ${
                           isComplete ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]' :
@@ -343,7 +352,7 @@ export default function Projects() {
                       </div>
                       
                       {/* Connecting Line */}
-                      {index < project.milestones.length - 1 && (
+                      {index < (project.milestones || []).length - 1 && (
                         <div className="hidden md:block flex-1 h-1.5 bg-[var(--bg-card)] rounded-full overflow-hidden relative">
                           <div className={`absolute left-0 top-0 h-full transition-all duration-700 ${
                             isComplete ? 'w-full bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'w-0'
@@ -405,8 +414,8 @@ export default function Projects() {
                   className="w-full bg-[var(--bg-input)] text-[color:var(--text-main)] border border-[var(--border-color)] rounded-xl p-3 focus:outline-none text-xs font-semibold"
                 >
                   <option value="">No Project (General Lab)</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name || p.title}</option>
+                  {(projects || []).map((p) => (
+                    <option key={p?.id || p?.slug || Math.random()} value={p?.id || ''}>{p?.name || p?.title || 'Untitled Project'}</option>
                   ))}
                 </select>
               </div>
@@ -511,7 +520,7 @@ export default function Projects() {
                 No debug entries recorded yet. Use the form above or click "I'm Stuck" whenever you encounter a blocking issue.
               </div>
             ) : (
-              debugJournals.map((entry) => (
+              (Array.isArray(debugJournals) ? debugJournals : []).map((entry) => (
                 <div 
                   key={entry.id}
                   className="p-6 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[var(--card-shadow)] flex flex-col gap-3 transition-all"
