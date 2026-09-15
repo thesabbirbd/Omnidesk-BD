@@ -1,0 +1,9 @@
+{
+  "appId": "com.omnidesk.app",
+  "appName": "OmnideskBD",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "cleartext": true
+  }
+}

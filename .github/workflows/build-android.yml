@@ -1,0 +1,61 @@
+name: Build Android APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java (JDK 17)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build React App (Vite)
+        working-directory: frontend
+        run: npm run build
+
+      - name: Capacitor Sync
+        working-directory: frontend
+        run: npx cap sync android
+
+      - name: Build Android APK
+        working-directory: frontend/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Rename APK
+        working-directory: frontend/android/app/build/outputs/apk/debug
+        run: mv app-debug.apk OmnideskBD_${{ github.ref_name || 'debug' }}.apk
+
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: frontend/android/app/build/outputs/apk/debug/*.apk
+          draft: true
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
