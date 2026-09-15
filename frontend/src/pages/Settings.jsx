@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Settings as SettingsIcon, Palette, Target, DownloadCloud, UploadCloud, Database, Clock, Camera, CheckCircle2, AlertTriangle, Sparkles, Check, RefreshCw } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
 import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/api/process';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 export default function Settings() {
   const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'dark');
