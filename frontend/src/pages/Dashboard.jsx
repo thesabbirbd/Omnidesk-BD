@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SignatureLoader from "../components/common/SignatureLoader";
+import { DashboardSkeleton } from "../components/common/Skeletons";
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { slugify, matchesSlug, getSpaceSlug } from '../utils/slugify';
 import { 
@@ -467,6 +469,8 @@ export default function Dashboard() {
         };
       })
     : undefined;
+  if (isLoadingSpace) return <DashboardSkeleton />;
+
 
   return (
     <div className="flex flex-col w-full min-h-full text-[color:var(--text-main)] gap-6 pb-12 transition-colors duration-300">
@@ -474,6 +478,11 @@ export default function Dashboard() {
       {/* ========================================================================= */}
       {/* 1. VERY TOP: PROMINENT, PREMIUM "CREATE NEW PROJECT / STUDYSPACE" INPUT AREA */}
       {/* ========================================================================= */}
+      {isGenerating ? (
+        <div className="w-full shrink-0 rounded-3xl bg-[var(--bg-card)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] border border-[var(--border-color)] overflow-hidden transition-all flex items-center justify-center min-h-[400px]">
+          <SignatureLoader />
+        </div>
+      ) : (
       <div className="w-full shrink-0 rounded-3xl bg-[var(--bg-card)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] border border-[var(--border-color)] p-6 md:p-8 relative overflow-hidden transition-all">
         {/* Subtle Ambient Radial Glow */}
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -750,6 +759,7 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. SUGGESTED PROJECTS / SKILLS SECTION (RIGHT BELOW INPUT AREA)             */}

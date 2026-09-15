@@ -599,3 +599,53 @@ button:active:not(:disabled),
   .badge-info { @apply bg-cyan-500/10 text-cyan-500 border border-cyan-500/20; }
   .badge-neutral { @apply bg-[var(--bg-input)] text-[color:var(--text-muted)] border border-[var(--border-color)]; }
 }
+
+/* ==========================================================================
+   PHASE 4 & 5: PREMIUM MOTION SYSTEM
+   ========================================================================== */
+@keyframes pageFadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-transition {
+  animation: pageFadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ==========================================================================
+   PHASE 8: SKELETON SYSTEM (400ms delay to prevent flashing)
+   ========================================================================== */
+@keyframes delayedFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.skeleton-delay {
+  opacity: 0;
+  animation: delayedFadeIn 0.3s ease-out forwards;
+  animation-delay: 400ms; /* Do NOT show for requests < 400ms */
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.skeleton-pulse {
+  animation: pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .skeleton-delay {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  .skeleton-pulse {
+    animation: none !important;
+  }
+}

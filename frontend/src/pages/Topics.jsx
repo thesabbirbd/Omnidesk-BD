@@ -177,7 +177,9 @@ export default function Topics() {
     };
 
     window.addEventListener('studyos-space-changed', handleSpaceChanged);
-    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
+    if (isLoadingTopics) return <StudySpaceSkeleton />;
+
+  return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
   }, []);
 
   const handleSwitchProject = (space) => {
@@ -228,6 +230,8 @@ export default function Topics() {
     const matchesCategory = selectedCategory === 'All' || topic.category === selectedCategory;
     return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  if (isLoadingTopics) return <StudySpaceSkeleton />;
 
   return (
     <div className="flex flex-col w-full min-h-full text-[color:var(--text-main)] gap-6 md:gap-8 pb-12">
@@ -313,7 +317,9 @@ export default function Topics() {
       <div className="shrink-0 flex flex-wrap items-center gap-2.5 w-full">
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat;
-          return (
+          if (isLoadingTopics) return <StudySpaceSkeleton />;
+
+  return (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -334,7 +340,9 @@ export default function Topics() {
         {statuses.map((status) => {
           const isSelected = selectedStatus === status;
           const conf = statusStyles[status];
-          return (
+          if (isLoadingTopics) return <StudySpaceSkeleton />;
+
+  return (
             <button
               key={status}
               onClick={() => setSelectedStatus(status)}
@@ -371,7 +379,9 @@ export default function Topics() {
             const conf = statusStyles[topic.status] || statusStyles.NORMAL;
             const completedCount = topic.checkpoints.filter((c) => c.done).length;
 
-            return (
+            if (isLoadingTopics) return <StudySpaceSkeleton />;
+
+  return (
               <div
                 key={topic.id}
                 className="p-6 md:p-7 rounded-[32px] bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[var(--card-shadow)] flex flex-col justify-between gap-6 hover:border-purple-500/40 transition-all duration-300 group"

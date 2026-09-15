@@ -248,6 +248,8 @@ const CustomNode = ({ id, data, selected }) => {
     setShowMoreMenu(false);
   };
 
+  if (isLoading) return <MindMapSkeleton />;
+
   return (
     <div 
       className="relative group select-none"
@@ -342,7 +344,9 @@ const CustomNode = ({ id, data, selected }) => {
               {Object.entries(statusConfig).map(([statusKey, cfg]) => {
                 const Icon = cfg.icon;
                 const isActive = data.status === statusKey;
-                return (
+                if (isLoading) return <MindMapSkeleton />;
+
+  return (
                   <button
                     key={statusKey}
                     onClick={(e) => handleStatusChange(e, statusKey)}
@@ -494,6 +498,7 @@ const CustomNode = ({ id, data, selected }) => {
 const nodeTypes = { custom: CustomNode };
 
 function MindMapFlow() {
+  const [isLoading, setIsLoading] = useState(true);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
@@ -534,7 +539,9 @@ function MindMapFlow() {
       }
     };
     window.addEventListener('studyos-topic-status-updated', handleStatusSync);
-    return () => window.removeEventListener('studyos-topic-status-updated', handleStatusSync);
+    if (isLoading) return <MindMapSkeleton />;
+
+  return () => window.removeEventListener('studyos-topic-status-updated', handleStatusSync);
   }, [setNodes]);
 
   useEffect(() => {
@@ -584,6 +591,7 @@ function MindMapFlow() {
 
           setNodes(fetchedNodes);
           setEdges(fetchedEdges);
+          setIsLoading(false);
           setTimeout(() => fitView({ duration: 600, padding: 0.2 }), 200);
           return;
         }
@@ -622,7 +630,9 @@ function MindMapFlow() {
       }
     };
     window.addEventListener('studyos-open-node-drawer', handleDrawerEvent);
-    return () => window.removeEventListener('studyos-open-node-drawer', handleDrawerEvent);
+    if (isLoading) return <MindMapSkeleton />;
+
+  return () => window.removeEventListener('studyos-open-node-drawer', handleDrawerEvent);
   }, []);
 
   const handleFilterChange = (filter) => {
@@ -648,6 +658,8 @@ function MindMapFlow() {
     );
     setTimeout(() => fitView({ duration: 600, padding: 0.2 }), 100);
   };
+
+  if (isLoading) return <MindMapSkeleton />;
 
   return (
     <div className="w-full h-[calc(100vh-12rem)] lg:h-[calc(100vh-8rem)] min-h-[500px] flex flex-col relative rounded-3xl overflow-hidden border border-[var(--border-color)] bg-[var(--bg-canvas)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] touch-none">
@@ -888,6 +900,8 @@ function MindMapFlow() {
 }
 
 export default function MindMap() {
+  if (isLoading) return <MindMapSkeleton />;
+
   return (
     <ReactFlowProvider>
       <MindMapFlow />

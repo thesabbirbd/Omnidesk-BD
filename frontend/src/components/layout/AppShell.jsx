@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Play, 
   Pause, 
@@ -18,6 +18,7 @@ import BottomNav from './BottomNav';
 import { useTimer } from '../../context/TimerContext';
 
 export default function AppShell() {
+  const location = useLocation();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { lastNotification, clearNotification } = useTimer();
 
@@ -172,7 +173,7 @@ export default function AppShell() {
 
           </div>
           
-          <Outlet />
+          <div key={location.pathname} className="page-transition flex-1 flex flex-col h-full"><Outlet /></div>
         </main>
         
         {/* Mobile Bottom Navigation (Hidden on Desktop) */}

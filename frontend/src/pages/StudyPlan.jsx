@@ -105,7 +105,9 @@ export default function StudyPlan() {
       fetchPlan();
     };
     window.addEventListener('studyos-space-changed', handleSpaceChanged);
-    return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
+    if (isLoading) return <StudySpaceSkeleton />;
+
+  return () => window.removeEventListener('studyos-space-changed', handleSpaceChanged);
   }, []);
 
   const currentWeekData = weeks.find((w) => w.weekNumber === selectedWeek) || weeks[0];
@@ -144,6 +146,8 @@ export default function StudyPlan() {
     if (filterStatus === 'overdue') return topic.overdue && topic.status !== 'complete';
     return topic.status === filterStatus;
   });
+
+  if (isLoading) return <StudySpaceSkeleton />;
 
   return (
     <div className="flex flex-col w-full min-h-full text-[color:var(--text-main)] gap-6 md:gap-8 pb-12">
@@ -222,7 +226,9 @@ export default function StudyPlan() {
         {weeks.map((week) => {
           const isSelected = week.weekNumber === selectedWeek;
           const weekCompleted = week.topics.every((t) => t.status === 'complete');
-          return (
+          if (isLoading) return <StudySpaceSkeleton />;
+
+  return (
             <button
               key={week.weekNumber}
               onClick={() => setSelectedWeek(week.weekNumber)}
@@ -282,7 +288,9 @@ export default function StudyPlan() {
             const isCompleted = topic.status === 'complete';
             const isOverdue = topic.overdue && !isCompleted;
 
-            return (
+            if (isLoading) return <StudySpaceSkeleton />;
+
+  return (
               <div
                 key={topic.id}
                 className={`p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
