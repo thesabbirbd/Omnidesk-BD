@@ -55,6 +55,6 @@ jobs:
         with:
           files: frontend/android/app/build/outputs/apk/debug/*.apk
           draft: true
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'nightly' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
