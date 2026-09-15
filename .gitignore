@@ -31,3 +31,24 @@ pnpm-debug.log*
 backend/uploads/*
 !backend/uploads/.gitkeep
 uploads/
+
+# Dependency directories
+node_modules/
+jspm_packages/
+.venv/
+__pycache__/
+
+# Large media and data files
+*.html
+assets/large-media/
+data/uploads/
+*.mp4
+*.zip
+*.log
+
+# Local environment and API keys
+.env
+.env.*
+
+# Additional media extensions
+*.pdf

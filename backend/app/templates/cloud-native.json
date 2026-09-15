@@ -1,0 +1,27 @@
+{
+  "id": "cloud-native",
+  "title": "Cloud Native & Kubernetes Architecture",
+  "description": "Pods, Ingress, Helm, Service Mesh & Production Cluster Management",
+  "category": "DevOps & Cloud",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Kubernetes Architecture",
+      "description": "Control plane, worker nodes, and etcd.",
+      "estimated_minutes": 90,
+      "difficulty": "INTERMEDIATE",
+      "dependencies": [],
+      "subtopics": ["Kubelet", "Kube-proxy", "API Server"]
+    },
+    {
+      "title": "Helm & Service Mesh",
+      "description": "Package management and advanced traffic routing.",
+      "estimated_minutes": 150,
+      "difficulty": "ADVANCED",
+      "dependencies": ["Kubernetes Architecture"],
+      "subtopics": ["Helm Charts", "Istio", "mTLS"]
+    }
+  ]
+}

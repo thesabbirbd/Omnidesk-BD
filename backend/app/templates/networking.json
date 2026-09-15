@@ -1,0 +1,27 @@
+{
+  "id": "networking",
+  "title": "Computer Networking Basics",
+  "description": "OSI 7 Layers, TCP/IP, IPv4 Subnetting & Routing Architecture",
+  "category": "Computer Science",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "OSI & TCP/IP Models",
+      "description": "Understand the layers of network communication.",
+      "estimated_minutes": 60,
+      "difficulty": "BEGINNER",
+      "dependencies": [],
+      "subtopics": ["OSI 7 Layers", "TCP/IP Suite", "Data Encapsulation"]
+    },
+    {
+      "title": "IPv4 & Subnetting",
+      "description": "Learn IP addressing, CIDR notation, and subnet calculations.",
+      "estimated_minutes": 120,
+      "difficulty": "INTERMEDIATE",
+      "dependencies": ["OSI & TCP/IP Models"],
+      "subtopics": ["Binary Math", "CIDR", "Subnet Masks"]
+    }
+  ]
+}

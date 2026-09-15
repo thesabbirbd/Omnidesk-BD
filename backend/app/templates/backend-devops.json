@@ -1,0 +1,43 @@
+{
+  "id": "backend-devops",
+  "title": "Backend → DevOps Engineer",
+  "description": "Linux, Shell Scripting, Docker Containers, Kubernetes & CI/CD Pipelines",
+  "category": "Backend / DevOps",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Linux Fundamentals & Shell Scripting",
+      "description": "Master command-line tools, file systems, permissions, and basic bash scripting.",
+      "estimated_minutes": 120,
+      "difficulty": "BEGINNER",
+      "dependencies": [],
+      "subtopics": ["File Permissions", "Process Management", "Bash Variables & Loops"]
+    },
+    {
+      "title": "Docker & Containerization",
+      "description": "Learn to containerize applications, manage images, and write Dockerfiles.",
+      "estimated_minutes": 150,
+      "difficulty": "INTERMEDIATE",
+      "dependencies": ["Linux Fundamentals & Shell Scripting"],
+      "subtopics": ["Dockerfile syntax", "Docker Compose", "Volumes & Networking"]
+    },
+    {
+      "title": "CI/CD Pipelines",
+      "description": "Automate testing and deployment using GitHub Actions or GitLab CI.",
+      "estimated_minutes": 180,
+      "difficulty": "INTERMEDIATE",
+      "dependencies": ["Docker & Containerization"],
+      "subtopics": ["YAML pipelines", "Automated Testing", "Artifact Deployment"]
+    },
+    {
+      "title": "Kubernetes Orchestration",
+      "description": "Deploy and manage containerized applications at scale using K8s.",
+      "estimated_minutes": 240,
+      "difficulty": "ADVANCED",
+      "dependencies": ["Docker & Containerization"],
+      "subtopics": ["Pods & Deployments", "Services & Ingress", "ConfigMaps & Secrets"]
+    }
+  ]
+}

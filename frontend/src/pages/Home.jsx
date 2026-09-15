@@ -41,7 +41,7 @@ function GithubIcon({ size = 16, className = "" }) {
   );
 }
 
-import { getStudySpaces, generateStudySpace, approveStudySpace } from '../services/api';
+import { getStudySpaces, generateStudySpace, approveStudySpace, getTemplatePreview } from '../services/api';
 import { getSpaceSlug, slugify } from '../utils/slugify';
 import { generateMasterPrompt, DEFAULT_TOPIC_PLACEHOLDER } from '../utils/masterPrompt';
 import { soundEngine } from '../utils/audioSynth';
@@ -51,7 +51,7 @@ import AboutOmnideskModal from '../components/common/AboutOmnideskModal';
 
 const SUGGESTED_STARTER_SKILLS = [
   {
-    id: 'devops',
+    id: 'backend-devops',
     title: 'Backend → DevOps Engineer',
     description: 'Linux, Shell Scripting, Docker Containers, Kubernetes & CI/CD Pipelines',
     icon: Server,
@@ -60,7 +60,7 @@ const SUGGESTED_STARTER_SKILLS = [
     gradient: 'from-blue-500/20 to-cyan-500/20 border-cyan-500/40'
   },
   {
-    id: 'net',
+    id: 'networking',
     title: 'Computer Networking Basics',
     description: 'OSI 7 Layers, TCP/IP, IPv4 Subnetting & Routing Architecture',
     icon: Globe,
@@ -69,7 +69,7 @@ const SUGGESTED_STARTER_SKILLS = [
     gradient: 'from-teal-500/20 to-emerald-500/20 border-teal-500/40'
   },
   {
-    id: 'py',
+    id: 'python',
     title: 'Python Mastery',
     description: 'AsyncIO, Generators, Metaclasses, OOP & Clean Architecture',
     icon: Code,
@@ -78,7 +78,7 @@ const SUGGESTED_STARTER_SKILLS = [
     gradient: 'from-amber-500/20 to-yellow-500/20 border-amber-500/40'
   },
   {
-    id: 'k8s',
+    id: 'cloud-native',
     title: 'Cloud Native & Kubernetes Architecture',
     description: 'Pods, Ingress, Helm, Service Mesh & Production Cluster Management',
     icon: Cpu,
@@ -93,9 +93,8 @@ export default function Home() {
   const [searchParams] = useSearchParams();
 
   // Boot sequence state
-  const [showBootSequence, setShowBootSequence] = useState(() => {
-    return !sessionStorage.getItem('studyos_booted');
-  });
+  const [showBootSequence, setShowBootSequence] = useState(true);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   // Modal states
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -228,13 +227,23 @@ export default function Home() {
     }
   };
 
-  const handleSelectStarterSkill = (skill) => {
+  const handleSelectStarterSkill = async (skill) => {
     setTopicName(skill.title);
     setWorkspaceTitle(skill.title);
     setCategory(skill.category);
     setInputMode('topic');
     setShowCreate(true);
     setGenerationError(null);
+    setIsGenerating(true);
+    try {
+      const preview = await getTemplatePreview(skill.id);
+      setPreviewData(preview);
+    } catch (err) {
+      console.error('Failed to load template:', err);
+      setGenerationError("Failed to load local template. " + (err.response?.data?.detail || err.message));
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -333,10 +342,23 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] flex flex-col items-center justify-start overflow-y-auto px-4 sm:px-6 py-6 sm:py-8 relative pb-36 transition-colors duration-300">
+    <div className="h-full min-h-screen w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] flex flex-col items-center justify-start overflow-y-auto px-4 sm:px-6 py-6 sm:py-8 relative pb-36 transition-colors duration-300">
       
       {/* OS Boot Sequence Overlay (First Launch or Replay) */}
-      {showBootSequence && (
+      {showBootSequence && !hasInteracted && (
+        <div 
+          onClick={() => setHasInteracted(true)}
+          className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col items-center justify-center cursor-pointer"
+        >
+          <div className="animate-pulse flex flex-col items-center gap-4">
+            <Sparkles size={48} className="text-cyan-400" />
+            <h1 className="text-2xl font-black text-white tracking-widest uppercase">Click Anywhere to Boot OS</h1>
+            <p className="text-slate-400 text-sm font-medium">System audio requires interaction</p>
+          </div>
+        </div>
+      )}
+
+      {showBootSequence && hasInteracted && (
         <OSBootSequence 
           forcePlay={true}
           onComplete={() => setShowBootSequence(false)} 

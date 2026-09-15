@@ -1,0 +1,27 @@
+{
+  "id": "python",
+  "title": "Python Mastery",
+  "description": "AsyncIO, Generators, Metaclasses, OOP & Clean Architecture",
+  "category": "Programming",
+  "interface_language": "en",
+  "learning_language": "en",
+  "source_language": "en",
+  "topics": [
+    {
+      "title": "Core Python & Data Structures",
+      "description": "Lists, dicts, sets, and basic algorithms.",
+      "estimated_minutes": 90,
+      "difficulty": "BEGINNER",
+      "dependencies": [],
+      "subtopics": ["List Comprehensions", "Generators", "Iterators"]
+    },
+    {
+      "title": "AsyncIO & Concurrency",
+      "description": "Master asynchronous programming in Python.",
+      "estimated_minutes": 120,
+      "difficulty": "ADVANCED",
+      "dependencies": ["Core Python & Data Structures"],
+      "subtopics": ["Event Loop", "async/await", "Threading vs Multiprocessing"]
+    }
+  ]
+}

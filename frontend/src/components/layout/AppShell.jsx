@@ -6,7 +6,8 @@ import {
   Sparkles, 
   AlertCircle, 
   CheckCircle2, 
-  X 
+  X, 
+  Bot 
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';

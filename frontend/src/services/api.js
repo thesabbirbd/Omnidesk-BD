@@ -9,6 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL || (
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 60000, // 60 seconds strict timeout to prevent infinite loading spinners
 });
 
 // Attach JWT access token automatically if present in storage

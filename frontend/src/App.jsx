@@ -20,11 +20,13 @@ import Ai from './pages/Ai';
 import Settings from './pages/Settings';
 
 import { TimerProvider } from './context/TimerContext';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <TimerProvider>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <TimerProvider>
         <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/os" element={<AppShell />}>
@@ -48,7 +50,8 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
         </Routes>
-      </TimerProvider>
-    </BrowserRouter>
+        </TimerProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
