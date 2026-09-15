@@ -5,6 +5,9 @@
     "dev": "npm --prefix frontend run dev"
   },
   "dependencies": {
-    "@tauri-apps/cli": "^3.0.0-alpha.0"
+    "@tauri-apps/cli": "^3.0.0-alpha.0",
+    "@tauri-apps/plugin-dialog": "^3.0.0-alpha.0",
+    "@tauri-apps/plugin-fs": "^3.0.0-alpha.0",
+    "@tauri-apps/plugin-shell": "^3.0.0-alpha.0"
   }
 }

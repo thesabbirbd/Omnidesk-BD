@@ -23,4 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "3.0.0-alpha.0" }
 tauri-runtime-wry = { version = "3.0.0-alpha.0" }
+tauri-plugin-dialog = "3.0.0-alpha"
+tauri-plugin-fs = "3.0.0-alpha"
+tauri-plugin-shell = "3.0.0-alpha"
 #tauri-plugin-log = "2"
