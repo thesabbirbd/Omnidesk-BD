@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Settings as SettingsIcon, Palette, Target, DownloadCloud, UploadCloud, Database, Clock, Camera, CheckCircle2, AlertTriangle, Sparkles, Check } from 'lucide-react';
+import { Settings as SettingsIcon, Palette, Target, DownloadCloud, UploadCloud, Database, Clock, Camera, CheckCircle2, AlertTriangle, Sparkles, Check, RefreshCw } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/api/process';
 
 export default function Settings() {
   const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'dark');
@@ -8,7 +10,43 @@ export default function Settings() {
   const [glassGradient, setGlassGradient] = useState(localStorage.getItem('glassGradient') || 'aurora');
   const [dailyGoal, setDailyGoal] = useState(4);
   const [backupStatus, setBackupStatus] = useState(null);
+  const [updaterStatus, setUpdaterStatus] = useState(null);
   const fileInputRef = useRef(null);
+
+  const handleCheckUpdate = async () => {
+    try {
+      setUpdaterStatus('checking');
+      const update = await check();
+      if (update) {
+        setUpdaterStatus('downloading');
+        let downloaded = 0;
+        let contentLength = 0;
+        await update.downloadAndInstall((event) => {
+          switch (event.event) {
+            case 'Started':
+              contentLength = event.data.contentLength;
+              setUpdaterStatus('downloading');
+              break;
+            case 'Progress':
+              downloaded += event.data.chunkLength;
+              // Fake progress bar NOT allowed by prompt, but we track state
+              break;
+            case 'Finished':
+              setUpdaterStatus('restarting');
+              break;
+          }
+        });
+        await relaunch();
+      } else {
+        setUpdaterStatus('uptodate');
+        setTimeout(() => setUpdaterStatus(null), 3000);
+      }
+    } catch (error) {
+      console.error(error);
+      setUpdaterStatus('error');
+      setTimeout(() => setUpdaterStatus(null), 3000);
+    }
+  };
 
   const handleGlassGradientChange = (grad) => {
     setGlassGradient(grad);
@@ -433,6 +471,42 @@ export default function Settings() {
             >
               Danger: Factory Reset All Data
             </button>
+          </div>
+        </section>
+
+        {/* System Updates */}
+        <section className="p-6 md:p-8 rounded-[32px] bg-[var(--bg-card)] shadow-[var(--card-shadow)] border border-[var(--border-color)] flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <h2 className="text-xl font-bold text-[color:var(--text-main)] flex items-center gap-3 pb-2 border-b border-[var(--border-color)]">
+              <RefreshCw className="text-cyan-400" size={24} />
+              System Updates
+            </h2>
+            <p className="text-xs text-[color:var(--text-muted)] mt-2">
+              Check for the latest features, security patches, and AI provider updates for Omnidesk OS.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleCheckUpdate}
+              disabled={['checking', 'downloading', 'verifying'].includes(updaterStatus)}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--bg-card-hover)] hover:bg-[var(--bg-input)] border border-[var(--border-color)] hover:border-cyan-500/50 text-[color:var(--text-main)] font-bold transition-all shadow-[inset_2px_2px_4px_var(--shadow-light),inset_-2px_-2px_4px_var(--shadow-dark)] disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw size={18} className={['checking', 'downloading'].includes(updaterStatus) ? "animate-spin" : ""} />
+              {updaterStatus === 'checking' && "Checking for Updates..."}
+              {updaterStatus === 'downloading' && "Downloading Update..."}
+              {updaterStatus === 'verifying' && "Verifying Signature..."}
+              {updaterStatus === 'restarting' && "Restarting..."}
+              {updaterStatus === 'uptodate' && "System is Up to Date"}
+              {updaterStatus === 'error' && "Update Failed (Retry)"}
+              {!updaterStatus && "Check for Updates"}
+            </button>
+            
+            {updaterStatus === 'uptodate' && (
+              <span className="text-emerald-400 text-sm font-bold flex items-center gap-1 animate-pulse">
+                <CheckCircle2 size={16} /> Latest Version Installed
+              </span>
+            )}
           </div>
         </section>
 

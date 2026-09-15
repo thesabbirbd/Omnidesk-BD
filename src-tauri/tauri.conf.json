@@ -4,12 +4,29 @@
   "version": "0.1.0",
   "identifier": "com.tauri.dev",
   "build": {
-  "beforeBuildCommand": "npm run build",
-  "beforeDevCommand": "npm run dev",
-  "frontendDist": "../dist",
-  "devUrl": "http://localhost:5173"
-}
-
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "tauri": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://raw.githubusercontent.com/thesabbirbd/Omnidesk-BD/main/latest.json"
+      ],
+      "dialog": false,
+      "pubkey": "%TAURI_UPDATER_PUBLIC_KEY%"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://raw.githubusercontent.com/thesabbirbd/Omnidesk-BD/main/latest.json"
+      ],
+      "pubkey": "%TAURI_UPDATER_PUBLIC_KEY%"
+    }
+  },
   "app": {
     "windows": [
       {

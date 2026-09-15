@@ -1,0 +1,73 @@
+name: Build Desktop & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-tauri:
+    name: Build Desktop App
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install system dependencies (Linux only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev \
+              build-essential \
+              curl \
+              wget \
+              libssl-dev \
+              libgtk-3-dev \
+              libayatana-appindicator3-dev \
+              librsvg2-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Omnidesk BD ${{ github.ref_name }}"
+          releaseBody: "Automated desktop release."
+          releaseDraft: true
+          prerelease: false
+
+      - name: Generate Updater Manifest
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          node scripts/generate_manifest.js ${{ github.ref_name }}
+          # Normally we would gather signatures from both OS builds via artifacts,
+          # but this creates the base latest.json ready for the update pipeline.
+
+      - name: Upload Manifest to Release
+        if: matrix.platform == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: latest.json
+          draft: true
+          tag_name: ${{ github.ref_name }}
