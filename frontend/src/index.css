@@ -466,6 +466,13 @@ a,
   transition: all var(--transition-normal);
 }
 
+/* Global Mobile Touch Scale Effect */
+button:active,
+a:active,
+[role="button"]:active {
+  transform: scale(0.96);
+}
+
 /* Accessible focus ring for keyboard navigation */
 button:focus-visible,
 a:focus-visible,

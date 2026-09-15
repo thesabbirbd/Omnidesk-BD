@@ -111,10 +111,10 @@ export default function UserProfileModal({ isOpen, onClose }) {
   const modalContent = (
     <div 
       onClick={onClose}
-      className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-[999] flex items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 select-none"
     >
       <div 
-        className="w-full max-w-xl rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_1px_1px_2px_rgba(255,255,255,0.1)] p-6 md:p-8 relative flex flex-col gap-6 max-h-[88vh] overflow-y-auto select-text transition-all"
+        className="w-full max-w-xl rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_1px_1px_2px_rgba(255,255,255,0.1)] p-6 md:p-8 relative flex flex-col gap-6 h-full sm:h-auto sm:max-h-[88vh] overflow-y-auto select-text transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
@@ -122,13 +122,13 @@ export default function UserProfileModal({ isOpen, onClose }) {
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] text-[color:var(--text-muted)] hover:text-cyan-400 border border-[var(--border-color)] transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold shrink-0"
+              className="p-2 rounded-none sm:rounded-3xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] text-[color:var(--text-muted)] hover:text-cyan-400 border border-[var(--border-color)] transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold shrink-0"
               title="Back to Workspace (Esc)"
             >
               <ArrowLeft size={16} />
               <span className="hidden sm:inline">Back</span>
             </button>
-            <div className="p-2.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shrink-0">
+            <div className="p-2.5 rounded-none sm:rounded-3xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shrink-0">
               <User size={20} />
             </div>
             <div>
@@ -143,7 +143,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] text-[color:var(--text-muted)] hover:text-white border border-[var(--border-color)] transition-all cursor-pointer flex items-center justify-center shrink-0"
+            className="p-2 rounded-none sm:rounded-3xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] text-[color:var(--text-muted)] hover:text-white border border-[var(--border-color)] transition-all cursor-pointer flex items-center justify-center shrink-0"
             title="Close Profile (Esc)"
           >
             <X size={18} />
@@ -152,15 +152,15 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
         {/* Save Toast */}
         {saveToast && (
-          <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <div className="p-3 rounded-none sm:rounded-3xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 size={16} />
             <span>Profile successfully updated and locked with security password!</span>
           </div>
         )}
 
         {/* Profile Card Header Display */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-5 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] shadow-inner">
-          <div className={`w-20 h-20 rounded-2xl bg-gradient-to-tr ${profile.avatarColor} text-white flex items-center justify-center text-3xl font-black shadow-[0_0_20px_rgba(6,182,212,0.5)] shrink-0`}>
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-5 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] shadow-inner">
+          <div className={`w-20 h-20 rounded-none sm:rounded-3xl bg-gradient-to-tr ${profile.avatarColor} text-white flex items-center justify-center text-3xl font-black shadow-[0_0_20px_rgba(6,182,212,0.5)] shrink-0`}>
             {profile.name.charAt(0) || 'U'}
           </div>
 
@@ -187,7 +187,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
           /* View Mode */
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-3.5 rounded-xl bg-[var(--bg-input)]/60 border border-[var(--border-color)] flex items-center gap-3">
+              <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/60 border border-[var(--border-color)] flex items-center gap-3">
                 <Target size={18} className="text-cyan-400 shrink-0" />
                 <div className="flex flex-col min-w-0">
                   <span className="text-[10px] uppercase font-bold text-[color:var(--text-muted)]">Active Track</span>
@@ -195,7 +195,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[var(--bg-input)]/60 border border-[var(--border-color)] flex items-center gap-3">
+              <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/60 border border-[var(--border-color)] flex items-center gap-3">
                 <Clock size={18} className="text-amber-400 shrink-0" />
                 <div className="flex flex-col">
                   <span className="text-[10px] uppercase font-bold text-[color:var(--text-muted)]">Daily Study Target</span>
@@ -203,7 +203,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[var(--bg-input)]/60 border border-[var(--border-color)] flex items-center gap-3">
+              <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/60 border border-[var(--border-color)] flex items-center gap-3">
                 <GitBranch size={18} className="text-purple-400 shrink-0" />
                 <div className="flex flex-col min-w-0">
                   <span className="text-[10px] uppercase font-bold text-[color:var(--text-muted)]">GitHub Profile</span>
@@ -213,7 +213,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[var(--bg-input)]/60 border border-[var(--border-color)] flex items-center gap-3">
+              <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/60 border border-[var(--border-color)] flex items-center gap-3">
                 <Mail size={18} className="text-emerald-400 shrink-0" />
                 <div className="flex flex-col min-w-0">
                   <span className="text-[10px] uppercase font-bold text-[color:var(--text-muted)]">Email</span>
@@ -223,7 +223,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
             </div>
 
             {/* Lock status banner & Edit Button */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] mt-2">
+            <div className="flex items-center justify-between p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] mt-2">
               <div className="flex items-center gap-2.5 text-xs text-[color:var(--text-muted)]">
                 <Lock size={16} className="text-amber-400" />
                 <span>Profile editing is secured with admin password lock</span>
@@ -231,7 +231,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
               <button
                 onClick={handleStartEdit}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-[0_0_12px_rgba(34,211,238,0.5)] active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-none sm:rounded-3xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-[0_0_12px_rgba(34,211,238,0.5)] active:scale-95 transition-all cursor-pointer"
               >
                 <Edit3 size={14} />
                 <span>Edit Profile</span>
@@ -241,7 +241,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
         ) : (
           /* Edit Mode (Unlocked after entering 'admin') */
           <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-none sm:rounded-3xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold">
               <Unlock size={14} />
               <span>Editing Unlocked (Security authenticated)</span>
             </div>
@@ -254,7 +254,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-cyan-400"
+                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-none sm:rounded-3xl px-3 py-2 outline-none focus:border-cyan-400"
                 />
               </div>
 
@@ -265,7 +265,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   value={formData.headline}
                   onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
                   required
-                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-cyan-400"
+                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-none sm:rounded-3xl px-3 py-2 outline-none focus:border-cyan-400"
                 />
               </div>
 
@@ -275,7 +275,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   type="text"
                   value={formData.targetTrack}
                   onChange={(e) => setFormData({ ...formData, targetTrack: e.target.value })}
-                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-cyan-400"
+                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-none sm:rounded-3xl px-3 py-2 outline-none focus:border-cyan-400"
                 />
               </div>
 
@@ -287,7 +287,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   max="16"
                   value={formData.dailyGoalHours}
                   onChange={(e) => setFormData({ ...formData, dailyGoalHours: Number(e.target.value) })}
-                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-cyan-400"
+                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-none sm:rounded-3xl px-3 py-2 outline-none focus:border-cyan-400"
                 />
               </div>
 
@@ -297,7 +297,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   type="url"
                   value={formData.githubUrl}
                   onChange={(e) => setFormData({ ...formData, githubUrl: e.target.value })}
-                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-cyan-400"
+                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-none sm:rounded-3xl px-3 py-2 outline-none focus:border-cyan-400"
                 />
               </div>
 
@@ -307,7 +307,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-cyan-400"
+                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-bold rounded-none sm:rounded-3xl px-3 py-2 outline-none focus:border-cyan-400"
                 />
               </div>
             </div>
@@ -318,7 +318,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 rows={2}
                 value={formData.bio}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-medium rounded-xl px-3 py-2 outline-none focus:border-cyan-400 resize-none"
+                className="bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-xs font-medium rounded-none sm:rounded-3xl px-3 py-2 outline-none focus:border-cyan-400 resize-none"
               />
             </div>
 
@@ -336,7 +336,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     type="button"
                     key={grad.id}
                     onClick={() => setFormData({ ...formData, avatarColor: grad.id })}
-                    className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${grad.id} cursor-pointer transition-transform ${formData.avatarColor === grad.id ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'}`}
+                    className={`w-8 h-8 rounded-none sm:rounded-3xl bg-gradient-to-tr ${grad.id} cursor-pointer transition-transform ${formData.avatarColor === grad.id ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'}`}
                     title={grad.label}
                   />
                 ))}
@@ -348,13 +348,13 @@ export default function UserProfileModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="px-4 py-2 rounded-xl hover:bg-[var(--bg-input)] text-xs font-bold text-[color:var(--text-muted)] cursor-pointer"
+                className="px-4 py-2 rounded-none sm:rounded-3xl hover:bg-[var(--bg-input)] text-xs font-bold text-[color:var(--text-muted)] cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-[0_0_12px_rgba(34,211,238,0.5)] active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2 rounded-none sm:rounded-3xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-[0_0_12px_rgba(34,211,238,0.5)] active:scale-95 transition-all cursor-pointer"
               >
                 <Save size={14} />
                 <span>Save & Lock</span>
@@ -365,8 +365,8 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
         {/* Security Password Unlock Modal */}
         {isPasswordModalOpen && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-md rounded-3xl p-6 flex flex-col items-center justify-center z-50 animate-in zoom-in-95 duration-200">
-            <div className="w-full max-w-sm rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] p-6 shadow-2xl flex flex-col gap-4 text-center">
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-md rounded-none sm:rounded-3xl p-6 flex flex-col items-center justify-center z-50 animate-in zoom-in-95 duration-200">
+            <div className="w-full max-w-sm h-full sm:h-auto max-h-screen sm:max-h-[90vh] rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] p-6 shadow-2xl flex flex-col gap-4 text-center">
               <div className="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/40">
                 <Lock size={24} />
               </div>
@@ -385,7 +385,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   autoFocus
-                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-center text-sm font-bold text-[color:var(--text-main)] px-3 py-2 rounded-xl outline-none focus:border-cyan-400 tracking-wider"
+                  className="bg-[var(--bg-input)] border border-[var(--border-color)] text-center text-sm font-bold text-[color:var(--text-main)] px-3 py-2 rounded-none sm:rounded-3xl outline-none focus:border-cyan-400 tracking-wider"
                 />
 
                 {passwordError && (
@@ -399,13 +399,13 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   <button
                     type="button"
                     onClick={() => setIsPasswordModalOpen(false)}
-                    className="px-4 py-2 rounded-xl hover:bg-[var(--bg-input)] text-xs font-bold text-[color:var(--text-muted)] cursor-pointer"
+                    className="px-4 py-2 rounded-none sm:rounded-3xl hover:bg-[var(--bg-input)] text-xs font-bold text-[color:var(--text-muted)] cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-md cursor-pointer"
+                    className="px-5 py-2 rounded-none sm:rounded-3xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-md cursor-pointer"
                   >
                     Unlock
                   </button>
@@ -424,7 +424,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] border border-[var(--border-color)] text-xs font-bold text-[color:var(--text-main)] hover:text-cyan-400 shadow-sm cursor-pointer transition-all flex items-center gap-1.5"
+            className="px-5 py-2 rounded-none sm:rounded-3xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] border border-[var(--border-color)] text-xs font-bold text-[color:var(--text-main)] hover:text-cyan-400 shadow-sm cursor-pointer transition-all flex items-center gap-1.5"
           >
             <ArrowLeft size={14} />
             <span>Close Profile</span>

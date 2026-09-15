@@ -154,9 +154,9 @@ export default function TopicQuizVerificationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div 
-        className={`relative w-full max-w-xl rounded-[32px] bg-[var(--bg-card)] border-2 transition-all duration-300 shadow-[16px_16px_32px_var(--shadow-dark),-16px_-16px_32px_var(--shadow-light)] overflow-hidden ${
+        className={`relative w-full max-w-xl h-full sm:h-auto max-h-screen sm:max-h-[90vh] rounded-none sm:rounded-3xl bg-[var(--bg-card)] border-2 transition-all duration-300 shadow-[16px_16px_32px_var(--shadow-dark),-16px_-16px_32px_var(--shadow-light)] overflow-hidden ${
           resultState === 'correct' 
             ? 'border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.3)]' 
             : resultState === 'incorrect' 
@@ -168,7 +168,7 @@ export default function TopicQuizVerificationModal({
         {/* Header */}
         <div className="p-6 pb-4 border-b border-[var(--border-color)] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-2xl ${
+            <div className={`p-2.5 rounded-none sm:rounded-3xl ${
               resultState === 'correct' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-cyan-500/10 text-cyan-400'
             } shadow-[inset_2px_2px_4px_var(--shadow-dark)]`}>
               <ShieldCheck size={26} />
@@ -185,14 +185,14 @@ export default function TopicQuizVerificationModal({
 
           <button 
             onClick={handleClose}
-            className="p-2 rounded-xl text-[color:var(--text-muted)] hover:text-white bg-[var(--bg-input)] cursor-pointer transition-colors"
+            className="p-2 rounded-none sm:rounded-3xl text-[color:var(--text-muted)] hover:text-white bg-[var(--bg-input)] cursor-pointer transition-colors"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto">
+        <div className="p-6 flex flex-col gap-5 h-full sm:h-auto sm:max-h-[75vh] overflow-y-auto">
           {loadingQuiz ? (
             <div className="py-12 flex flex-col items-center justify-center gap-3 text-center">
               <Loader2 className="animate-spin text-cyan-400" size={36} />
@@ -217,7 +217,7 @@ export default function TopicQuizVerificationModal({
           ) : quizData ? (
             <>
               {/* Question Box */}
-              <div className="p-5 rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-color)] shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]">
+              <div className="p-5 rounded-none sm:rounded-3xl bg-[var(--bg-panel)] border border-[var(--border-color)] shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--text-muted)]">
                   Conceptual Question ({quizData.provider || 'gemini-1.5-flash'})
                 </span>
@@ -256,7 +256,7 @@ export default function TopicQuizVerificationModal({
                         setSelectedIdx(idx);
                         setResultState(null);
                       }}
-                      className={`w-full p-4 rounded-2xl border text-left text-sm flex items-start gap-3 transition-all cursor-pointer ${btnStyle}`}
+                      className={`w-full p-4 rounded-none sm:rounded-3xl border text-left text-sm flex items-start gap-3 transition-all cursor-pointer ${btnStyle}`}
                     >
                       <span className="w-6 h-6 rounded-lg bg-[var(--bg-input)] flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
                         {String.fromCharCode(65 + idx)}
@@ -269,7 +269,7 @@ export default function TopicQuizVerificationModal({
 
               {/* Feedback Alert */}
               {resultState === 'correct' && (
-                <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex flex-col gap-1.5 animate-in fade-in">
+                <div className="p-4 rounded-none sm:rounded-3xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex flex-col gap-1.5 animate-in fade-in">
                   <div className="flex items-center gap-2 font-black text-sm text-emerald-400">
                     <CheckCircle size={18} /> Verified Mastery! Status Updated to COMPLETE.
                   </div>
@@ -282,7 +282,7 @@ export default function TopicQuizVerificationModal({
               )}
 
               {resultState === 'incorrect' && (
-                <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex flex-col gap-2.5 animate-in fade-in">
+                <div className="p-4 rounded-none sm:rounded-3xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex flex-col gap-2.5 animate-in fade-in">
                   <div className="flex items-center gap-2 font-black text-sm text-rose-400">
                     <AlertCircle size={18} /> Incorrect Answer. Anti-Fake-Progress Gate Enforced.
                   </div>
@@ -293,7 +293,7 @@ export default function TopicQuizVerificationModal({
                     type="button"
                     onClick={handleRequestHint}
                     disabled={loadingHint}
-                    className="self-start flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold hover:bg-amber-500/30 transition-all text-xs"
+                    className="self-start flex items-center gap-2 px-3 py-1.5 rounded-none sm:rounded-3xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold hover:bg-amber-500/30 transition-all text-xs"
                   >
                     <Lightbulb size={14} />
                     {loadingHint ? "Getting Socratic Hint..." : "Ask AI for a Hint"}
@@ -303,7 +303,7 @@ export default function TopicQuizVerificationModal({
 
               {/* Socratic Hint Box */}
               {hintText && (
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex flex-col gap-1 animate-in fade-in">
+                <div className="p-4 rounded-none sm:rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex flex-col gap-1 animate-in fade-in">
                   <span className="font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Lightbulb size={14} /> Socratic AI Hint:
                   </span>
@@ -323,7 +323,7 @@ export default function TopicQuizVerificationModal({
           <button
             type="button"
             onClick={handleClose}
-            className="px-5 py-2.5 rounded-xl text-xs font-bold text-[color:var(--text-muted)] hover:text-white transition-colors"
+            className="px-5 py-2.5 rounded-none sm:rounded-3xl text-xs font-bold text-[color:var(--text-muted)] hover:text-white transition-colors"
           >
             Cancel
           </button>
@@ -333,7 +333,7 @@ export default function TopicQuizVerificationModal({
               <button
                 type="button"
                 onClick={() => fetchQuiz(activeTopic.id)}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-[var(--bg-input)] text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/10 transition-all"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-none sm:rounded-3xl text-xs font-bold bg-[var(--bg-input)] text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/10 transition-all"
               >
                 <RotateCcw size={14} /> Try Another Question
               </button>
@@ -343,7 +343,7 @@ export default function TopicQuizVerificationModal({
               type="button"
               disabled={(selectedIdx === null && !quizData?.fallbackMode) || submitting || resultState === 'correct'}
               onClick={handleVerify}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-none sm:rounded-3xl text-xs font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
             >
               {submitting ? (
                 <>

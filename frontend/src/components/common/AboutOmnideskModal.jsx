@@ -64,18 +64,18 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
   const modalContent = (
     <div 
       onClick={onClose}
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-0 sm:p-6 bg-black/70 backdrop-blur-md animate-in fade-in duration-200 select-none"
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl rounded-3xl bg-[var(--bg-card)] border border-cyan-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(34,211,238,0.2)] p-6 sm:p-8 flex flex-col gap-6 text-[color:var(--text-main)] select-text relative max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-cyan-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(34,211,238,0.2)] p-6 sm:p-8 flex flex-col gap-6 text-[color:var(--text-main)] select-text relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[var(--border-color)]">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
+              className="p-1.5 rounded-none sm:rounded-3xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
               title="Back"
             >
               <ArrowLeft size={18} />
@@ -89,7 +89,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
+            className="p-1.5 rounded-none sm:rounded-3xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
           >
             <X size={18} />
           </button>
@@ -98,8 +98,8 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
         {/* Center Hero: Logo with Glowing Aura */}
         <div className="flex flex-col items-center text-center gap-4 py-2">
           <div className="relative">
-            <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-cyan-500/30 via-indigo-500/20 to-teal-400/30 blur-xl opacity-75 animate-pulse" />
-            <div className="relative w-24 h-24 rounded-3xl bg-slate-900 border border-cyan-400/50 p-3 shadow-[0_0_30px_rgba(34,211,238,0.4)] flex items-center justify-center">
+            <div className="absolute -inset-4 rounded-none sm:rounded-3xl bg-gradient-to-r from-cyan-500/30 via-indigo-500/20 to-teal-400/30 blur-xl opacity-75 animate-pulse" />
+            <div className="relative w-24 h-24 rounded-none sm:rounded-3xl bg-slate-900 border border-cyan-400/50 p-3 shadow-[0_0_30px_rgba(34,211,238,0.4)] flex items-center justify-center">
               <img 
                 src="/omnidesk-mark.png" 
                 alt="Omnidesk BD" 
@@ -120,11 +120,11 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
         </div>
 
         {/* Audio & Boot Sequence Interactive Actions */}
-        <div className="p-4 rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={handleToggleSound}
-              className={`p-2.5 rounded-xl border transition-all ${
+              className={`p-2.5 rounded-none sm:rounded-3xl border transition-all ${
                 soundEnabled 
                   ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20' 
                   : 'bg-[var(--bg-input)] text-slate-500 border-slate-700 hover:text-slate-300'
@@ -147,7 +147,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
             <button
               onClick={handleTestVoiceAndChime}
               disabled={isPlayingAudio}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-bold transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-none sm:rounded-3xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-bold transition-all active:scale-95 disabled:opacity-50"
             >
               <Play size={13} className={isPlayingAudio ? "animate-spin" : ""} />
               <span>{isPlayingAudio ? "Playing Voice..." : "Test Voice & Chime"}</span>
@@ -158,7 +158,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
                   onClose();
                   onReplayBoot();
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black shadow-[0_0_15px_rgba(34,211,238,0.4)] transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-none sm:rounded-3xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black shadow-[0_0_15px_rgba(34,211,238,0.4)] transition-all active:scale-95"
               >
                 <Sparkles size={13} />
                 <span>Replay Boot Sequence</span>
@@ -169,7 +169,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
 
         {/* System Capabilities & Highlights */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="p-3.5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start gap-3">
+          <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start gap-3">
             <Cpu size={18} className="text-cyan-400 mt-0.5 shrink-0" />
             <div>
               <h4 className="text-xs font-bold text-[color:var(--text-main)]">Gemini AI Cognitive Engine</h4>
@@ -177,7 +177,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start gap-3">
+          <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start gap-3">
             <Terminal size={18} className="text-teal-400 mt-0.5 shrink-0" />
             <div>
               <h4 className="text-xs font-bold text-[color:var(--text-main)]">Native DevOps Lab Terminal</h4>
@@ -185,7 +185,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start gap-3">
+          <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start gap-3">
             <ShieldCheck size={18} className="text-indigo-400 mt-0.5 shrink-0" />
             <div>
               <h4 className="text-xs font-bold text-[color:var(--text-main)]">Protected Project Deletion</h4>
@@ -193,7 +193,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start gap-3">
+          <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start gap-3">
             <Layers size={18} className="text-purple-400 mt-0.5 shrink-0" />
             <div>
               <h4 className="text-xs font-bold text-[color:var(--text-main)]">Dynamic Knowledge Graphs</h4>
@@ -222,7 +222,7 @@ export default function AboutOmnideskModal({ isOpen, onClose, onReplayBoot }) {
             href="https://github.com/thesabbirbd/Omnidesk-BD" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] border border-[var(--border-color)] hover:border-cyan-400/50 text-[color:var(--text-main)] font-semibold transition-all hover:scale-105"
+            className="flex items-center gap-2 px-4 py-2 rounded-none sm:rounded-3xl bg-[var(--bg-input)] hover:bg-[var(--bg-panel)] border border-[var(--border-color)] hover:border-cyan-400/50 text-[color:var(--text-main)] font-semibold transition-all hover:scale-105"
           >
             <GithubIcon size={15} />
             <span>View GitHub Repository</span>

@@ -160,7 +160,7 @@ export default function DevOpsTerminalModal() {
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-6 bg-black/35 backdrop-blur-sm animate-fadeIn">
       <div 
-        className={`w-full flex flex-col rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] overflow-hidden transition-all duration-300 ${
+        className={`w-full flex flex-col rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] overflow-hidden transition-all duration-300 ${
           isMaximized ? 'h-[98vh] max-w-[98vw]' : 'h-[80vh] max-w-5xl'
         }`}
         style={{

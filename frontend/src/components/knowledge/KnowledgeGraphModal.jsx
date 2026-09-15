@@ -46,9 +46,9 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
   const metrics = data?.metrics;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-6 bg-black/35 backdrop-blur-sm animate-fadeIn">
       <div 
-        className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
+        className="w-full max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
         style={{
           boxShadow: '0 25px 50px -12px var(--shadow-dark), inset 1px 1px 2px var(--shadow-light)'
         }}
@@ -56,7 +56,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-[var(--border-color)] bg-[var(--bg-input)]/40">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+            <div className="w-10 h-10 rounded-none sm:rounded-3xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]">
               <Share2 size={20} />
             </div>
             <div>
@@ -83,7 +83,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
 
           <button 
             onClick={onClose}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)] transition-all cursor-pointer"
+            className="w-9 h-9 rounded-none sm:rounded-3xl flex items-center justify-center text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)] transition-all cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -104,7 +104,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
             <>
               {/* Metrics Highlights */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="p-4 rounded-2xl bg-[var(--bg-input)]/50 border border-[var(--border-color)]">
+                <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/50 border border-[var(--border-color)]">
                   <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold mb-1">
                     <Clock size={14} />
                     <span>Focus Time</span>
@@ -117,7 +117,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[var(--bg-input)]/50 border border-[var(--border-color)]">
+                <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/50 border border-[var(--border-color)]">
                   <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold mb-1">
                     <Award size={14} />
                     <span>Competency</span>
@@ -130,7 +130,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[var(--bg-input)]/50 border border-[var(--border-color)]">
+                <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/50 border border-[var(--border-color)]">
                   <div className="flex items-center gap-2 text-rose-400 text-xs font-semibold mb-1">
                     <Bug size={14} />
                     <span>Debug Lab</span>
@@ -143,7 +143,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[var(--bg-input)]/50 border border-[var(--border-color)]">
+                <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/50 border border-[var(--border-color)]">
                   <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold mb-1">
                     <GraduationCap size={14} />
                     <span>Quizzes Passed</span>
@@ -159,7 +159,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
 
               {/* Source Grounding Callout */}
               {topic?.source_reference && (
-                <div className="p-3.5 rounded-2xl bg-cyan-500/5 border border-cyan-500/20 flex items-start gap-3">
+                <div className="p-3.5 rounded-none sm:rounded-3xl bg-cyan-500/5 border border-cyan-500/20 flex items-start gap-3">
                   <FileText size={16} className="text-cyan-400 mt-0.5 shrink-0" />
                   <div className="text-xs">
                     <span className="font-bold text-cyan-300">Grounding Source: </span>
@@ -179,7 +179,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-none sm:rounded-3xl transition-all cursor-pointer ${
                       activeTab === t.id 
                         ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' 
                         : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]'
@@ -195,7 +195,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Prerequisites */}
-                    <div className="p-4 rounded-2xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
+                    <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
                       <div className="flex items-center gap-2 text-xs font-bold text-[color:var(--text-main)] mb-3">
                         <ArrowLeft size={14} className="text-amber-400" />
                         <span>Prerequisites ({data.prerequisites?.length || 0})</span>
@@ -205,7 +205,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                       ) : (
                         <div className="space-y-2">
                           {data.prerequisites.map((p) => (
-                            <div key={p.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
+                            <div key={p.id} className="flex items-center justify-between p-2.5 rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
                               <span className="font-semibold text-[color:var(--text-main)]">{p.title}</span>
                               <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ${
                                 p.status === 'complete' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
@@ -219,7 +219,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                     </div>
 
                     {/* Downstream Topics */}
-                    <div className="p-4 rounded-2xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
+                    <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
                       <div className="flex items-center gap-2 text-xs font-bold text-[color:var(--text-main)] mb-3">
                         <ArrowRight size={14} className="text-cyan-400" />
                         <span>Unlocks Downstream ({data.downstream_topics?.length || 0})</span>
@@ -229,7 +229,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                       ) : (
                         <div className="space-y-2">
                           {data.downstream_topics.map((d) => (
-                            <div key={d.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
+                            <div key={d.id} className="flex items-center justify-between p-2.5 rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
                               <span className="font-semibold text-[color:var(--text-main)]">{d.title}</span>
                               <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-[var(--bg-input)] text-[color:var(--text-muted)]">
                                 {d.status}
@@ -251,7 +251,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {data.competencies.map((c) => (
-                        <div key={c.id} className="p-3.5 rounded-2xl bg-[var(--bg-input)]/40 border border-[var(--border-color)] flex items-start gap-3">
+                        <div key={c.id} className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/40 border border-[var(--border-color)] flex items-start gap-3">
                           <div className={`mt-0.5 shrink-0 ${c.is_completed ? 'text-emerald-400' : 'text-slate-500'}`}>
                             {c.is_completed ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                           </div>
@@ -277,7 +277,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
               {activeTab === 'artifacts' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Related Notes */}
-                  <div className="p-4 rounded-2xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
+                  <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
                     <h4 className="text-xs font-bold text-[color:var(--text-main)] mb-3 flex items-center gap-2">
                       <FileText size={14} className="text-cyan-400" />
                       <span>Study Notes ({data.related_notes?.length || 0})</span>
@@ -287,7 +287,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                     ) : (
                       <div className="space-y-2">
                         {data.related_notes.map((n) => (
-                          <div key={n.id} className="p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
+                          <div key={n.id} className="p-2.5 rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
                             <div className="font-semibold text-[color:var(--text-main)] truncate">{n.title}</div>
                             <div className="text-[10px] text-[color:var(--text-muted)] mt-1">{n.created_at}</div>
                           </div>
@@ -297,7 +297,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                   </div>
 
                   {/* Materials */}
-                  <div className="p-4 rounded-2xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
+                  <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
                     <h4 className="text-xs font-bold text-[color:var(--text-main)] mb-3 flex items-center gap-2">
                       <BookOpen size={14} className="text-amber-400" />
                       <span>Course Materials ({data.related_materials?.length || 0})</span>
@@ -307,7 +307,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                     ) : (
                       <div className="space-y-2">
                         {data.related_materials.map((m) => (
-                          <div key={m.id} className="p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
+                          <div key={m.id} className="p-2.5 rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
                             <div className="font-semibold text-[color:var(--text-main)] truncate">{m.title}</div>
                             <div className="text-[10px] text-[color:var(--text-muted)] mt-1">
                               {m.file_type?.toUpperCase()} {m.page_count ? `• ${m.page_count} pages` : ''}
@@ -324,7 +324,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
               {activeTab === 'projects' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Projects */}
-                  <div className="p-4 rounded-2xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
+                  <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
                     <h4 className="text-xs font-bold text-[color:var(--text-main)] mb-3 flex items-center gap-2">
                       <FolderKanban size={14} className="text-indigo-400" />
                       <span>Linked Projects ({data.related_projects?.length || 0})</span>
@@ -334,7 +334,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                     ) : (
                       <div className="space-y-2">
                         {data.related_projects.map((p) => (
-                          <div key={p.id} className="p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
+                          <div key={p.id} className="p-2.5 rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs">
                             <div className="font-semibold text-[color:var(--text-main)]">{p.title}</div>
                             <div className="flex items-center gap-2 text-[10px] text-[color:var(--text-muted)] mt-1">
                               <span className="uppercase font-bold text-cyan-400">{p.status}</span>
@@ -347,7 +347,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                   </div>
 
                   {/* Bugs & Debug Lab */}
-                  <div className="p-4 rounded-2xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
+                  <div className="p-4 rounded-none sm:rounded-3xl bg-[var(--bg-input)]/40 border border-[var(--border-color)]">
                     <h4 className="text-xs font-bold text-[color:var(--text-main)] mb-3 flex items-center gap-2">
                       <Bug size={14} className="text-rose-400" />
                       <span>Debug Lab Journal ({data.bugs_fixed?.length || 0})</span>
@@ -357,7 +357,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
                     ) : (
                       <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
                         {data.bugs_fixed.map((b) => (
-                          <div key={b.id} className="p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs space-y-1">
+                          <div key={b.id} className="p-2.5 rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs space-y-1">
                             <div className="font-semibold text-rose-400">{b.title}</div>
                             <p className="text-[11px] text-[color:var(--text-muted)] line-clamp-2">{b.problem}</p>
                             {b.solution && (
@@ -380,7 +380,7 @@ export default function KnowledgeGraphModal({ topicId, isOpen, onClose }) {
         <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-input)]/40 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] bg-[var(--bg-input)] border border-[var(--border-color)] shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 transition-all cursor-pointer"
+            className="px-5 py-2.5 rounded-none sm:rounded-3xl font-bold text-xs uppercase tracking-wider text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] bg-[var(--bg-input)] border border-[var(--border-color)] shadow-[inset_2px_2px_4px_var(--shadow-dark)] active:scale-95 transition-all cursor-pointer"
           >
             Close Explorer
           </button>

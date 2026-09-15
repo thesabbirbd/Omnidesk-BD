@@ -96,15 +96,15 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
   const unreadCount = notificationsList.filter((n) => !n.read).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/35 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-md rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_20px_50px_rgba(0,0,0,0.7),inset_1px_1px_2px_rgba(255,255,255,0.1)] p-5 md:p-6 relative flex flex-col gap-4 max-h-[85vh] overflow-hidden"
+        className="w-full max-w-md rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-[0_20px_50px_rgba(0,0,0,0.7),inset_1px_1px_2px_rgba(255,255,255,0.1)] p-5 md:p-6 relative flex flex-col gap-4 h-full sm:h-auto sm:max-h-[85vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
         <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+            <div className="p-2 rounded-none sm:rounded-3xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
               <Bell size={18} />
             </div>
             <div>
@@ -124,14 +124,14 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-none sm:rounded-3xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-white transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Customization & Preferences Box */}
-        <div className="p-3.5 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] flex flex-col gap-2.5 shadow-inner">
+        <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] flex flex-col gap-2.5 shadow-inner">
           <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--text-muted)]">
             Notification Customizations
           </span>
@@ -155,7 +155,7 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
             {browserPermission === 'granted' ? (
               <button
                 onClick={() => setPrefs((prev) => ({ ...prev, browserPush: !prev.browserPush }))}
-                className={`px-3 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-none sm:rounded-3xl text-[10px] font-black transition-all cursor-pointer ${
                   prefs.browserPush 
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_8px_rgba(34,211,238,0.5)]' 
                     : 'bg-white/10 text-[color:var(--text-muted)]'
@@ -166,7 +166,7 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
             ) : (
               <button
                 onClick={handleRequestPushPermission}
-                className="px-2.5 py-1 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-[10px] font-black shadow-md cursor-pointer"
+                className="px-2.5 py-1 rounded-none sm:rounded-3xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-[10px] font-black shadow-md cursor-pointer"
               >
                 Enable Push
               </button>
@@ -229,7 +229,7 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
         </div>
 
         {/* Scrollable Notifications Stream */}
-        <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1 min-h-[160px] max-h-[280px]">
+        <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1 min-h-[160px] h-full sm:h-auto sm:max-h-[280px]">
           {notificationsList.length === 0 ? (
             <div className="flex flex-col items-center justify-center my-auto py-8 text-[color:var(--text-muted)]">
               <Bell size={24} className="opacity-40 mb-2" />
@@ -244,7 +244,7 @@ export default function NotificationCenterModal({ isOpen, onClose }) {
                   if (item.type === 'complete' || item.type === 'start') navigate('/os/timer');
                   onClose();
                 }}
-                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-2.5 ${
+                className={`p-3 rounded-none sm:rounded-3xl border transition-all cursor-pointer flex items-start gap-2.5 ${
                   !item.read 
                     ? 'bg-cyan-500/10 border-cyan-500/30 text-[color:var(--text-main)]' 
                     : 'bg-[var(--bg-input)]/60 border-[var(--border-color)] text-[color:var(--text-muted)] hover:border-cyan-500/30'

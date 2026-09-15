@@ -157,15 +157,15 @@ export default function ImStuckModal() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/35 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex flex-col gap-6"
+        className="w-full max-w-3xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto bg-[var(--bg-card)] border border-[var(--border-color)] rounded-none sm:rounded-3xl p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex flex-col gap-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
+            <div className="w-10 h-10 rounded-none sm:rounded-3xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
               <Terminal size={22} />
             </div>
             <div>
@@ -179,7 +179,7 @@ export default function ImStuckModal() {
           </div>
           <button 
             onClick={() => setIsOpen(false)}
-            className="p-2 rounded-xl text-[color:var(--text-muted)] hover:text-white bg-[var(--bg-input)] cursor-pointer"
+            className="p-2 rounded-none sm:rounded-3xl text-[color:var(--text-muted)] hover:text-white bg-[var(--bg-input)] cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -199,7 +199,7 @@ export default function ImStuckModal() {
                 placeholder="e.g. Postgres async deadlock on worker thread"
                 value={form.title}
                 onChange={(e) => handleChange('title', e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm font-semibold text-[color:var(--text-main)] outline-none focus:border-orange-400/50"
+                className="w-full px-4 py-2.5 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm font-semibold text-[color:var(--text-main)] outline-none focus:border-orange-400/50"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -209,7 +209,7 @@ export default function ImStuckModal() {
               <select
                 value={form.project_id}
                 onChange={(e) => handleChange('project_id', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-semibold text-[color:var(--text-main)] outline-none"
+                className="w-full px-3 py-2.5 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-semibold text-[color:var(--text-main)] outline-none"
               >
                 <option value="">No Project (General)</option>
                 {projects.map((p) => (
@@ -231,7 +231,7 @@ export default function ImStuckModal() {
                 placeholder="Describe the failure, expected vs actual behavior..."
                 value={form.problem}
                 onChange={(e) => handleChange('problem', e.target.value)}
-                className="w-full p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-[color:var(--text-main)] outline-none focus:border-orange-400/50 resize-none"
+                className="w-full p-3 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-[color:var(--text-main)] outline-none focus:border-orange-400/50 resize-none"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -243,7 +243,7 @@ export default function ImStuckModal() {
                 placeholder="What error code or strange behavior appeared?"
                 value={form.symptom}
                 onChange={(e) => handleChange('symptom', e.target.value)}
-                className="w-full p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-[color:var(--text-main)] outline-none focus:border-orange-400/50 resize-none"
+                className="w-full p-3 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-[color:var(--text-main)] outline-none focus:border-orange-400/50 resize-none"
               />
             </div>
           </div>
@@ -270,7 +270,7 @@ export default function ImStuckModal() {
               placeholder="What invariant or configuration might have failed?"
               value={form.hypothesis}
               onChange={(e) => handleChange('hypothesis', e.target.value)}
-              className="w-full p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-cyan-300 outline-none focus:border-cyan-400/50 resize-none"
+              className="w-full p-3 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-cyan-300 outline-none focus:border-cyan-400/50 resize-none"
             />
           </div>
 
@@ -286,7 +286,7 @@ export default function ImStuckModal() {
                 placeholder="e.g. docker-compose logs --tail=100 backend"
                 value={form.command_used}
                 onChange={(e) => handleChange('command_used', e.target.value)}
-                className="w-full p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-emerald-400 outline-none focus:border-emerald-400/50 resize-none"
+                className="w-full p-3 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-emerald-400 outline-none focus:border-emerald-400/50 resize-none"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -299,7 +299,7 @@ export default function ImStuckModal() {
                 placeholder="Paste raw stack trace or log output here..."
                 value={form.output_logs}
                 onChange={(e) => handleChange('output_logs', e.target.value)}
-                className="w-full p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-red-300 outline-none focus:border-red-400/50 resize-none"
+                className="w-full p-3 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-red-300 outline-none focus:border-red-400/50 resize-none"
               />
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function ImStuckModal() {
                 placeholder="The actual underlying bug once identified..."
                 value={form.root_cause}
                 onChange={(e) => handleChange('root_cause', e.target.value)}
-                className="w-full p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-[color:var(--text-main)] outline-none resize-none"
+                className="w-full p-3 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-[color:var(--text-main)] outline-none resize-none"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -327,7 +327,7 @@ export default function ImStuckModal() {
                 placeholder="What fixed it permanently, and what lesson will prevent it?"
                 value={form.solution}
                 onChange={(e) => handleChange('solution', e.target.value)}
-                className="w-full p-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-emerald-300 outline-none resize-none"
+                className="w-full p-3 rounded-none sm:rounded-3xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs font-mono text-emerald-300 outline-none resize-none"
               />
             </div>
           </div>
@@ -337,14 +337,14 @@ export default function ImStuckModal() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold text-[color:var(--text-muted)] hover:text-white bg-[var(--bg-input)] cursor-pointer"
+              className="px-5 py-2.5 rounded-none sm:rounded-3xl text-xs font-bold text-[color:var(--text-muted)] hover:text-white bg-[var(--bg-input)] cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-slate-950 bg-orange-400 hover:bg-orange-300 shadow-[0_0_15px_rgba(251,146,60,0.4)] flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+              className="px-6 py-2.5 rounded-none sm:rounded-3xl text-xs font-black uppercase tracking-wider text-slate-950 bg-orange-400 hover:bg-orange-300 shadow-[0_0_15px_rgba(251,146,60,0.4)] flex items-center gap-2 cursor-pointer transition-all active:scale-95"
             >
               <Wrench size={13} />
               <span>{saving ? "Recording..." : "Save to Debug Lab"}</span>

@@ -62,11 +62,11 @@ export default function DeleteProjectModal({ isOpen, onClose, project, onDeleted
   const modalContent = (
     <div 
       onClick={onClose}
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-0 sm:p-6 bg-black/70 backdrop-blur-md animate-in fade-in duration-200 select-none"
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-md rounded-3xl bg-[var(--bg-card)] border border-red-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(239,68,68,0.2)] p-6 sm:p-8 flex flex-col gap-6 text-[color:var(--text-main)] select-text relative transition-transform ${
+        className={`w-full max-w-md h-full sm:h-auto max-h-screen sm:max-h-[90vh] rounded-none sm:rounded-3xl bg-[var(--bg-card)] border border-red-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(239,68,68,0.2)] p-6 sm:p-8 flex flex-col gap-6 text-[color:var(--text-main)] select-text relative transition-transform ${
           shake ? 'animate-bounce' : ''
         }`}
       >
@@ -76,12 +76,12 @@ export default function DeleteProjectModal({ isOpen, onClose, project, onDeleted
             <button
               onClick={onClose}
               disabled={isDeleting}
-              className="p-1.5 rounded-xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
+              className="p-1.5 rounded-none sm:rounded-3xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
               title="Back"
             >
               <ArrowLeft size={18} />
             </button>
-            <div className="p-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30">
+            <div className="p-2 rounded-none sm:rounded-3xl bg-red-500/10 text-red-400 border border-red-500/30">
               <ShieldAlert size={22} />
             </div>
             <div>
@@ -92,7 +92,7 @@ export default function DeleteProjectModal({ isOpen, onClose, project, onDeleted
           <button 
             onClick={onClose}
             disabled={isDeleting}
-            className="p-1.5 rounded-xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
+            className="p-1.5 rounded-none sm:rounded-3xl hover:bg-[var(--bg-input)] text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
           >
             <X size={18} />
           </button>
@@ -103,7 +103,7 @@ export default function DeleteProjectModal({ isOpen, onClose, project, onDeleted
           <p className="text-sm text-[color:var(--text-muted)] leading-relaxed">
             You are about to permanently delete the project:
           </p>
-          <div className="p-3.5 rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-center justify-between">
+          <div className="p-3.5 rounded-none sm:rounded-3xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-center justify-between">
             <span className="font-bold text-sm text-[color:var(--text-main)] truncate">{project.title}</span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 font-bold uppercase">
               Permanent
@@ -127,7 +127,7 @@ export default function DeleteProjectModal({ isOpen, onClose, project, onDeleted
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter 'admin' to confirm"
-              className="w-full bg-[var(--bg-input)] border border-red-500/30 focus:border-red-400 text-[color:var(--text-main)] font-semibold text-sm rounded-2xl py-3 px-4 focus:outline-none transition-all shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]"
+              className="w-full bg-[var(--bg-input)] border border-red-500/30 focus:border-red-400 text-[color:var(--text-main)] font-semibold text-sm rounded-none sm:rounded-3xl py-3 px-4 focus:outline-none transition-all shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)]"
             />
             <span className="text-[10px] text-[color:var(--text-muted)] pl-1">
               Default system password: <span className="font-mono text-cyan-400">admin</span>
@@ -135,7 +135,7 @@ export default function DeleteProjectModal({ isOpen, onClose, project, onDeleted
           </div>
 
           {error && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold flex items-center gap-2">
+            <div className="p-3 rounded-none sm:rounded-3xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold flex items-center gap-2">
               <ShieldAlert size={15} className="shrink-0" />
               <span>{error}</span>
             </div>
@@ -147,14 +147,14 @@ export default function DeleteProjectModal({ isOpen, onClose, project, onDeleted
               type="button"
               onClick={onClose}
               disabled={isDeleting}
-              className="px-5 py-2.5 rounded-xl font-bold text-xs text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
+              className="px-5 py-2.5 rounded-none sm:rounded-3xl font-bold text-xs text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isDeleting || !password}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-none sm:rounded-3xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all active:scale-95 disabled:opacity-50"
             >
               <Trash2 size={14} />
               <span>{isDeleting ? "Deleting..." : "Confirm Deletion"}</span>
