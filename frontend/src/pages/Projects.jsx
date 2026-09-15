@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Briefcase, 
   Terminal, 
@@ -14,7 +15,7 @@ import {
   Check,
   ChevronDown
 } from 'lucide-react';
-import { getDebugJournals, createDebugJournal, getDebugHypothesis } from '../services/api';
+import { getDebugJournals, createDebugJournal, getDebugHypothesis, getStudySpaces } from '../services/api';
 
 const LIFECYCLE_STAGES = ['Idea', 'Architecture', 'In Progress', 'Code Complete', 'Deployed'];
 
@@ -71,10 +72,12 @@ const initialProjects = [
 
 export default function Projects() {
   const [activeTab, setActiveTab] = useState('projects');
-  const [projects, setProjects] = useState(initialProjects);
+  const navigate = useNavigate();
+  const [projects, setProjects] = useState([]);
   const [stageFilter, setStageFilter] = useState('All');
   const [debugJournals, setDebugJournals] = useState([]);
   const [loadingJournals, setLoadingJournals] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingHypo, setLoadingHypo] = useState(false);
   const [savingJournal, setSavingJournal] = useState(false);
 
@@ -91,23 +94,48 @@ export default function Projects() {
     project_id: ''
   });
 
-  const fetchJournals = async () => {
+  const fetchJournalsAndProjects = async () => {
     setLoadingJournals(true);
+    setLoadingProjects(true);
     try {
-      const data = await getDebugJournals();
-      setDebugJournals(data || []);
+      const [jData, pData] = await Promise.all([
+        getDebugJournals().catch(() => []),
+        getStudySpaces().catch(() => [])
+      ]);
+      setDebugJournals(jData || []);
+      
+      if (pData && pData.length > 0) {
+        // Map backend StudySpace fields to UI fields used in Projects.jsx
+        setProjects(pData.map(p => ({
+          ...p,
+          name: p.title,
+          description: p.description,
+          stage: p.progress >= 100 ? 'Deployed' : (p.progress > 0 ? 'In Progress' : 'Idea'),
+          progress: p.progress || 0,
+          tags: [p.category || 'Engineering', 'React Flow', 'FastAPI'],
+          slug: p.slug
+        })));
+      } else {
+        setProjects([]);
+      }
     } catch (e) {
-      console.warn("Failed to load debug journals:", e);
+      console.warn("Failed to load debug journals or projects:", e);
+      setProjects([]);
     } finally {
       setLoadingJournals(false);
+      setLoadingProjects(false);
     }
   };
 
   useEffect(() => {
-    fetchJournals();
-    const handleRefresh = () => fetchJournals();
+    fetchJournalsAndProjects();
+    const handleRefresh = () => fetchJournalsAndProjects();
     window.addEventListener('studyos-debug-journal-added', handleRefresh);
-    return () => window.removeEventListener('studyos-debug-journal-added', handleRefresh);
+    window.addEventListener('studyos-space-changed', handleRefresh);
+    return () => {
+      window.removeEventListener('studyos-debug-journal-added', handleRefresh);
+      window.removeEventListener('studyos-space-changed', handleRefresh);
+    };
   }, []);
 
   const handleAutoHypo = async () => {
@@ -233,8 +261,19 @@ export default function Projects() {
 
       {activeTab === 'projects' ? (
         <div className="flex flex-col gap-8 max-w-6xl mx-auto w-full">
+          {filteredProjects.length === 0 && (
+            <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-[var(--border-color)] rounded-[32px] bg-[var(--bg-card)]">
+              <Briefcase size={48} className="text-[color:var(--text-muted)] mb-4 opacity-50" />
+              <h3 className="text-xl font-bold text-[color:var(--text-main)] mb-2">No projects found</h3>
+              <p className="text-[color:var(--text-muted)]">Create a new StudySpace from the Dashboard to see it here.</p>
+            </div>
+          )}
           {filteredProjects.map(project => (
-            <div key={project.id} className="p-6 md:p-8 rounded-[32px] overflow-hidden bg-[var(--bg-card)] shadow-[var(--card-shadow)] border border-[var(--border-color)] flex flex-col gap-6">
+            <div 
+              key={project.id} 
+              onClick={() => project.slug ? navigate(`/os/dashboard/${project.slug}`) : null}
+              className="p-6 md:p-8 rounded-[32px] overflow-hidden bg-[var(--bg-card)] shadow-[var(--card-shadow)] border border-[var(--border-color)] flex flex-col gap-6 cursor-pointer hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all duration-300"
+            >
               
               {/* Project Header */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

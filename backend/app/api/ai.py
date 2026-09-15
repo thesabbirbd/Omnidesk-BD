@@ -4,12 +4,7 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.api.deps import get_current_user, get_optional_current_user
 from app.models.user import User
-from app.services.ai_provider import (
-    get_ai_provider,
-    generate_verification_quiz,
-    chat_assistant,
-    GeminiProvider
-)
+from app.services.ai_provider import get_ai_provider
 from app.api.study_spaces import generate_study_space_preview
 from app.schemas.studyspace import StudySpacePreviewResponse
 
@@ -53,7 +48,7 @@ def chat_with_assistant(
     if mode not in {"explain", "hint", "debug"}:
         mode = "explain"
 
-    return chat_assistant(
+    return get_ai_provider().chat_assistant(
         message=payload.message.strip(),
         mode=mode,
         context_topic=payload.context_topic.strip() if payload.context_topic else None,

@@ -471,7 +471,7 @@ def approve_and_persist_study_space(
         category=payload.category,
         is_active=True,
         interface_language=payload.interface_language,
-        learning_language=payload.learning_language,
+        learning_output_language=payload.learning_language,
         source_language=payload.source_language
     )
     db.add(space)
@@ -487,7 +487,7 @@ def approve_and_persist_study_space(
         pos_x = 100.0 + (col * 320.0)
         pos_y = 100.0 + (row * 240.0)
 
-        topic_st = GenerationType.SOURCE_EXTRACTED if t_in.generation_type == "SOURCE_EXTRACTED" else st_enum
+        topic_st = GenerationType.SOURCE_EXTRACTED if getattr(t_in, "source_type", getattr(t_in, "generation_type", "AI_INFERRED")) == "SOURCE_EXTRACTED" else st_enum
 
         topic = Topic(
             user_id=current_user.id,
@@ -496,7 +496,7 @@ def approve_and_persist_study_space(
             description=t_in.description,
             generation_type=topic_st,
             source_reference=t_in.source_reference,
-            source_material_id=payload.material_id,
+            source_id=payload.material_id,
             confidence_score=t_in.confidence_score,
             status="NORMAL",
             progress=0,
@@ -603,7 +603,7 @@ def approve_and_persist_study_space(
         created_at=space.created_at,
         updated_at=space.updated_at,
         interface_language=space.interface_language or "en",
-        learning_language=space.learning_language or "en",
+        learning_language=space.learning_output_language or "en",
         source_language=space.source_language or "en",
         topic_count=len(payload.topics),
         completed_topic_count=0,
@@ -651,7 +651,7 @@ def list_study_spaces(
                 created_at=s.created_at,
                 updated_at=s.updated_at,
                 interface_language=s.interface_language or "en",
-                learning_language=s.learning_language or "en",
+                learning_language=s.learning_output_language or "en",
                 source_language=s.source_language or "en",
                 topic_count=t_count,
                 completed_topic_count=completed_count,
@@ -677,7 +677,7 @@ def create_manual_study_space(
         category=space_in.category,
         is_active=True,
         interface_language=space_in.interface_language,
-        learning_language=space_in.learning_language,
+        learning_output_language=space_in.learning_language,
         source_language=space_in.source_language
     )
     db.add(space)
@@ -803,7 +803,7 @@ def get_study_space(
         created_at=space.created_at,
         updated_at=space.updated_at,
         interface_language=space.interface_language or "en",
-        learning_language=space.learning_language or "en",
+        learning_language=space.learning_output_language or "en",
         source_language=space.source_language or "en",
         topic_count=t_count,
         completed_topic_count=completed_count,

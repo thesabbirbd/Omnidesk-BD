@@ -3,12 +3,12 @@ import json
 import re
 import logging
 from pathlib import Path
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
-from dotenv import load_dotenv
-from fastapi import HTTPException, status
+from typing import Dict, Any, Optional
 
-# Explicitly ensure backend/.env is loaded
+from dotenv import load_dotenv
+from fastapi import HTTPException
+
+# Load environment variables from backend/.env
 _env_path = Path(__file__).resolve().parent.parent.parent / ".env"
 if _env_path.exists():
     load_dotenv(dotenv_path=_env_path)
@@ -17,846 +17,125 @@ else:
 
 logger = logging.getLogger("studyos.ai")
 
+# Import the new abstract base and providers
+from .ai.base import AIProvider
+from .ai.provider_impl.gemini_provider import GeminiProvider
+from .ai.provider_impl.ollama_provider import OllamaProvider
+from .ai.budget import gemini_budgeter
 
-class AIProvider(ABC):
-    """
-    Abstract AI Provider interface ensuring StudyOS works 100% offline
-    without any external paid API dependency.
-    """
+# Prompt modules
+from .ai.prompts.studyspace_generate import get_curriculum_prompt
+from .ai.prompts.quiz_generate import get_quiz_prompt
+from .ai.prompts.chat_modes import get_chat_prompt, get_system_instruction
 
-    @abstractmethod
+class AIService:
+    """Facade that selects the appropriate AI provider and handles fallback & budgeting."""
+
+    def __init__(self):
+        self.gemini = GeminiProvider()
+        self.ollama = OllamaProvider()
+        self.current_provider: AIProvider = self.gemini if self.gemini.is_available() else self.ollama
+
+    def _record_and_check_budget(self):
+        if not gemini_budgeter.can_make_request():
+            raise HTTPException(status_code=429, detail="AI request quota exceeded (15 RPM limit).")
+        gemini_budgeter.record_request()
+
+    def _fallback_to_ollama(self, exc: Exception):
+        logger.warning(f"Gemini provider failed ({exc}); falling back to Ollama.")
+        self.current_provider = self.ollama
+        return self.current_provider
+
+    # ---- Provider method proxies ----
     def generate_completion(self, prompt: str) -> str:
-        """Generate general text completion."""
-        pass
-
-    @abstractmethod
-    def analyze_weakness(self, topic_title: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze learning difficulties and prescribe actionable study advice."""
-        pass
-
-    @abstractmethod
-    def suggest_debug_hypothesis(
-        self, problem: str, symptom: Optional[str] = None, logs: Optional[str] = None
-    ) -> Dict[str, str]:
-        """Suggest root causes and hypotheses for a debugging scenario."""
-        pass
-
-    @abstractmethod
-    def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
-        """Extract structured curriculum JSON (topics, subtopics, prerequisites, estimated minutes)."""
-        pass
-
-    @abstractmethod
-    def generate_study_topics(
-        self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Generate structured curriculum roadmap from raw text or raw topic name."""
-        pass
-
-    @abstractmethod
-    def chat_assistant(
-        self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Pedagogical interactive assistant adhering to modes: explain, hint, or debug."""
-        pass
-
-    @abstractmethod
-    def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
-        """Generate a 4-option conceptual verification quiz in JSON format."""
-        pass
-
-
-class LocalOfflineAIProvider(AIProvider):
-    """
-    100% Offline AI Provider using deterministic rule engines, heuristic reasoning,
-    and structured synthesis. Zero network calls, zero billing.
-    """
-
-    def generate_completion(self, prompt: str) -> str:
-        lower_prompt = prompt.lower()
-        if "sql" in lower_prompt or "postgres" in lower_prompt or "query" in lower_prompt:
-            return (
-                "Offline Engineering Heuristic: Optimize query execution plans by checking missing indexes, "
-                "avoiding N+1 relationships with eager loads, and evaluating `EXPLAIN (ANALYZE, BUFFERS)`."
-            )
-        if "docker" in lower_prompt or "container" in lower_prompt:
-            return (
-                "Offline Engineering Heuristic: Utilize multi-stage builds to minimize image sizes, "
-                "order Dockerfile directives from least to most frequently modified for optimal layer caching, "
-                "and ensure a non-root user execution."
-            )
-        if "fastapi" in lower_prompt or "python" in lower_prompt:
-            return (
-                "Offline Engineering Heuristic: Use dependency injection (`Depends`) for session and auth scoping, "
-                "pydantic schemas for serialization boundaries, and async engines for I/O bound operations."
-            )
-        return (
-            "Omnidesk BD Offline Advisor: Break this engineering challenge down into: "
-            "1) Core invariant, 2) Isolated reproduction test, 3) Verified fix."
-        )
-
-    def analyze_weakness(self, topic_title: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        quiz_score = metrics.get("quiz_score_pct", 100)
-        time_spent = metrics.get("study_minutes", 0)
-        estimated_minutes = metrics.get("estimated_minutes", 60)
-        unverified_competencies = metrics.get("unverified_competencies", [])
-
-        reasons = []
-        recommendations = []
-
-        if quiz_score < 70:
-            reasons.append(f"Recent quiz score of {quiz_score}% indicates conceptual gaps.")
-            recommendations.append(f"Re-review foundational concepts and architecture notes for '{topic_title}'.")
-        
-        if time_spent > estimated_minutes * 1.5:
-            reasons.append(
-                f"Logged {time_spent}m study time exceeds estimated budget ({estimated_minutes}m)."
-            )
-            recommendations.append(
-                "Convert passive reading into active coding drills or debug lab exercises."
-            )
-
-        if unverified_competencies:
-            items_str = ", ".join(unverified_competencies[:3])
-            reasons.append(f"Pending hands-on competency verifications: {items_str}.")
-            recommendations.append(f"Implement and verify: {items_str} to solidify mastery.")
-
-        if not recommendations:
-            recommendations.append(
-                f"Perform spaced repetition review of '{topic_title}' and attempt building a micro-project."
-            )
-
-        severity = "HIGH" if quiz_score < 60 or time_spent > estimated_minutes * 2 else "MEDIUM"
-
-        return {
-            "topic": topic_title,
-            "severity": severity,
-            "identified_reasons": reasons,
-            "actionable_recommendations": recommendations,
-            "mode": "LOCAL_OFFLINE"
-        }
-
-    def suggest_debug_hypothesis(
-        self, problem: str, symptom: Optional[str] = None, logs: Optional[str] = None
-    ) -> Dict[str, str]:
-        combined = f"{problem} {symptom or ''} {logs or ''}".lower()
-
-        if "connection refused" in combined or "port" in combined or "econnrefused" in combined:
-            return {
-                "hypothesis": "The target service is either not running, listening on localhost inside a container rather than 0.0.0.0, or blocked by a firewall/security group.",
-                "investigation_command": "netstat -tulnp | grep <port>  # or: docker ps",
-                "recommended_fix": "Verify that the service is running, binding to 0.0.0.0, and that container port mappings match host expectations."
-            }
-        if "401" in combined or "unauthorized" in combined or "token" in combined:
-            return {
-                "hypothesis": "JWT token has expired, bearer authorization header is missing, or signature validation failed due to secret mismatch.",
-                "investigation_command": "curl -v -H 'Authorization: Bearer <TOKEN>' http://localhost:8000/api/users/profile",
-                "recommended_fix": "Inspect the token payload expiration (`exp`), verify `SECRET_KEY` alignment between services, and use refresh tokens."
-            }
-        if "foreignkey" in combined or "integrityerror" in combined or "constraint" in combined:
-            return {
-                "hypothesis": "Database relational constraint violation: inserting a record referencing a non-existent parent ID, or violating a unique constraint.",
-                "investigation_command": "SELECT id FROM <parent_table> WHERE id = '<foreign_key_val>';",
-                "recommended_fix": "Ensure the referenced parent record is created and committed before inserting child records, and check CASCADE rules."
-            }
-        if "nullpointer" in combined or "nonetype" in combined or "undefined" in combined:
-            return {
-                "hypothesis": "An unhandled null/undefined value was accessed before initialization or after an optional lookup returned nothing.",
-                "investigation_command": "python -m pdb -c continue <script.py>",
-                "recommended_fix": "Add optional chaining / guard clauses and validate schema inputs at boundary entrypoints."
-            }
-
-        return {
-            "hypothesis": "The issue likely stems from state divergence between runtime environment and expected configuration.",
-            "investigation_command": "env | grep -i <KEY>  # Check environment flags and service logs",
-            "recommended_fix": "Add structured debug logging at the boundaries of the failing function and verify config variables."
-        }
+        self._record_and_check_budget()
+        try:
+            return self.current_provider.generate_completion(prompt)
+        except HTTPException as e:
+            if e.status_code == 429:
+                provider = self._fallback_to_ollama(e)
+                return provider.generate_completion(prompt)
+            raise
 
     def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
-        from app.services.course_generator import course_generator
-        parsed_topics = course_generator.parse_topics_from_text(text)
-        course_title = title or "Autonomous Engineering Curriculum"
-        
-        topics_list = []
-        for idx, t in enumerate(parsed_topics):
-            prereqs = [parsed_topics[idx - 1]["title"]] if idx > 0 else []
-            topics_list.append({
-                "title": t["title"],
-                "description": t.get("description", f"Deep dive into {t['title']}."),
-                "subtopics": [f"{t['title']} Core Architecture", f"{t['title']} Practical Scenarios", f"{t['title']} Verification Drills"],
-                "dependencies": prereqs,
-                "prerequisites": prereqs,
-                "estimated_minutes": 60,
-                "difficulty": "INTERMEDIATE",
-                "source_reference": f"Section {idx + 1}"
-            })
-            
-        return {
-            "title": course_title,
-            "category": "Backend / DevOps",
-            "summary": f"Structured offline roadmap covering {len(topics_list)} core competency topics.",
-            "topics": topics_list,
-            "provider_used": "offline_heuristic"
-        }
-
-    def generate_study_topics(
-        self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
-    ) -> Dict[str, Any]:
-        effective_title = title or (input_text.strip() if is_topic_name else "Curriculum Track")
-        if is_topic_name:
-            goal_clean = input_text.strip()
-            topics_list = [
-                {
-                    "title": f"{goal_clean}: Foundations & Core Concepts",
-                    "description": f"Master fundamental principles, syntax, and foundational mental models of {goal_clean}.",
-                    "subtopics": [f"{goal_clean} Basics", f"{goal_clean} Core Primitives", f"{goal_clean} Tooling & Environment"],
-                    "dependencies": [],
-                    "prerequisites": [],
-                    "estimated_minutes": 60,
-                    "difficulty": "BEGINNER",
-                    "source_reference": f"Directive: {goal_clean}"
-                },
-                {
-                    "title": f"{goal_clean}: Intermediate Architecture & Patterns",
-                    "description": f"Design resilient structures, modular abstractions, and standard workflows in {goal_clean}.",
-                    "subtopics": [f"{goal_clean} Best Practices", f"{goal_clean} Common Design Patterns", f"{goal_clean} Error Handling"],
-                    "dependencies": [f"{goal_clean}: Foundations & Core Concepts"],
-                    "prerequisites": [f"{goal_clean}: Foundations & Core Concepts"],
-                    "estimated_minutes": 75,
-                    "difficulty": "INTERMEDIATE",
-                    "source_reference": f"Directive: {goal_clean}"
-                },
-                {
-                    "title": f"{goal_clean}: Advanced Systems & Optimization",
-                    "description": f"Deep dive into high-performance tuning, scalability, and internal mechanisms of {goal_clean}.",
-                    "subtopics": [f"{goal_clean} Internals", f"{goal_clean} Performance Profiling", f"{goal_clean} Production Hardening"],
-                    "dependencies": [f"{goal_clean}: Intermediate Architecture & Patterns"],
-                    "prerequisites": [f"{goal_clean}: Intermediate Architecture & Patterns"],
-                    "estimated_minutes": 90,
-                    "difficulty": "ADVANCED",
-                    "source_reference": f"Directive: {goal_clean}"
-                },
-                {
-                    "title": f"{goal_clean}: Real-World Capstone & Debug Lab",
-                    "description": f"Synthesize end-to-end knowledge through hands-on laboratory exercises and failure analysis in {goal_clean}.",
-                    "subtopics": [f"{goal_clean} Capstone Project", f"{goal_clean} Incident Debugging", f"{goal_clean} Production Readiness Review"],
-                    "dependencies": [f"{goal_clean}: Advanced Systems & Optimization"],
-                    "prerequisites": [f"{goal_clean}: Advanced Systems & Optimization"],
-                    "estimated_minutes": 90,
-                    "difficulty": "ADVANCED",
-                    "source_reference": f"Directive: {goal_clean}"
-                }
-            ]
-            return {
-                "title": effective_title,
-                "category": "Technology & Engineering",
-                "summary": f"Comprehensive roadmap generated for topic goal '{goal_clean}' ({len(topics_list)} progressive modules).",
-                "topics": topics_list,
-                "provider_used": "offline_heuristic"
-            }
-        return self.extract_curriculum(input_text, title=effective_title)
-
-    def chat_assistant(
-        self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None
-    ) -> Dict[str, Any]:
-        mode_lower = (mode or "explain").lower()
-        ctx_str = f" for '{context_topic}'" if context_topic else ""
-
-        if mode_lower == "hint":
-            reply = (
-                f"💡 Guiding Hint{ctx_str}:\n"
-                f"Consider what fundamental invariant is being challenged here. "
-                f"Instead of jumping to the final syntax, ask yourself: "
-                f"How does data flow across this boundary, and what state changes occur? "
-                f"Try isolating the single step where expectations diverge from actual runtime behavior."
-            )
-        elif mode_lower == "debug":
-            diag = self.suggest_debug_hypothesis(message, symptom=context_topic)
-            reply = (
-                f"🛠️ Debug Lab Analysis{ctx_str}:\n\n"
-                f"• Root Cause Hypothesis: {diag['hypothesis']}\n\n"
-                f"• Diagnostic Action: `{diag['investigation_command']}`\n\n"
-                f"• Recommended Fix: {diag['recommended_fix']}"
-            )
-        else:
-            reply = (
-                f"🧠 Feynman Concept Breakdown{ctx_str}:\n\n"
-                f"Let's explain '{context_topic or message}' using simple, intuitive intuition:\n\n"
-                f"1. Core Intuition: Think of this system like a highway interchange where traffic must merge smoothly based on priority signals rather than brute-forcing intersections.\n"
-                f"2. Decoupled Role: Each component focuses strictly on its single invariant, minimizing cascading blast radiuses.\n"
-                f"3. Practical Takeaway: Build around invariants first; the implementation details naturally align once the boundary is clear."
-            )
-
-        return {
-            "reply": reply,
-            "mode": mode_lower,
-            "context_topic": context_topic,
-            "provider": "offline_heuristic"
-        }
-
-    def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
-        return {
-            "question": f"In {subtopic_name}, which architectural strategy best prevents latency degradation and thread exhaustion under high concurrency?",
-            "options": [
-                f"Implement asynchronous non-blocking I/O with connection pooling and caching for {subtopic_name}",
-                f"Apply global synchronous locks across all {subtopic_name} mutations",
-                "Disable all connection retries and let queries crash immediately",
-                "Allocate unbounded thread pools without resource limits"
-            ],
-            "correct_answer_index": 0,
-            "explanation": f"High-throughput systems handling {subtopic_name} rely on asynchronous non-blocking I/O and connection pooling to prevent thread exhaustion.",
-            "subtopic": subtopic_name,
-            "provider": "offline_heuristic"
-        }
-
-
-class GeminiProvider(AIProvider):
-    """
-    Google Gemini AI Provider utilizing the official `google-generativeai` SDK.
-    Targets the 100% Free Tier of Google AI Studio (zero GCP/Vertex billing required).
-    Uses gemini-3.6-flash (active free tier model) with fallback to gemini-flash-latest.
-    """
-
-    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        raw_model = model_name or os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-        if "1.5" in raw_model or "2.5" in raw_model:
-            raw_model = "gemini-3.6-flash"
-        self.model_name = raw_model
-        self.candidate_models = [self.model_name, "gemini-flash-latest", "gemini-3.5-flash"]
-        self._offline_fallback = LocalOfflineAIProvider()
-        self._ollama_fallback = OllamaAIProvider()
-
-        if self.api_key and self.api_key.strip():
-            try:
-                import google.generativeai as genai
-                genai.configure(api_key=self.api_key.strip())
-            except Exception as e:
-                logger.error("Failed to configure Gemini SDK: %s", e)
-
-    def is_available(self) -> bool:
-        return bool(self.api_key and self.api_key.strip())
-
-    def _get_model(self, model_name: str, is_json: bool = False):
-        import google.generativeai as genai
-        if is_json:
-            return genai.GenerativeModel(
-                model_name=model_name,
-                generation_config={"response_mime_type": "application/json", "temperature": 0.2}
-            )
-        return genai.GenerativeModel(model_name=model_name)
-
-    def generate_study_topics(
-        self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Generate study topics using Gemini 3.6 Flash Free Tier.
-        """
-        if not self.api_key or not self.api_key.strip():
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="API Key missing or Invalid in .env"
-            )
-
-        if is_topic_name:
-            effective_input = f"Create a comprehensive study roadmap for the following topic/goal: {input_text.strip()}"
-            effective_title = title or input_text.strip()
-        else:
-            effective_input = input_text[:10000]
-            effective_title = title or "Curriculum Track"
-
-        prompt = (
-            "You are a Principal Curriculum Architect and Staff Systems Engineer. "
-            f"{effective_input}\n\n"
-            "Analyze and synthesize an exhaustive, production-grade learning roadmap with strict DAG prerequisites, "
-            "actionable hands-on competency tasks, and verified documentation references.\n\n"
-            "You MUST return a JSON object with this exact structure:\n"
-            "{\n"
-            f'  "title": "{effective_title}",\n'
-            '  "category": "Technology & Engineering",\n'
-            '  "summary": "Concise executive overview of the roadmap",\n'
-            '  "topics": [\n'
-            "    {\n"
-            '      "title": "Topic Name",\n'
-            '      "description": "Detailed description of competencies learned and production context",\n'
-            '      "subtopics": ["Subtopic 1: Concrete hands-on checkpoint", "Subtopic 2: Concrete implementation task"],\n'
-            '      "prerequisites": ["Prerequisite Topic Title, or empty if root topic"],\n'
-            '      "dependencies": ["Prerequisite Topic Title, or empty if root topic"],\n'
-            '      "estimated_minutes": 60,\n'
-            '      "difficulty": "BEGINNER" | "INTERMEDIATE" | "ADVANCED",\n'
-            '      "source_reference": "Official Docs / Standards Reference / RFC"\n'
-            "    }\n"
-            "  ]\n"
-            "}\n"
-            "Output ONLY valid, parseable JSON."
-        )
-
-        last_err = None
-        for candidate in self.candidate_models:
-            try:
-                model = self._get_model(candidate, is_json=True)
-                response = model.generate_content(prompt)
-                raw_text = response.text or ""
-                cleaned = raw_text.strip()
-                if cleaned.startswith("```"):
-                    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-                    cleaned = re.sub(r"\s*```$", "", cleaned)
-                data = json.loads(cleaned)
-                data["provider_used"] = candidate
-                return data
-            except Exception as err:
-                err_str = str(err).lower()
-                last_err = err
-                if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
-                    raise HTTPException(
-                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly."
-                    )
-                if any(k in err_str for k in ["api key", "api_key", "invalid_argument", "unauthorized", "permission_denied", "403", "400"]):
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="API Key missing or Invalid in .env"
-                    )
-                logger.warning("Gemini model %s error: %s. Trying fallback model...", candidate, err)
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"API Key missing or Invalid in .env ({str(last_err)})"
-        )
-
-    def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
-        """Backwards compatible wrapper around generate_study_topics."""
-        return self.generate_study_topics(text, is_topic_name=False, title=title)
-
-    def chat_assistant(
-        self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Interactive AI Assistant adhering strictly to teaching modes:
-        - explain: Feynman technique breakdown
-        - hint: Socratic guiding clues (AI IS NOT A KEYBOARD - never dumps full solutions)
-        - debug: Root-cause diagnosis for Engineering Lab
-        """
-        if not self.api_key or not self.api_key.strip():
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="API Key missing or Invalid in .env"
-            )
-
-        mode_lower = (mode or "explain").lower()
-
-        if mode_lower == "hint":
-            system_instruction = (
-                "You are an inspiring Socratic AI mentor for Omnidesk BD. "
-                "CRITICAL RULE: AI IS NOT A KEYBOARD. DO NOT give the direct answer or dump full code solutions. "
-                "Prioritize teaching, giving targeted hints, and guiding the learner with thought-provoking questions "
-                "so they arrive at the solution themselves."
-            )
-        elif mode_lower == "debug":
-            system_instruction = (
-                "You are a Senior Site Reliability & Debugging Specialist in the Omnidesk BD Engineering Lab. "
-                "Analyze errors, stack traces, and symptoms systematically. Identify the most probable root cause hypothesis, "
-                "suggest exact diagnostic commands, and outline the fix conceptually rather than blindly dumping copy-paste code."
-            )
-        else:
-            system_instruction = (
-                "You are an expert AI tutor for Omnidesk BD. Your teaching style is grounded in the Feynman technique: "
-                "break down complex concepts simply, use relatable real-world analogies, explain why things work under the hood, "
-                "and verify understanding with a quick conceptual check. Prioritize clarity over jargon."
-            )
-
-        topic_ctx = ""
-        if current_study_space:
-            topic_ctx += f"Active Study Space: {current_study_space}\n"
-        if context_topic:
-            topic_ctx += f"Specific Topic Context: {context_topic}\n"
-            
-        prompt = f"{system_instruction}\n\n{topic_ctx}Learner Message: {message}\n\nResponse:"
-
-        last_err = None
-        for candidate in self.candidate_models:
-            try:
-                model = self._get_model(candidate, is_json=False)
-                response = model.generate_content(prompt)
-                reply = (response.text or "").strip()
-                return {
-                    "reply": reply,
-                    "mode": mode_lower,
-                    "context_topic": context_topic,
-                    "provider": candidate
-                }
-            except Exception as err:
-                err_str = str(err).lower()
-                last_err = err
-                if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
-                    raise HTTPException(
-                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly."
-                    )
-                if any(k in err_str for k in ["api key", "api_key", "invalid_argument", "unauthorized", "permission_denied", "403", "400"]):
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="API Key missing or Invalid in .env"
-                    )
-                logger.warning("Gemini model %s error: %s. Trying fallback model...", candidate, err)
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"API Key missing or Invalid in .env ({str(last_err)})"
-        )
-
-    def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
-        """
-        Anti-Fake-Progress Quiz: Returns a 4-option conceptual JSON question using Gemini 3.6 Flash.
-        """
-        if not self.api_key or not self.api_key.strip():
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="API Key missing or Invalid in .env"
-            )
-
-        prompt = (
-            f"Generate a rigorous conceptual verification quiz question to verify genuine engineering understanding "
-            f"for the subtopic: '{subtopic_name}'.\n"
-            "Do NOT ask trivial syntax questions. Test deep architectural reasoning, failure modes, or edge cases.\n"
-            "Return a strictly valid JSON object with the following schema:\n"
-            "{\n"
-            '  "question": "The question text",\n'
-            '  "options": ["Option A", "Option B", "Option C", "Option D"],\n'
-            '  "correct_answer_index": 0,\n'
-            '  "explanation": "Why this answer is correct and why the alternatives are incorrect"\n'
-            "}\n"
-            "Return ONLY the raw JSON object."
-        )
-
-        last_err = None
-        for candidate in self.candidate_models:
-            try:
-                model = self._get_model(candidate, is_json=True)
-                response = model.generate_content(prompt)
-                raw_text = response.text or ""
-                cleaned = raw_text.strip()
-                if cleaned.startswith("```"):
-                    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-                    cleaned = re.sub(r"\s*```$", "", cleaned)
-                quiz_data = json.loads(cleaned)
-                quiz_data["subtopic"] = subtopic_name
-                quiz_data["provider"] = candidate
-                return quiz_data
-            except Exception as err:
-                err_str = str(err).lower()
-                last_err = err
-                if "resourceexhausted" in err_str or "429" in err_str or "quota" in err_str:
-                    raise HTTPException(
-                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail="Gemini Free Tier rate limit exceeded (15 RPM / 1500 RPD). Please try again shortly."
-                    )
-                if any(k in err_str for k in ["api key", "api_key", "invalid_argument", "unauthorized", "permission_denied", "403", "400"]):
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="API Key missing or Invalid in .env"
-                    )
-                logger.warning("Gemini model %s error: %s. Trying fallback model...", candidate, err)
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"API Key missing or Invalid in .env ({str(last_err)})"
-        )
-
-    def generate_completion(self, prompt: str) -> str:
-        if not self.is_available():
-            return self._offline_fallback.generate_completion(prompt)
+        self._record_and_check_budget()
         try:
-            response = self._model.generate_content(prompt)
-            return response.text or self._offline_fallback.generate_completion(prompt)
-        except Exception:
-            return self._offline_fallback.generate_completion(prompt)
+            return self.current_provider.extract_curriculum(text, title)
+        except HTTPException as e:
+            if e.status_code == 429:
+                return self._fallback_to_ollama(e).extract_curriculum(text, title)
+            raise
+
+    def generate_study_topics(self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None) -> Dict[str, Any]:
+        self._record_and_check_budget()
+        effective_input = input_text[:6000]
+        effective_title = title or "Curriculum Track"
+        prompt = get_curriculum_prompt(effective_input, effective_title)
+        try:
+            if hasattr(self.current_provider, "generate_with_prompt"):
+                return self.current_provider.generate_with_prompt(prompt)
+            return self.current_provider.generate_study_topics(input_text, is_topic_name, title)
+        except HTTPException as e:
+            if e.status_code == 429:
+                fallback = self._fallback_to_ollama(e)
+                if hasattr(fallback, "generate_with_prompt"):
+                    return fallback.generate_with_prompt(prompt)
+                return fallback.generate_study_topics(input_text, is_topic_name, title)
+            raise
+
+    def chat_assistant(self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None) -> Dict[str, Any]:
+        self._record_and_check_budget()
+        system_instruction = get_system_instruction(mode)
+        topic_ctx = f"Context Topic: {context_topic}\n" if context_topic else ""
+        prompt = get_chat_prompt(system_instruction, topic_ctx, message)
+        try:
+            if hasattr(self.current_provider, "chat_with_prompt"):
+                return self.current_provider.chat_with_prompt(prompt, mode)
+            return self.current_provider.chat_assistant(message, mode, context_topic, current_study_space)
+        except HTTPException as e:
+            if e.status_code == 429:
+                fallback = self._fallback_to_ollama(e)
+                if hasattr(fallback, "chat_with_prompt"):
+                    return fallback.chat_with_prompt(prompt, mode)
+                return fallback.chat_assistant(message, mode, context_topic, current_study_space)
+            raise
+
+    def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
+        self._record_and_check_budget()
+        prompt = get_quiz_prompt(subtopic_name)
+        try:
+            if hasattr(self.current_provider, "quiz_with_prompt"):
+                return self.current_provider.quiz_with_prompt(prompt)
+            return self.current_provider.generate_verification_quiz(subtopic_name)
+        except HTTPException as e:
+            if e.status_code == 429:
+                fallback = self._fallback_to_ollama(e)
+                if hasattr(fallback, "quiz_with_prompt"):
+                    return fallback.quiz_with_prompt(prompt)
+                return fallback.generate_verification_quiz(subtopic_name)
+            raise
 
     def analyze_weakness(self, topic_title: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        if not self.is_available():
-            return self._offline_fallback.analyze_weakness(topic_title, metrics)
+        self._record_and_check_budget()
         try:
-            prompt = (
-                f"Analyze this engineering learning weakness for topic '{topic_title}':\n"
-                f"Metrics: {metrics}\n"
-                "Return a JSON object with keys: identified_reasons (list of strings), actionable_recommendations (list of strings)."
-            )
-            response = self._model.generate_content(prompt)
-            raw = response.text or ""
-            cleaned = raw.strip()
-            if cleaned.startswith("```"):
-                cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-                cleaned = re.sub(r"\s*```$", "", cleaned)
-            data = json.loads(cleaned)
-            return {
-                "topic": topic_title,
-                "severity": "HIGH" if metrics.get("quiz_score_pct", 100) < 70 else "MEDIUM",
-                "identified_reasons": data.get("identified_reasons", [raw[:200]]),
-                "actionable_recommendations": data.get("actionable_recommendations", [
-                    f"Drill {topic_title} fundamentals",
-                    "Complete practical debug labs"
-                ]),
-                "mode": "GEMINI_ONLINE"
-            }
-        except Exception:
-            return self._offline_fallback.analyze_weakness(topic_title, metrics)
+            return self.current_provider.analyze_weakness(topic_title, metrics)
+        except HTTPException as e:
+            if e.status_code == 429:
+                return self._fallback_to_ollama(e).analyze_weakness(topic_title, metrics)
+            raise
 
-    def suggest_debug_hypothesis(
-        self, problem: str, symptom: Optional[str] = None, logs: Optional[str] = None
-    ) -> Dict[str, str]:
-        if not self.is_available():
-            return self._offline_fallback.suggest_debug_hypothesis(problem, symptom, logs)
+    def suggest_debug_hypothesis(self, problem: str, symptom: Optional[str] = None, logs: Optional[str] = None) -> Dict[str, str]:
+        self._record_and_check_budget()
         try:
-            prompt = (
-                f"Software Debug Scenario:\nProblem: {problem}\nSymptom: {symptom}\nLogs: {logs}\n"
-                "Return a JSON object with keys: hypothesis, investigation_command, recommended_fix."
-            )
-            response = self._model.generate_content(prompt)
-            raw = response.text or ""
-            cleaned = raw.strip()
-            if cleaned.startswith("```"):
-                cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
-                cleaned = re.sub(r"\s*```$", "", cleaned)
-            data = json.loads(cleaned)
-            return {
-                "hypothesis": data.get("hypothesis", "Unidentified failure mode."),
-                "investigation_command": data.get("investigation_command", "Check system logs"),
-                "recommended_fix": data.get("recommended_fix", "Apply systematic diagnostic patch.")
-            }
-        except Exception:
-            return self._offline_fallback.suggest_debug_hypothesis(problem, symptom, logs)
+            return self.current_provider.suggest_debug_hypothesis(problem, symptom, logs)
+        except HTTPException as e:
+            if e.status_code == 429:
+                return self._fallback_to_ollama(e).suggest_debug_hypothesis(problem, symptom, logs)
+            raise
 
-
-# Backwards compatibility alias
-GeminiAIProvider = GeminiProvider
-
-
-class OllamaAIProvider(AIProvider):
-    """
-    Local Offline LLM Provider connecting to local Ollama runtime
-    (e.g., llama3, mistral, deepseek-coder) via REST API on http://127.0.0.1:11434.
-    Ensures 100% private, on-device AI generation with heuristic fallback.
-    """
-
-    def __init__(self, base_url: Optional[str] = None, model: Optional[str] = None):
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip("/")
-        self.model = model or os.getenv("OLLAMA_MODEL", "llama3")
-        self._offline_fallback = LocalOfflineAIProvider()
-
-    def is_available(self) -> bool:
-        """Check if local Ollama daemon is reachable on base_url."""
-        try:
-            import httpx
-            r = httpx.get(f"{self.base_url}/api/tags", timeout=1.5)
-            return r.status_code == 200
-        except Exception:
-            return False
-
-    def generate_study_topics(
-        self, input_text: str, is_topic_name: bool = False, title: Optional[str] = None
-    ) -> Dict[str, Any]:
-        if not self.is_available():
-            return self._offline_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
-        try:
-            import httpx
-            prefix = f"Create a comprehensive study roadmap for the following topic/goal: {input_text}" if is_topic_name else input_text[:6000]
-            prompt = (
-                "You are an expert technical curriculum designer. Analyze this text and return a JSON object:\n"
-                f"{prefix}\n\n"
-                "Schema: {\"title\": string, \"category\": string, \"summary\": string, \"topics\": [{\"title\": string, \"description\": string, \"subtopics\": [string], \"prerequisites\": [string], \"dependencies\": [string], \"estimated_minutes\": int, \"difficulty\": string}]}"
-            )
-            resp = httpx.post(
-                f"{self.base_url}/api/generate",
-                json={"model": self.model, "prompt": prompt, "format": "json", "stream": False},
-                timeout=25.0
-            )
-            if resp.status_code == 200:
-                raw = resp.json().get("response", "")
-                data = json.loads(raw)
-                data["provider_used"] = f"ollama_{self.model}"
-                return data
-        except Exception:
-            pass
-        return self._offline_fallback.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
-
-    def extract_curriculum(self, text: str, title: Optional[str] = None) -> Dict[str, Any]:
-        return self.generate_study_topics(text, is_topic_name=False, title=title)
-
-    def chat_assistant(
-        self, message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None
-    ) -> Dict[str, Any]:
-        if not self.is_available():
-            return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic, current_study_space=current_study_space)
-        try:
-            import httpx
-            topic_ctx = f"Context Topic: {context_topic}\n" if context_topic else ""
-            prompt = f"Mode: {mode}\n{topic_ctx}User: {message}\nAssistant:"
-            resp = httpx.post(
-                f"{self.base_url}/api/generate",
-                json={"model": self.model, "prompt": prompt, "stream": False},
-                timeout=20.0
-            )
-            if resp.status_code == 200:
-                reply = resp.json().get("response", "").strip()
-                return {
-                    "reply": reply,
-                    "mode": mode,
-                    "context_topic": context_topic,
-                    "provider": f"ollama_{self.model}"
-                }
-        except Exception:
-            pass
-        return self._offline_fallback.chat_assistant(message, mode=mode, context_topic=context_topic, current_study_space=current_study_space)
-
-    def generate_verification_quiz(self, subtopic_name: str) -> Dict[str, Any]:
-        if not self.is_available():
-            return self._offline_fallback.generate_verification_quiz(subtopic_name)
-        try:
-            import httpx
-            prompt = (
-                f"Generate a 4-option conceptual verification quiz JSON for '{subtopic_name}'.\n"
-                "Schema: {\"question\": string, \"options\": [string, string, string, string], \"correct_answer_index\": int, \"explanation\": string}"
-            )
-            resp = httpx.post(
-                f"{self.base_url}/api/generate",
-                json={"model": self.model, "prompt": prompt, "format": "json", "stream": False},
-                timeout=20.0
-            )
-            if resp.status_code == 200:
-                raw = resp.json().get("response", "")
-                data = json.loads(raw)
-                data["subtopic"] = subtopic_name
-                data["provider"] = f"ollama_{self.model}"
-                return data
-        except Exception:
-            pass
-        return self._offline_fallback.generate_verification_quiz(subtopic_name)
-
-    def generate_completion(self, prompt: str) -> str:
-        try:
-            import httpx
-            resp = httpx.post(
-                f"{self.base_url}/api/generate",
-                json={"model": self.model, "prompt": prompt, "stream": False},
-                timeout=10.0
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                return data.get("response") or self._offline_fallback.generate_completion(prompt)
-        except Exception:
-            pass
-        return self._offline_fallback.generate_completion(prompt)
-
-    def analyze_weakness(self, topic_title: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            import httpx
-            prompt = (
-                f"Analyze this engineering weakness for topic '{topic_title}':\n"
-                f"Metrics: {metrics}\n"
-                "Provide reasons and 2 practical actions."
-            )
-            resp = httpx.post(
-                f"{self.base_url}/api/generate",
-                json={"model": self.model, "prompt": prompt, "stream": False},
-                timeout=10.0
-            )
-            if resp.status_code == 200:
-                text = resp.json().get("response", "")
-                return {
-                    "topic": topic_title,
-                    "severity": "HIGH" if metrics.get("quiz_score_pct", 100) < 70 else "MEDIUM",
-                    "identified_reasons": [text[:250]],
-                    "actionable_recommendations": [
-                        f"Practice hands-on {topic_title} exercises in DevOps Lab",
-                        "Retake conceptual quiz"
-                    ],
-                    "mode": f"OLLAMA_LOCAL_{self.model.upper()}"
-                }
-        except Exception:
-            pass
-        return self._offline_fallback.analyze_weakness(topic_title, metrics)
-
-    def suggest_debug_hypothesis(
-        self, problem: str, symptom: Optional[str] = None, logs: Optional[str] = None
-    ) -> Dict[str, str]:
-        try:
-            import httpx
-            prompt = (
-                f"Debug Scenario:\nProblem: {problem}\nSymptom: {symptom}\nLogs: {logs}\n"
-                "Provide: 1) hypothesis, 2) check command, 3) solution."
-            )
-            resp = httpx.post(
-                f"{self.base_url}/api/generate",
-                json={"model": self.model, "prompt": prompt, "stream": False},
-                timeout=10.0
-            )
-            if resp.status_code == 200:
-                text = resp.json().get("response", "")
-                lines = [l.strip() for l in text.split("\n") if l.strip()]
-                return {
-                    "hypothesis": lines[0] if lines else "Local LLM hypothesis pending.",
-                    "investigation_command": lines[1] if len(lines) > 1 else "journalctl -xe",
-                    "recommended_fix": lines[2] if len(lines) > 2 else "Apply local config fix."
-                }
-        except Exception:
-            pass
-        return self._offline_fallback.suggest_debug_hypothesis(problem, symptom, logs)
-
-
-# Backwards compatibility alias
-OllamaProvider = OllamaAIProvider
-
+# Global singleton for application use
+_ai_service = AIService()
 
 def get_ai_provider() -> AIProvider:
-    """
-    Factory returning active AIProvider based on environment configuration.
-    Supports Gemini (online free tier), Ollama (local offline LLMs),
-    and LocalOfflineAIProvider (deterministic heuristic engine).
-    """
-    provider_type = os.getenv("AI_PROVIDER", "gemini").lower()
-    gemini_key = os.getenv("GEMINI_API_KEY")
-
-    if provider_type == "gemini" or gemini_key:
-        if not gemini_key or not gemini_key.strip():
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="API Key missing or Invalid in .env"
-            )
-        return GeminiProvider(gemini_key)
-
-    if provider_type == "ollama":
-        return OllamaAIProvider()
-
-    return LocalOfflineAIProvider()
-
-
-def generate_verification_quiz(subtopic_name: str) -> Dict[str, Any]:
-    """
-    Helper function that returns a 4-option conceptual JSON question using
-    Gemini 1.5 Flash (or graceful fallback).
-    """
-    provider = get_ai_provider()
-    if hasattr(provider, "generate_verification_quiz"):
-        return provider.generate_verification_quiz(subtopic_name)
-    return LocalOfflineAIProvider().generate_verification_quiz(subtopic_name)
-
-
-def generate_study_topics(input_text: str, is_topic_name: bool = False, title: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Top-level helper function to generate curriculum topics using active provider.
-    """
-    provider = get_ai_provider()
-    if hasattr(provider, "generate_study_topics"):
-        return provider.generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
-    return LocalOfflineAIProvider().generate_study_topics(input_text, is_topic_name=is_topic_name, title=title)
-
-
-def chat_assistant(message: str, mode: str = "explain", context_topic: Optional[str] = None, current_study_space: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Top-level helper function for interactive AI chat assistant.
-    """
-    provider = get_ai_provider()
-    if hasattr(provider, "chat_assistant"):
-        return provider.chat_assistant(message, mode=mode, context_topic=context_topic, current_study_space=current_study_space)
-    return LocalOfflineAIProvider().chat_assistant(message, mode=mode, context_topic=context_topic, current_study_space=current_study_space)
-
+    """Return the AIService instance which conforms to AIProvider protocol for backward compatibility."""
+    return _ai_service

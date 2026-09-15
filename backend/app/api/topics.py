@@ -19,7 +19,7 @@ from app.schemas.topic import (
     CompetencyItemUpdate
 )
 from app.services.competency_engine import competency_engine
-from app.services.ai_provider import generate_verification_quiz
+from app.services.ai_provider import get_ai_provider
 from app.api.deps import get_current_user, get_optional_current_user, get_or_create_default_user
 
 router = APIRouter()
@@ -140,7 +140,7 @@ def get_topic_verification_quiz_challenge(
     if not topic:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found.")
 
-    quiz_data = generate_verification_quiz(topic.title)
+    quiz_data = get_ai_provider().generate_verification_quiz(topic.title)
     return {
         "topic_id": str(topic.id),
         "topic_title": topic.title,
