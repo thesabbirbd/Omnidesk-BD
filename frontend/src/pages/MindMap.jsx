@@ -6,7 +6,8 @@ import ReactFlow, {
   Position, 
   useNodesState, 
   useEdgesState, 
-  useReactFlow, 
+  useReactFlow,
+  MiniMap, 
   ReactFlowProvider 
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -505,7 +506,7 @@ function MindMapFlow() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isKnowledgeGraphOpen, setIsKnowledgeGraphOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all'); // all, normal, learning, complete
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { zoomIn, zoomOut, fitView, setCenter } = useReactFlow();
   const { startTimer } = useTimer();
 
   const onNodeDragStop = useCallback(async (event, node) => {
@@ -617,6 +618,7 @@ function MindMapFlow() {
   }, [setNodes, setEdges, fitView]);
 
   const onNodeClick = useCallback((event, node) => {
+    setCenter(node.position.x + 100, node.position.y, { zoom: 1.2, duration: 800 });
     setSelectedTopic(node.data);
     setIsDrawerOpen(true);
   }, []);
@@ -749,6 +751,7 @@ function MindMapFlow() {
         >
           <Background color="#334155" gap={24} size={1.5} />
           <Controls className="!bg-[var(--bg-card)] !border-[var(--border-color)] !shadow-[4px_4px_10px_var(--shadow-dark)] !rounded-xl !overflow-hidden" />
+          <MiniMap className="!bg-[var(--bg-card)] !border !border-[var(--border-color)] !rounded-2xl !overflow-hidden !shadow-[4px_4px_10px_var(--shadow-dark)]" nodeColor="#22d3ee" maskColor="rgba(15, 23, 42, 0.7)" />
         </ReactFlow>
       </div>
 

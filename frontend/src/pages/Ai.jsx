@@ -94,7 +94,8 @@ export default function Ai() {
           role: 'ai', 
           content: response.reply,
           mode: response.mode || currentMode,
-          provider: response.provider || 'gemini-1.5-flash'
+          provider: response.provider || 'gemini-1.5-flash',
+          citations: response.citations || []
         }
       ]);
     } catch (err) {
@@ -262,8 +263,27 @@ export default function Ai() {
                   </div>
                 )}
 
-                <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                  {msg.content}
+                <div className="text-sm font-sans w-full overflow-hidden">
+                  <StreamingMessage content={msg.content} isStreamingEnabled={idx === messages.length - 1 && msg.role === 'ai' && !msg.isError} />
+                {/* Citations Block */}
+                {msg.citations && msg.citations.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-[var(--border-color)] flex flex-col gap-2">
+                    {msg.citations.map((cit, cIdx) => (
+                      <div key={cIdx} className="flex items-start gap-2 bg-[var(--bg-input)] px-3 py-2 rounded-xl text-[11px] font-medium border shadow-[inset_1px_1px_3px_var(--shadow-dark)]"
+                           style={{ borderColor: cit.type === 'SOURCE_CONFIRMED' ? 'rgba(52, 211, 153, 0.3)' : 'rgba(168, 85, 247, 0.3)' }}
+                      >
+                        <FileText size={12} className={cit.type === 'SOURCE_CONFIRMED' ? 'text-emerald-400 mt-0.5' : 'text-purple-400 mt-0.5'} />
+                        <div className="flex-1 flex flex-col">
+                          <span className="text-[color:var(--text-main)]">{cit.text}</span>
+                          <span className={cit.type === 'SOURCE_CONFIRMED' ? 'text-emerald-500 font-bold tracking-wider uppercase' : 'text-purple-400 font-bold tracking-wider uppercase'}>
+                            [{cit.type === 'SOURCE_CONFIRMED' ? 'Open Source / Verified' : 'AI Inferred'}]
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 </div>
               </div>
             </div>
@@ -282,11 +302,11 @@ export default function Ai() {
                     <div className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#22d3ee]" />
                   </div>
                   <span className="text-sm text-cyan-300 font-black tracking-wide uppercase bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
-                    Cognitive Engine Active
+                    THINKING...
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 ml-9">
-                  <span className="text-xs font-mono text-slate-400">Synthesizing {activeMode} payload</span>
+                  <span className="text-xs font-mono text-slate-400">Synthesizing knowledge context</span>
                   <span className="flex gap-0.5">
                     <span className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                     <span className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />

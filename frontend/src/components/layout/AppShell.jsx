@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Play, 
@@ -15,10 +15,12 @@ import FloatingTimer from '../timer/FloatingTimer';
 import ImStuckModal from '../debug/ImStuckModal';
 import DevOpsTerminalModal from '../terminal/DevOpsTerminalModal';
 import BottomNav from './BottomNav';
+import ScrollToTop from '../common/ScrollToTop';
 import { useTimer } from '../../context/TimerContext';
 
 export default function AppShell() {
   const location = useLocation();
+  const mainRef = useRef(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { lastNotification, clearNotification } = useTimer();
 
@@ -110,7 +112,7 @@ export default function AppShell() {
         )}
 
         {/* Main Viewport Container */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 lg:pb-6 relative">
+        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 lg:pb-6 relative">
           {/* Ambient Lighting & 3D Objects dynamically tailored to the active Glass Gradient option */}
           <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
             
@@ -175,6 +177,7 @@ export default function AppShell() {
           
           <div key={location.pathname} className="page-transition flex-1 flex flex-col h-full"><Outlet /></div>
         </main>
+        <ScrollToTop targetRef={mainRef} />
         
         {/* Mobile Bottom Navigation (Hidden on Desktop) */}
         <BottomNav />

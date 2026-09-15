@@ -503,8 +503,8 @@ textarea,
 
 /* Premium Native Desktop Scrollbars */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -514,7 +514,7 @@ textarea,
 ::-webkit-scrollbar-thumb {
   background-color: var(--border-color);
   border-radius: 9999px;
-  border: 3px solid transparent; /* creates padding inside track */
+  border: 2px solid transparent; /* creates padding inside track */
   background-clip: padding-box;
   transition: background-color var(--transition-fast);
 }
