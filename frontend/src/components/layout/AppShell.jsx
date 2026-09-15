@@ -53,7 +53,15 @@ export default function AppShell() {
   }, [lastNotification, clearNotification]);
 
   return (
-    <div className="flex h-screen w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] font-sans overflow-hidden">
+    <div 
+      className="flex h-screen w-full bg-[var(--bg-canvas)] text-[color:var(--text-main)] font-sans overflow-hidden"
+      style={{ 
+        paddingTop: 'var(--safe-area-top)', 
+        paddingBottom: 'var(--safe-area-bottom)',
+        paddingLeft: 'var(--safe-area-left)',
+        paddingRight: 'var(--safe-area-right)'
+      }}
+    >
       {/* Responsive Sidebar Drawer */}
       <Sidebar 
         isOpen={isMobileSidebarOpen} 

@@ -5,5 +5,11 @@
   "bundledWebRuntime": false,
   "server": {
     "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "backgroundColor": "#0f1523"
+    }
   }
 }
