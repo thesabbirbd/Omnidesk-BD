@@ -189,7 +189,7 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
         {/* Hamburger Menu Button (Mobile & Tablet) */}
         <button
           onClick={onToggleSidebar}
-          className="p-2 rounded-xl bg-[var(--bg-card)] shadow-[3px_3px_6px_var(--shadow-dark),-3px_-3px_6px_var(--shadow-light)] active:shadow-[inset_2px_2px_4px_var(--shadow-dark)] text-[color:var(--text-muted)] hover:text-cyan-400 lg:hidden cursor-pointer transition-all shrink-0"
+          className="p-2 rounded-xl bg-[var(--bg-card)] shadow-[3px_3px_6px_var(--shadow-dark),-3px_-3px_6px_var(--shadow-light)] active:shadow-[inset_2px_2px_4px_var(--shadow-dark)] text-[color:var(--text-muted)] hover:text-cyan-400 hidden cursor-pointer transition-all shrink-0"
           title="Open Menu"
           aria-label="Open Menu"
         >

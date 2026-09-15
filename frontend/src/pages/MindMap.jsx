@@ -432,7 +432,7 @@ const CustomNode = ({ id, data, selected }) => {
                 </button>
               </form>
             ) : (
-              <span className="tracking-wide text-xs font-bold leading-tight px-0.5 truncate max-w-[150px]">
+              <span className="tracking-wide text-[11px] sm:text-xs font-bold leading-tight px-0.5 line-clamp-3 break-words text-wrap max-w-[150px]">
                 {data.label}
               </span>
             )}
@@ -650,9 +650,9 @@ function MindMapFlow() {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-8rem)] min-h-[650px] flex flex-col relative rounded-3xl overflow-hidden border border-[var(--border-color)] bg-[var(--bg-canvas)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)]">
+    <div className="w-full h-[calc(100vh-12rem)] lg:h-[calc(100vh-8rem)] min-h-[500px] flex flex-col relative rounded-3xl overflow-hidden border border-[var(--border-color)] bg-[var(--bg-canvas)] shadow-[8px_8px_20px_var(--shadow-dark),-8px_-8px_20px_var(--shadow-light)] touch-none">
       
-      {/* Compact Floating Glass/Clay Toolbar */}
+      {/* Top Toolbar overlay (Glassmorphic) */}
       <div className="absolute top-5 left-6 z-10 flex flex-wrap items-center gap-2 bg-[var(--bg-card)]/90 backdrop-blur-xl p-2 rounded-2xl shadow-[6px_6px_16px_var(--shadow-dark),-6px_-6px_16px_var(--shadow-light)] border border-[var(--border-color)]">
         
         {/* Filter Pills: All, Normal, Learning, Complete */}

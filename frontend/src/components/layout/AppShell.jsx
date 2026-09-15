@@ -14,6 +14,7 @@ import TopBar from './TopBar';
 import FloatingTimer from '../timer/FloatingTimer';
 import ImStuckModal from '../debug/ImStuckModal';
 import DevOpsTerminalModal from '../terminal/DevOpsTerminalModal';
+import BottomNav from './BottomNav';
 import { useTimer } from '../../context/TimerContext';
 
 export default function AppShell() {
@@ -108,7 +109,7 @@ export default function AppShell() {
         )}
 
         {/* Main Viewport Container */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 relative">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 lg:pb-6 relative">
           {/* Ambient Lighting & 3D Objects dynamically tailored to the active Glass Gradient option */}
           <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
             
@@ -173,6 +174,9 @@ export default function AppShell() {
           
           <Outlet />
         </main>
+        
+        {/* Mobile Bottom Navigation (Hidden on Desktop) */}
+        <BottomNav />
       </div>
 
       {/* Global StudyOS Floating Timer Widget */}
@@ -181,7 +185,7 @@ export default function AppShell() {
             {/* Global AI Assistant Floating Button */}
       <button
         onClick={() => window.location.href = '/os/ai-assistant'}
-        className="fixed bottom-6 right-6 z-[90] p-4 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_10px_30px_rgba(6,182,212,0.4)] hover:shadow-[0_15px_40px_rgba(6,182,212,0.6)] transition-all hover:scale-110 active:scale-95 group flex items-center justify-center"
+        className="fixed bottom-24 lg:bottom-6 right-6 z-[90] p-4 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_10px_30px_rgba(6,182,212,0.4)] hover:shadow-[0_15px_40px_rgba(6,182,212,0.6)] transition-all hover:scale-110 active:scale-95 group flex items-center justify-center hidden lg:flex"
         title="Omni AI Assistant"
       >
         <Bot size={28} className="group-hover:animate-pulse" />

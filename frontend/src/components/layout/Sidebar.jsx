@@ -114,22 +114,9 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
 
   return (
     <>
-      {/* Mobile Backdrop Overlay */}
-      {isOpen && (
-        <div 
-          onClick={onClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 lg:hidden transition-opacity duration-300"
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Main Sidebar (Fixed slide-over on mobile, static on desktop) */}
+      {/* Main Sidebar (Desktop Only) */}
       <aside 
-        className={`
-          fixed lg:static inset-y-0 left-0 z-50 w-72 bg-[var(--bg-panel)] border-r border-[var(--border-color)] 
-          flex flex-col h-full overflow-hidden select-none shrink-0 transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
-        `}
+        className="hidden lg:flex static inset-y-0 left-0 z-50 w-72 bg-[var(--bg-panel)] border-r border-[var(--border-color)] flex-col h-full overflow-hidden select-none shrink-0"
       >
         
         {/* Brand Header */}
@@ -149,15 +136,6 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
               </span>
             </div>
           </div>
-
-          {/* Close button for mobile */}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-[color:var(--text-muted)] hover:text-[color:var(--text-main)] hover:bg-[var(--bg-input)] lg:hidden cursor-pointer transition-all"
-            title="Close navigation"
-          >
-            <X size={20} />
-          </button>
         </div>
 
         {/* Nav Items List (Scrollable) */}

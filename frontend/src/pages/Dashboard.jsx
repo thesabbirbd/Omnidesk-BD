@@ -558,7 +558,7 @@ export default function Dashboard() {
         {inputMode === 'auto' ? (
           <>
             {/* Unified Input Zone (Text Input + File Drag-and-Drop) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10 items-stretch">
+            <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 relative z-10 items-stretch">
               
               {/* Left Column: Topic Goal Input (col-span-7) */}
               <div className="lg:col-span-7 flex flex-col gap-3 justify-between">
@@ -768,7 +768,7 @@ export default function Dashboard() {
         </div>
 
         {/* Horizontal Scrolling or Responsive Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-3 w-full">
+        <div className="flex flex-col sm:grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-3 w-full">
           {SUGGESTED_SKILLS.map((skill) => {
             const Icon = skill.icon;
             const isSelected = activeSuggestion === skill.id || topicInput === skill.title;
@@ -876,7 +876,7 @@ export default function Dashboard() {
               <span>Total Estimated Time: {previewData.total_estimated_minutes || 600} minutes</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 max-h-80 overflow-y-auto pr-1">
+            <div className="flex flex-col md:grid md:grid-cols-2 xl:grid-cols-4 gap-4 max-h-80 overflow-y-auto pr-1">
               {(previewData.topics || []).map((t, idx) => (
                 <div 
                   key={idx} 
@@ -1020,7 +1020,7 @@ export default function Dashboard() {
       {/* 4. MIDDLE SECTION: DYNAMIC REACT FLOW MIND MAP & ACTIVE SPRINT (LEFT)       */}
       {/*    AND TODAY'S ACTIVITY & PROGRESS OVERVIEW (RIGHT)                         */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full shrink-0 items-start">
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 w-full shrink-0 items-start">
         
         {/* Left Column: Interactive Mind Map + Active Sprint Panel (approx 65% width / col-span-8) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
@@ -1052,7 +1052,7 @@ export default function Dashboard() {
       {/* ========================================================================= */}
       {/* 5. BOTTOM ROW: 4 CONTEXTUAL WIDGET CARDS                                   */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full shrink-0 items-stretch">
+      <div className="flex flex-col md:grid md:grid-cols-2 xl:grid-cols-4 gap-6 w-full shrink-0 items-stretch">
         
         {/* Card 1: Current Study Plan */}
         <DashboardStudyPlanWidget planWeeks={computedPlanWeeks} />
