@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Settings as SettingsIcon, Palette, Target, DownloadCloud, UploadCloud, Database, Clock, Camera, CheckCircle2, AlertTriangle, Sparkles, Check, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, Palette, Target, DownloadCloud, UploadCloud, Database, Clock, Camera, CheckCircle2, AlertTriangle, Sparkles, Check, RefreshCw, Bot, Video, Activity } from 'lucide-react';
 import { useTimer } from '../context/TimerContext';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -11,7 +11,19 @@ export default function Settings() {
   const [dailyGoal, setDailyGoal] = useState(4);
   const [backupStatus, setBackupStatus] = useState(null);
   const [updaterStatus, setUpdaterStatus] = useState(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const fileInputRef = useRef(null);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleCheckUpdate = async () => {
     try {
@@ -424,6 +436,41 @@ export default function Settings() {
                 onChange={(e) => handleDurationChange('long_break', e.target.value)}
                 className="bg-transparent font-black text-xl text-purple-400 outline-none"
               />
+            </div>
+          </div>
+        </section>
+
+        {/* AI Provider Status (Phase 33) */}
+        <section className="p-6 md:p-8 rounded-[32px] bg-[var(--bg-card)] shadow-[var(--card-shadow)] border border-[var(--border-color)] flex flex-col gap-6">
+          <h2 className="text-xl font-bold text-[color:var(--text-main)] flex items-center gap-3 pb-2 border-b border-[var(--border-color)]">
+            <Activity className="text-emerald-400" size={24} />
+            AI & API Provider Status
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] flex items-center gap-4">
+              <Bot className={isOnline ? "text-cyan-400" : "text-slate-500"} size={28} />
+              <div>
+                <p className="text-sm text-[color:var(--text-muted)] font-semibold">Gemini AI</p>
+                <p className={`font-black text-sm ${isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  {isOnline ? '● Connected' : '○ Offline'}
+                </p>
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] flex items-center gap-4">
+              <Database className="text-slate-500" size={28} />
+              <div>
+                <p className="text-sm text-[color:var(--text-muted)] font-semibold">Ollama (Local)</p>
+                <p className="text-slate-400 font-black text-sm">○ Unavailable</p>
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] flex items-center gap-4">
+              <Video className={isOnline ? "text-rose-500" : "text-slate-500"} size={28} />
+              <div>
+                <p className="text-sm text-[color:var(--text-muted)] font-semibold">YouTube API</p>
+                <p className={`font-black text-sm ${isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  {isOnline ? '● Available' : '○ Offline'}
+                </p>
+              </div>
             </div>
           </div>
         </section>

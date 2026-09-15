@@ -33,6 +33,18 @@ export default function Ai() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom
@@ -300,23 +312,24 @@ export default function Ai() {
               <textarea 
                 rows="1"
                 value={input}
+                disabled={!isOnline || isLoading}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleSend();
+                    if (isOnline) handleSend();
                   }
                 }}
-                placeholder={`Ask ${activeMode === 'explain' ? 'for an explanation' : activeMode === 'hint' ? 'for a guiding clue' : 'for root-cause debugging'} (Press Enter to send)...`}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-sm rounded-2xl py-3 px-4 focus:outline-none focus:border-cyan-500/50 shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)] resize-none"
+                placeholder={!isOnline ? "⚠️ AI is unavailable offline..." : `Ask ${activeMode === 'explain' ? 'for an explanation' : activeMode === 'hint' ? 'for a guiding clue' : 'for root-cause debugging'} (Press Enter to send)...`}
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[color:var(--text-main)] text-sm rounded-2xl py-3 px-4 focus:outline-none focus:border-cyan-500/50 shadow-[inset_3px_3px_6px_var(--shadow-dark),inset_-3px_-3px_6px_var(--shadow-light)] resize-none disabled:opacity-50"
               />
             </div>
             
             <button 
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || !isOnline}
               className="p-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
-              title="Send prompt"
+              title={!isOnline ? "Offline" : "Send prompt"}
             >
               <Send size={18} />
             </button>

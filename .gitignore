@@ -27,6 +27,18 @@ pnpm-debug.log*
 !.env.example
 .vscode/
 .idea/
+
+# Security & Secrets (CRITICAL)
+*.keystore
+*.jks
+key.properties
+*.pem
+*.key
+src-tauri/tauri.private.key
+src-tauri/tauri.key
+frontend/android/key.properties
+frontend/android/app/*.jks
+
 # Uploads
 backend/uploads/*
 !backend/uploads/.gitkeep

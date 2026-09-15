@@ -440,18 +440,28 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
           <span className="hidden xl:inline">Launch Lab</span>
         </button>
 
-        {/* Offline Sync Status Indicator */}
-        {(!syncStatus.online || syncStatus.count > 0 || syncStatus.isSyncing) && (
+        {/* Strict Top-level Network Indicator */}
+        <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold shrink-0 border shadow-inner ${
+          syncStatus.online 
+            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+        }`}>
+          <span>{syncStatus.online ? '● Online' : '○ Offline'}</span>
+        </div>
+
+        {/* Pending Sync Button (Only if pending items exist and we are online) */}
+        {(syncStatus.count > 0 || syncStatus.isSyncing) && (
           <button
             onClick={() => offlineSyncService.syncPending()}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 border ${
+            disabled={!syncStatus.online}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all shrink-0 border ${
               syncStatus.isSyncing
                 ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 animate-pulse'
-                : !syncStatus.online
-                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : syncStatus.online
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 cursor-pointer hover:bg-amber-500/30'
+                  : 'bg-slate-500/20 text-slate-400 border-slate-500/40 cursor-not-allowed opacity-50'
             }`}
-            title={syncStatus.isSyncing ? 'Syncing mutations to backend...' : `${syncStatus.count} pending offline mutations. Click to sync.`}
+            title={syncStatus.isSyncing ? 'Syncing mutations...' : `Sync ${syncStatus.count} pending items`}
           >
             {syncStatus.isSyncing ? (
               <RefreshCw size={11} className="animate-spin" />
@@ -461,7 +471,7 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
               <RefreshCw size={11} />
             )}
             <span className="hidden md:inline">
-              {syncStatus.isSyncing ? 'Syncing...' : !syncStatus.online ? `Offline (${syncStatus.count})` : `Sync (${syncStatus.count})`}
+              {syncStatus.isSyncing ? 'Syncing...' : syncStatus.online ? `Sync (${syncStatus.count})` : `Pending (${syncStatus.count})`}
             </span>
           </button>
         )}

@@ -43,12 +43,58 @@ logging.basicConfig(
 )
 logger = logging.getLogger("studyos.api")
 
+import subprocess
+from contextlib import asynccontextmanager
+import shutil
+import sys
+
+# Structured JSON HTTP Request Logging Middleware
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Phase 22: Database Safety Gates
+    # Run DB Backup before Alembic migrations
+    try:
+        from pathlib import Path
+        import time
+        app_data_dir = Path.home() / ".omnidesk"
+        db_path = app_data_dir / "studyos.db"
+        if db_path.exists():
+            backup_dir = app_data_dir / "backups"
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            backup_path = backup_dir / f"studyos_backup_{timestamp}.db"
+            shutil.copy2(db_path, backup_path)
+            logger.info(f"Database backed up successfully to {backup_path}")
+            
+            # Keep only last 5 backups
+            backups = sorted(backup_dir.glob("studyos_backup_*.db"))
+            if len(backups) > 5:
+                for old in backups[:-5]:
+                    old.unlink()
+        
+        # Check migration health
+        logger.info("Running database migrations...")
+        result = subprocess.run(["alembic", "upgrade", "head"], capture_output=True, text=True, cwd=str(Path(__file__).parent))
+        if result.returncode != 0:
+            logger.error(f"Migration failed: {result.stderr}")
+            # Attempt safe restore
+            if db_path.exists() and 'backup_path' in locals():
+                logger.warning(f"Restoring database from backup {backup_path}")
+                shutil.copy2(backup_path, db_path)
+                logger.info("Database restored safely. Crashing to prevent data corruption.")
+                sys.exit(1)
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+    
+    yield
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # CORS middleware allowing development and production origins
