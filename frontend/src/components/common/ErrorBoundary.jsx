@@ -1,50 +1,55 @@
 import React from 'react';
-import { AlertCircle, RotateCw } from 'lucide-react';
+import { RefreshCw, Home } from 'lucide-react';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    this.setState({ error, errorInfo });
-    console.error("ErrorBoundary caught an error", error, errorInfo);
+    console.error("Omnidesk UI Error:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--bg-canvas)] text-[color:var(--text-main)] p-6">
-          <div className="max-w-2xl w-full bg-[var(--bg-card)] border border-rose-500/50 p-8 rounded-3xl shadow-[0_0_40px_rgba(244,63,94,0.15)] flex flex-col items-center text-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/30">
-              <AlertCircle size={32} />
+        <div className="min-h-screen bg-[var(--bg-main)] flex flex-col items-center justify-center p-6 text-center">
+          <div className="bg-[var(--bg-card)] p-8 rounded-3xl border border-[var(--border-color)] shadow-[var(--card-shadow)] max-w-md w-full">
+            <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
             </div>
-            <div>
-              <h1 className="text-2xl font-black text-white tracking-wide mb-2">Omnidesk Runtime Error</h1>
-              <p className="text-slate-400 font-medium">A critical error occurred while rendering this module.</p>
+            <h1 className="text-xl font-black text-[color:var(--text-main)] mb-2">Omnidesk encountered an unexpected error.</h1>
+            <p className="text-[color:var(--text-muted)] text-sm mb-8">
+              {this.state.error?.message || "Something went wrong while rendering this view."}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button 
+                onClick={() => window.location.reload()}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl transition-all active:scale-95"
+              >
+                <RefreshCw size={18} />
+                Reload
+              </button>
+              <button 
+                onClick={() => window.location.href = '/'}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-[var(--bg-input)] hover:bg-[var(--border-color)] border border-[var(--border-color)] text-[color:var(--text-main)] font-bold rounded-xl transition-all active:scale-95"
+              >
+                <Home size={18} />
+                Go Home
+              </button>
             </div>
-            
-            <div className="w-full bg-slate-950 p-4 rounded-xl border border-slate-800 text-left overflow-x-auto text-xs font-mono text-rose-300">
-              <p className="font-bold mb-2">{this.state.error && this.state.error.toString()}</p>
-              <pre className="text-slate-500">{this.state.errorInfo && this.state.errorInfo.componentStack}</pre>
-            </div>
-
-            <button 
-              onClick={() => window.location.href = '/'}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold tracking-wide transition-all shadow-[0_0_15px_rgba(244,63,94,0.4)] hover:scale-105 active:scale-95"
-            >
-              <RotateCw size={18} />
-              <span>Return to OS Core</span>
-            </button>
           </div>
         </div>
       );
     }
+
     return this.props.children;
   }
 }

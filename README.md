@@ -1,3 +1,7 @@
+# Omnidesk BD
+
+[![Windows Download](https://img.shields.io/badge/Windows-Download%20.exe-blue?style=for-the-badge&logo=windows)](https://github.com/thesabbirbd/Omnidesk-BD/releases/latest) [![Linux Download](https://img.shields.io/badge/Linux-Download%20.AppImage-orange?style=for-the-badge&logo=linux)](https://github.com/thesabbirbd/Omnidesk-BD/releases/latest) [![Android Download](https://img.shields.io/badge/Android-Download%20.apk-green?style=for-the-badge&logo=android)](https://github.com/thesabbirbd/Omnidesk-BD/releases/latest)
+
 <div align="center">
 
   <img src="docs/images/omnidesk-logo.png" alt="Omnidesk BD Logo" width="260" style="filter: drop-shadow(0 0 24px rgba(0, 240, 255, 0.35)); margin-bottom: 12px;" />
