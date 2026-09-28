@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 
 export default function StreamingMessage({ content, isStreamingEnabled = true }) {
   const [displayedText, setDisplayedText] = useState(isStreamingEnabled ? '' : content);
@@ -52,7 +53,7 @@ export default function StreamingMessage({ content, isStreamingEnabled = true })
   return (
     <div className="text-sm leading-relaxed font-sans w-full">
       <div
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(displayedText) }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(displayedText)) }}
         className="[&>p]:mb-1 [&>p:last-child]:mb-0"
       />
       {isStreaming && (
