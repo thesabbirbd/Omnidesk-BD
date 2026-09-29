@@ -3,7 +3,6 @@ import logging
 import concurrent.futures
 from typing import Dict, Any, Callable, Optional
 from datetime import datetime, timezone
-from app.core.config import settings
 
 logger = logging.getLogger("studyos.task_queue")
 
