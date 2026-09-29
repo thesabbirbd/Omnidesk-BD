@@ -25,7 +25,7 @@ import { getStudySpaces } from '../../services/api';
 import { getAvatarColor, getInitials } from '../../utils/avatar';
 import { getSpaceSlug, slugify } from '../../utils/slugify';
 
-export default function TopBar({ onToggleSidebar = () => {} }) {
+const TopBar = React.memo(({ onToggleSidebar = () => {} }) => {
   const navigate = useNavigate();
   const searchInputRef = useRef(null);
   const { notificationsList = [] } = useTimer();
@@ -521,4 +521,6 @@ export default function TopBar({ onToggleSidebar = () => {} }) {
 
     </header>
   );
-}
+});
+
+export default TopBar;

@@ -29,7 +29,7 @@ import DeleteProjectModal from '../projects/DeleteProjectModal';
 import AboutOmnideskModal from '../common/AboutOmnideskModal';
 
 
-const navItems = [
+const NAV_ITEMS = [
   { path: '/os/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-cyan-400' },
   { path: '/os/mindmap', label: 'Mind Map', icon: GitFork, color: 'text-cyan-400' },
   { path: '/os/study-plan', label: 'Study Plan', icon: Calendar, color: 'text-emerald-400' },
@@ -45,7 +45,7 @@ const navItems = [
   { path: '/os/settings', label: 'Settings', icon: Settings, color: 'text-slate-400' },
 ];
 
-export default function Sidebar({ isOpen = false, onClose = () => {} }) {
+const Sidebar = React.memo(({ isOpen = false, onClose = () => {} }) => {
   const navigate = useNavigate();
   const [spacesList, setSpacesList] = useState([]);
   const [projectToDelete, setProjectToDelete] = useState(null);
@@ -140,7 +140,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
 
         {/* Nav Items List (Scrollable) */}
         <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 scrollbar-thin">
-          {navItems.map((item) => (
+          {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -214,5 +214,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
       />
     </>
   );
-}
+});
+
+export default Sidebar;
 
