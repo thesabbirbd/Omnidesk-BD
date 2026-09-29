@@ -194,24 +194,57 @@ class AnalyticsService:
 
         weak_areas = []
 
+        topic_ids = [t.id for t in topics]
+        study_space_ids = list({t.study_space_id for t in topics})
+
+        # Bulk fetch data to avoid N+1 queries
+        from collections import defaultdict
+
+        quiz_attempts_by_topic = defaultdict(list)
+        if topic_ids:
+            all_attempts = (
+                db.query(QuizAttempt, Quiz.topic_id)
+                .join(Quiz, QuizAttempt.quiz_id == Quiz.id)
+                .filter(Quiz.topic_id.in_(topic_ids))
+                .all()
+            )
+            for attempt, topic_id in all_attempts:
+                quiz_attempts_by_topic[topic_id].append(attempt)
+
+        bug_counts_by_topic = {}
+        if topic_ids:
+            bug_counts = (
+                db.query(DebugJournal.topic_id, func.count(DebugJournal.id))
+                .filter(DebugJournal.topic_id.in_(topic_ids))
+                .group_by(DebugJournal.topic_id)
+                .all()
+            )
+            bug_counts_by_topic = {t_id: count for t_id, count in bug_counts}
+
+        project_counts_by_space = {}
+        if study_space_ids:
+            project_counts = (
+                db.query(Project.study_space_id, func.count(Project.id))
+                .filter(Project.study_space_id.in_(study_space_ids))
+                .group_by(Project.study_space_id)
+                .all()
+            )
+            project_counts_by_space = {s_id: count for s_id, count in project_counts}
+
+
         for t in topics:
             reasons = []
 
             # 1. Check linked quiz scores
-            quiz_attempts = (
-                db.query(QuizAttempt)
-                .join(Quiz, QuizAttempt.quiz_id == Quiz.id)
-                .filter(Quiz.topic_id == t.id)
-                .all()
-            )
+            quiz_attempts = quiz_attempts_by_topic.get(t.id, [])
             if quiz_attempts:
-                avg_score = sum(a.score_pct for a in quiz_attempts) / len(quiz_attempts)
+                avg_score = sum(a.score / max(a.max_score, 1) * 100 for a in quiz_attempts) / len(quiz_attempts)
                 if avg_score < 70:
                     reasons.append(f"Average quiz score is {avg_score:.0f}% (threshold 70%).")
 
             # 2. Check linked project or debug journal
-            linked_bugs = db.query(DebugJournal).filter(DebugJournal.topic_id == t.id).count()
-            linked_projects = db.query(Project).filter(Project.study_space_id == t.study_space_id).count()
+            linked_bugs = bug_counts_by_topic.get(t.id, 0)
+            linked_projects = project_counts_by_space.get(t.study_space_id, 0)
 
             if linked_bugs == 0 and linked_projects == 0:
                 reasons.append("Zero hands-on projects or debug lab journals associated with this topic.")
