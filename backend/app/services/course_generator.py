@@ -202,14 +202,23 @@ class CourseGenerator:
         edges: List[Tuple[uuid.UUID, uuid.UUID, str]] = []
         topic_map = {t.title.lower(): t for t in topics}
 
+        # Pre-build an inverted index for tech prerequisites
+        unique_prereqs = set(p for prereqs in TECH_PREREQUISITES.values() for p in prereqs)
+        prereq_to_topics = {p: [] for p in unique_prereqs}
+
+        for title_lower, topic in topic_map.items():
+            for p in unique_prereqs:
+                if p in title_lower:
+                    prereq_to_topics[p].append(topic)
+
         # 1. Tech prerequisite heuristics
         for t in topics:
             title_lower = t.title.lower()
             for key, prereqs in TECH_PREREQUISITES.items():
                 if key in title_lower:
                     for prereq in prereqs:
-                        for other_title, other_topic in topic_map.items():
-                            if other_topic.id != t.id and prereq in other_title:
+                        for other_topic in prereq_to_topics.get(prereq, []):
+                            if other_topic.id != t.id:
                                 edges.append((other_topic.id, t.id, "PREREQUISITE"))
 
         # 2. Sequential fallback if sparse graph (connect root to first layer, layer n to n+1)
