@@ -83,22 +83,35 @@ class WeaknessDetectorService:
             .all()
         )
 
+        target_topic_ids = [t_id for t_id, _ in session_aggregates if t_id not in analyzed_topic_ids]
+
+        if target_topic_ids:
+            topics = db.query(Topic).filter(Topic.id.in_(target_topic_ids)).all()
+            topic_by_id = {t.id: t for t in topics}
+
+            items = (
+                db.query(CompetencyItem.topic_id, CompetencyItem.title)
+                .filter(CompetencyItem.topic_id.in_(target_topic_ids), CompetencyItem.is_completed == False)
+                .all()
+            )
+            unverified_by_topic = {tid: [] for tid in target_topic_ids}
+            for item in items:
+                unverified_by_topic[item.topic_id].append(item.title)
+        else:
+            topic_by_id = {}
+            unverified_by_topic = {}
+
         for topic_id, total_mins in session_aggregates:
             if topic_id in analyzed_topic_ids:
                 continue
 
-            topic = db.query(Topic).filter(Topic.id == topic_id).first()
+            topic = topic_by_id.get(topic_id)
             if not topic:
                 continue
 
             # Flag if study time > 1.5x estimate and topic not yet complete or mastered
             if total_mins > (topic.estimated_minutes * 1.5) and topic.status.upper() not in ["COMPLETE", "MASTERED"]:
-                items = (
-                    db.query(CompetencyItem.title)
-                    .filter(CompetencyItem.topic_id == topic_id, CompetencyItem.is_completed == False)
-                    .all()
-                )
-                unverified = [it[0] for it in items]
+                unverified = unverified_by_topic.get(topic_id, [])
 
                 metrics = {
                     "quiz_score_pct": 100,
