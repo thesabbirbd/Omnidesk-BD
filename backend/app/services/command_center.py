@@ -1,15 +1,13 @@
 import uuid
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.models.study_space import StudySpace
 from app.models.topic import Topic
 from app.models.dependency import TopicDependency
 from app.models.review import Review
 from app.models.study_session import StudySession
-from app.models.user_settings import UserSettings
 from app.models.user_profile import UserProfile
 from app.services.weakness_detector import WeaknessDetectorService
 
