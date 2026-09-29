@@ -35,13 +35,13 @@ export default function StreamingMessage({ content, isStreamingEnabled = true })
     return text
       .split('\n')
       .map((line, i) => {
-        // Bold
+        // Format bold text
         line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Italic
+        // Format italic text
         line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        // Inline code
+        // Format inline code
         line = line.replace(/`([^`]+)`/g, '<code class="bg-slate-800 px-1 py-0.5 rounded text-cyan-300 text-xs font-mono">$1</code>');
-        // Bullet points
+        // Format bullet points
         if (line.match(/^[•\-\*] /)) {
           line = `<span class="flex gap-2"><span class="text-cyan-400 mt-1 shrink-0">•</span><span>${line.slice(2)}</span></span>`;
         }
