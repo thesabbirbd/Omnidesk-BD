@@ -16,8 +16,8 @@ def test_health_endpoint():
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["status"] == "healthy"
-    assert data["version"] == "1.2.5"
-    print("✓ Health endpoint returned 200 and version 1.2.5")
+    assert data["version"] == "1.2.9"
+    print("✓ Health endpoint returned 200 and version 1.2.9")
 
 
 def test_auth_and_profile_lifecycle():
