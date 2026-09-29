@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.models.study_space import StudySpace
 from app.models.topic import Topic
