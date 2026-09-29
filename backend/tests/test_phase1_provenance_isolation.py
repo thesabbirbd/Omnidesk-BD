@@ -10,7 +10,7 @@ from main import app
 from app.db.session import SessionLocal
 from app.models.user import User
 from app.models.study_space import StudySpace
-from app.models.topic import Topic, SourceType
+from app.models.topic import Topic
 from app.models.task import Task
 from app.models.study_session import StudySession
 
