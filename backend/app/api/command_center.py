@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.api.deps import get_current_user, get_optional_current_user, get_or_create_default_user
+from app.api.deps import get_optional_current_user, get_or_create_default_user
 from app.models.user import User
 from app.schemas.command_center import (
     WhatToStudyResponse,
