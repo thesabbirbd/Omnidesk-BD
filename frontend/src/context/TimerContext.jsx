@@ -460,38 +460,36 @@ export function TimerProvider({ children }) {
 
   // CRITICAL FIX: Prevent changing mode while timer is running or paused!
   const setTimerMode = useCallback((newMode, customMinutes = null) => {
-    setState((prev) => {
-      if (prev.isRunning || prev.isPaused) {
-        triggerNotification({
-          type: 'warning',
-          title: 'Mode Change Blocked',
-          message: 'Active timer in progress! Stop the current timer before changing mode.',
-        });
-        return prev;
-      }
-
-      const modeConfig = DEFAULT_MODES[newMode] || DEFAULT_MODES.pomodoro;
-      const mins = customMinutes !== null ? customMinutes : modeConfig.defaultMinutes;
-
+    if (state.isRunning || state.isPaused) {
       triggerNotification({
-        type: 'info',
-        title: 'Timer Mode Changed',
-        message: `Switched mode to ${modeConfig.label} (${mins}m).`,
+        type: 'warning',
+        title: 'Mode Change Blocked',
+        message: 'Active timer in progress! Stop the current timer before changing mode.',
       });
+      return;
+    }
 
-      return {
-        ...prev,
-        mode: newMode,
-        durationMinutes: mins,
-        timeLeft: newMode === 'stopwatch' ? 0 : mins * 60,
-        isRunning: false,
-        isPaused: false,
-        startTime: null,
-        targetEndTime: null,
-        totalPausedDurationMs: 0
-      };
+    const modeConfig = DEFAULT_MODES[newMode] || DEFAULT_MODES.pomodoro;
+    const mins = customMinutes !== null ? customMinutes : modeConfig.defaultMinutes;
+
+    triggerNotification({
+      type: 'info',
+      title: 'Timer Mode Changed',
+      message: `Switched mode to ${modeConfig.label} (${mins}m).`,
     });
-  }, [triggerNotification]);
+
+    setState((prev) => ({
+      ...prev,
+      mode: newMode,
+      durationMinutes: mins,
+      timeLeft: newMode === 'stopwatch' ? 0 : mins * 60,
+      isRunning: false,
+      isPaused: false,
+      startTime: null,
+      targetEndTime: null,
+      totalPausedDurationMs: 0
+    }));
+  }, [state.isRunning, state.isPaused, triggerNotification]);
 
   const setTopic = useCallback((topicTitle) => {
     setState((prev) => ({ ...prev, activeTopic: topicTitle }));
