@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
 
 from app.models.study_space import StudySpace
@@ -75,6 +75,9 @@ class CommandCenterService:
                 Topic.status.in_(["LEARNING", "learning"])
             )
             .order_by(Topic.priority.desc(), Topic.updated_at.desc())
+            .options(
+                selectinload(Topic.dependencies_in).joinedload(TopicDependency.source_topic)
+            )
             .all()
         )
 
@@ -83,12 +86,7 @@ class CommandCenterService:
                 continue
 
             # Verify DAG prerequisite satisfaction
-            prereqs = (
-                db.query(Topic)
-                .join(TopicDependency, TopicDependency.source_topic_id == Topic.id)
-                .filter(TopicDependency.target_topic_id == topic.id)
-                .all()
-            )
+            prereqs = [dep.source_topic for dep in topic.dependencies_in]
             unmet_prereqs = [p.title for p in prereqs if p.status.upper() not in ["COMPLETE", "MASTERED"]]
 
             if not unmet_prereqs:
@@ -126,6 +124,9 @@ class CommandCenterService:
                     Topic.status.in_(["NORMAL", "normal"])
                 )
                 .order_by(Topic.priority.desc())
+                .options(
+                    selectinload(Topic.dependencies_in).joinedload(TopicDependency.source_topic)
+                )
                 .limit(5)
                 .all()
             )
@@ -133,12 +134,7 @@ class CommandCenterService:
                 if any(r["topic_id"] == str(topic.id) for r in recommendations):
                     continue
 
-                prereqs = (
-                    db.query(Topic)
-                    .join(TopicDependency, TopicDependency.source_topic_id == Topic.id)
-                    .filter(TopicDependency.target_topic_id == topic.id)
-                    .all()
-                )
+                prereqs = [dep.source_topic for dep in topic.dependencies_in]
                 unmet_prereqs = [p.title for p in prereqs if p.status.upper() not in ["COMPLETE", "MASTERED"]]
 
                 if not unmet_prereqs:
