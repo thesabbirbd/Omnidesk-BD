@@ -15,8 +15,7 @@ from app.schemas.topic import (
     TopicResponse,
     TopicStatusUpdate,
     TopicStatusUpdateResponse,
-    CompetencyItemResponse,
-    CompetencyItemUpdate
+    CompetencyItemResponse
 )
 from app.services.competency_engine import competency_engine
 from app.services.ai_provider import get_ai_provider
