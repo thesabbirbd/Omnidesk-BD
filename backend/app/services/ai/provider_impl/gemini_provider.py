@@ -6,7 +6,6 @@ from fastapi import HTTPException
 
 # Switch to google-genai package
 from google import genai
-from google.genai import types
 
 from app.services.ai.base import AIProvider
 
