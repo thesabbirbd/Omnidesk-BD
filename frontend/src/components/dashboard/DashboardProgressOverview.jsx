@@ -1,6 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Activity, ChevronRight, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+
+// Static Mock GitHub-Style Heatmap data for past 4 weeks (Mon-Sun)
+const DAYS_OF_WEEK = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const HEATMAP_WEEKS = [
+  [
+    { day: 'Mon', date: 'Aug 17', hours: 3.5, level: 3 },
+    { day: 'Tue', date: 'Aug 18', hours: 2.0, level: 2 },
+    { day: 'Wed', date: 'Aug 19', hours: 4.5, level: 4 },
+    { day: 'Thu', date: 'Aug 20', hours: 3.0, level: 3 },
+    { day: 'Fri', date: 'Aug 21', hours: 5.0, level: 4 },
+    { day: 'Sat', date: 'Aug 22', hours: 1.5, level: 1 },
+    { day: 'Sun', date: 'Aug 23', hours: 0, level: 0 },
+  ],
+  [
+    { day: 'Mon', date: 'Aug 24', hours: 4.0, level: 4 },
+    { day: 'Tue', date: 'Aug 25', hours: 4.2, level: 4 },
+    { day: 'Wed', date: 'Aug 26', hours: 3.8, level: 3 },
+    { day: 'Thu', date: 'Aug 27', hours: 2.5, level: 2 },
+    { day: 'Fri', date: 'Aug 28', hours: 4.5, level: 4 },
+    { day: 'Sat', date: 'Aug 29', hours: 3.0, level: 3 },
+    { day: 'Sun', date: 'Aug 30', hours: 1.0, level: 1 },
+  ],
+  [
+    { day: 'Mon', date: 'Aug 31', hours: 3.0, level: 3 },
+    { day: 'Tue', date: 'Sep 01', hours: 4.8, level: 4 },
+    { day: 'Wed', date: 'Sep 02', hours: 2.2, level: 2 },
+    { day: 'Thu', date: 'Sep 03', hours: 3.5, level: 3 },
+    { day: 'Fri', date: 'Sep 04', hours: 4.0, level: 4 },
+    { day: 'Sat', date: 'Sep 05', hours: 2.0, level: 2 },
+    { day: 'Sun', date: 'Sep 06', hours: 0, level: 0 },
+  ],
+  [
+    { day: 'Mon', date: 'Sep 07 (Today)', hours: 2.5, level: 3 },
+    { day: 'Tue', date: 'Sep 08', hours: 0, level: 0, future: true },
+    { day: 'Wed', date: 'Sep 09', hours: 0, level: 0, future: true },
+    { day: 'Thu', date: 'Sep 10', hours: 0, level: 0, future: true },
+    { day: 'Fri', date: 'Sep 11', hours: 0, level: 0, future: true },
+    { day: 'Sat', date: 'Sep 12', hours: 0, level: 0, future: true },
+    { day: 'Sun', date: 'Sep 13', hours: 0, level: 0, future: true },
+  ]
+];
 
 export default function DashboardProgressOverview({ 
   topicsCount = { completed: 14, learning: 6, notStarted: 26, blocked: 2 } 
@@ -9,68 +51,33 @@ export default function DashboardProgressOverview({
   const [hoveredSegment, setHoveredSegment] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
 
-  const total = topicsCount.completed + topicsCount.learning + topicsCount.notStarted + topicsCount.blocked || 48;
-  const compPct = Math.round((topicsCount.completed / total) * 100);
-  const learnPct = Math.round((topicsCount.learning / total) * 100);
-  const notStartPct = Math.round((topicsCount.notStarted / total) * 100);
-  const blockPct = 100 - compPct - learnPct - notStartPct;
+    const { compPct, segments, donutSegments } = useMemo(() => {
+    const total = topicsCount.completed + topicsCount.learning + topicsCount.notStarted + topicsCount.blocked || 48;
+    const compPct = Math.round((topicsCount.completed / total) * 100);
+    const learnPct = Math.round((topicsCount.learning / total) * 100);
+    const notStartPct = Math.round((topicsCount.notStarted / total) * 100);
+    const blockPct = 100 - compPct - learnPct - notStartPct;
 
-  const segments = [
-    { key: 'completed', label: 'Completed', count: topicsCount.completed, pct: compPct, color: '#22c55e', textClass: 'text-emerald-400', bgClass: 'bg-emerald-500' },
-    { key: 'learning', label: 'Learning', count: topicsCount.learning, pct: learnPct, color: '#eab308', textClass: 'text-amber-400', bgClass: 'bg-amber-400' },
-    { key: 'notStarted', label: 'Not Started', count: topicsCount.notStarted, pct: notStartPct, color: '#64748b', textClass: 'text-slate-400', bgClass: 'bg-slate-500' },
-    { key: 'blocked', label: 'Blocked', count: topicsCount.blocked, pct: blockPct, color: '#ef4444', textClass: 'text-red-400', bgClass: 'bg-red-500' },
-  ];
+    const segments = [
+      { key: 'completed', label: 'Completed', count: topicsCount.completed, pct: compPct, color: '#22c55e', textClass: 'text-emerald-400', bgClass: 'bg-emerald-500' },
+      { key: 'learning', label: 'Learning', count: topicsCount.learning, pct: learnPct, color: '#eab308', textClass: 'text-amber-400', bgClass: 'bg-amber-400' },
+      { key: 'notStarted', label: 'Not Started', count: topicsCount.notStarted, pct: notStartPct, color: '#64748b', textClass: 'text-slate-400', bgClass: 'bg-slate-500' },
+      { key: 'blocked', label: 'Blocked', count: topicsCount.blocked, pct: blockPct, color: '#ef4444', textClass: 'text-red-400', bgClass: 'bg-red-500' },
+    ];
 
-  // Circumference for r=15.9155 is exactly 100
-  let cumulativeOffset = 0;
-  const donutSegments = segments.map((seg) => {
-    const strokeDasharray = `${seg.pct} ${100 - seg.pct}`;
-    const strokeDashoffset = -cumulativeOffset;
-    cumulativeOffset += seg.pct;
-    return { ...seg, strokeDasharray, strokeDashoffset };
-  });
+    // Circumference for r=15.9155 is exactly 100
+    let cumulativeOffset = 0;
+    const donutSegments = segments.map((seg) => {
+      const strokeDasharray = `${seg.pct} ${100 - seg.pct}`;
+      const strokeDashoffset = -cumulativeOffset;
+      cumulativeOffset += seg.pct;
+      return { ...seg, strokeDasharray, strokeDashoffset };
+    });
 
-  // Mock GitHub-Style Heatmap data for past 4 weeks (Mon-Sun)
-  const daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const heatmapWeeks = [
-    [
-      { day: 'Mon', date: 'Aug 17', hours: 3.5, level: 3 },
-      { day: 'Tue', date: 'Aug 18', hours: 2.0, level: 2 },
-      { day: 'Wed', date: 'Aug 19', hours: 4.5, level: 4 },
-      { day: 'Thu', date: 'Aug 20', hours: 3.0, level: 3 },
-      { day: 'Fri', date: 'Aug 21', hours: 5.0, level: 4 },
-      { day: 'Sat', date: 'Aug 22', hours: 1.5, level: 1 },
-      { day: 'Sun', date: 'Aug 23', hours: 0, level: 0 },
-    ],
-    [
-      { day: 'Mon', date: 'Aug 24', hours: 4.0, level: 4 },
-      { day: 'Tue', date: 'Aug 25', hours: 4.2, level: 4 },
-      { day: 'Wed', date: 'Aug 26', hours: 3.8, level: 3 },
-      { day: 'Thu', date: 'Aug 27', hours: 2.5, level: 2 },
-      { day: 'Fri', date: 'Aug 28', hours: 4.5, level: 4 },
-      { day: 'Sat', date: 'Aug 29', hours: 3.0, level: 3 },
-      { day: 'Sun', date: 'Aug 30', hours: 1.0, level: 1 },
-    ],
-    [
-      { day: 'Mon', date: 'Aug 31', hours: 3.0, level: 3 },
-      { day: 'Tue', date: 'Sep 01', hours: 4.8, level: 4 },
-      { day: 'Wed', date: 'Sep 02', hours: 2.2, level: 2 },
-      { day: 'Thu', date: 'Sep 03', hours: 3.5, level: 3 },
-      { day: 'Fri', date: 'Sep 04', hours: 4.0, level: 4 },
-      { day: 'Sat', date: 'Sep 05', hours: 2.0, level: 2 },
-      { day: 'Sun', date: 'Sep 06', hours: 0, level: 0 },
-    ],
-    [
-      { day: 'Mon', date: 'Sep 07 (Today)', hours: 2.5, level: 3 },
-      { day: 'Tue', date: 'Sep 08', hours: 0, level: 0, future: true },
-      { day: 'Wed', date: 'Sep 09', hours: 0, level: 0, future: true },
-      { day: 'Thu', date: 'Sep 10', hours: 0, level: 0, future: true },
-      { day: 'Fri', date: 'Sep 11', hours: 0, level: 0, future: true },
-      { day: 'Sat', date: 'Sep 12', hours: 0, level: 0, future: true },
-      { day: 'Sun', date: 'Sep 13', hours: 0, level: 0, future: true },
-    ]
-  ];
+    return { compPct, segments, donutSegments };
+  }, [topicsCount.completed, topicsCount.learning, topicsCount.notStarted, topicsCount.blocked]);
+
+
 
   return (
     <div className="p-6 rounded-3xl bg-[var(--bg-card)] shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] border border-[var(--border-color)] flex flex-col gap-5 transition-all">
@@ -172,14 +179,14 @@ export default function DashboardProgressOverview({
 
         {/* Day-of-week header */}
         <div className="grid grid-cols-7 gap-1.5 text-center text-[9px] font-bold text-[color:var(--text-muted)]">
-          {daysOfWeek.map((d, i) => (
+          {DAYS_OF_WEEK.map((d, i) => (
             <span key={i}>{d}</span>
           ))}
         </div>
 
         {/* 4 Weeks of glowing cells */}
         <div className="flex flex-col gap-1.5">
-          {heatmapWeeks.map((week, wIdx) => (
+          {HEATMAP_WEEKS.map((week, wIdx) => (
             <div key={wIdx} className="grid grid-cols-7 gap-1.5">
               {week.map((day, dIdx) => {
                 const isHovered = hoveredCell?.date === day.date;
