@@ -1,7 +1,6 @@
 from typing import Dict, Any, List
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from app.models.study_space import StudySpace
 from app.models.topic import Topic
 from app.models.study_session import StudySession
