@@ -2,18 +2,20 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Share2, Clock, Bot } from 'lucide-react';
 
-export default function BottomNav() {
-  const navItems = [
-    { label: 'Home', icon: Home, path: '/os/dashboard', color: 'text-cyan-400' },
-    { label: 'Mind Map', icon: Share2, path: '/os/projects', color: 'text-emerald-400' },
-    { label: 'Timer', icon: Clock, path: '/os/timer', color: 'text-amber-400' },
-    { label: 'AI', icon: Bot, path: '/os/ai-assistant', color: 'text-purple-400' },
-  ];
+
+const NAV_ITEMS = [
+  { label: 'Home', icon: Home, path: '/os/dashboard', color: 'text-cyan-400' },
+  { label: 'Mind Map', icon: Share2, path: '/os/projects', color: 'text-emerald-400' },
+  { label: 'Timer', icon: Clock, path: '/os/timer', color: 'text-amber-400' },
+  { label: 'AI', icon: Bot, path: '/os/ai-assistant', color: 'text-purple-400' },
+];
+
+const BottomNav = React.memo(() => {
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-panel)]/90 backdrop-blur-md border-t border-[var(--border-color)] pb-[var(--safe-area-bottom)] safe-area-shadow">
       <div className="flex items-center justify-around px-2 py-2">
-        {navItems.map((item) => (
+        {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -45,4 +47,6 @@ export default function BottomNav() {
       </div>
     </nav>
   );
-}
+});
+
+export default BottomNav;
