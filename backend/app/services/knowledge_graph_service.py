@@ -159,14 +159,23 @@ class KnowledgeGraphService:
             .filter(Quiz.topic_id == topic_id)
             .all()
         )
+
+        quiz_ids = [q.id for q in quizzes]
+        best_attempts_by_quiz = {}
+
+        if quiz_ids:
+            all_attempts = (
+                db.query(QuizAttempt)
+                .filter(QuizAttempt.quiz_id.in_(quiz_ids), QuizAttempt.user_id == user_id)
+                .all()
+            )
+            for attempt in all_attempts:
+                if attempt.quiz_id not in best_attempts_by_quiz or attempt.score > best_attempts_by_quiz[attempt.quiz_id].score:
+                    best_attempts_by_quiz[attempt.quiz_id] = attempt
+
         quizzes_data = []
         for q in quizzes:
-            best_attempt = (
-                db.query(QuizAttempt)
-                .filter(QuizAttempt.quiz_id == q.id, QuizAttempt.user_id == user_id)
-                .order_by(QuizAttempt.score.desc())
-                .first()
-            )
+            best_attempt = best_attempts_by_quiz.get(q.id)
             quizzes_data.append({
                 "id": str(q.id),
                 "title": q.title,
