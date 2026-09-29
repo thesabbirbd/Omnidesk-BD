@@ -1,4 +1,5 @@
 import uuid
+from collections import defaultdict
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -34,6 +35,18 @@ class WeaknessDetectorService:
 
         analyzed_topic_ids = set()
 
+        # Pre-fetch unverified competencies for relevant topics
+        low_quiz_topic_ids = [topic.id for attempt, quiz, topic in low_quizzes if topic]
+        unverified_by_topic = defaultdict(list)
+        if low_quiz_topic_ids:
+            unverified_items = (
+                db.query(CompetencyItem.topic_id, CompetencyItem.title)
+                .filter(CompetencyItem.topic_id.in_(low_quiz_topic_ids), CompetencyItem.is_completed == False)
+                .all()
+            )
+            for t_id, title in unverified_items:
+                unverified_by_topic[t_id].append(title)
+
         for attempt, quiz, topic in low_quizzes:
             topic_title = topic.title if topic else quiz.title
             topic_id = topic.id if topic else None
@@ -41,14 +54,7 @@ class WeaknessDetectorService:
                 analyzed_topic_ids.add(topic_id)
 
             # Get unverified competencies
-            unverified = []
-            if topic_id:
-                items = (
-                    db.query(CompetencyItem.title)
-                    .filter(CompetencyItem.topic_id == topic_id, CompetencyItem.is_completed == False)
-                    .all()
-                )
-                unverified = [it[0] for it in items]
+            unverified = unverified_by_topic.get(topic_id, []) if topic_id else []
 
             metrics = {
                 "quiz_score_pct": attempt.score,
