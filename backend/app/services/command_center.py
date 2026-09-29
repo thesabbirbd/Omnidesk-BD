@@ -50,12 +50,22 @@ class CommandCenterService:
 
         # 2. Check Weakness Detector for Critical Interventions
         weaknesses = WeaknessDetectorService.detect_weaknesses(user_id, db)
-        for w in weaknesses:
-            if w.get("topic_id") and w.get("severity") == "HIGH":
-                topic = db.query(Topic).filter(Topic.id == uuid.UUID(w["topic_id"])).first()
-                if topic and not any(r["topic_id"] == str(topic.id) for r in recommendations):
+
+        # Collect topic IDs for HIGH severity weaknesses
+        high_severity_weaknesses = [w for w in weaknesses if w.get("topic_id") and w.get("severity") == "HIGH"]
+        topic_ids = [uuid.UUID(w["topic_id"]) for w in high_severity_weaknesses]
+
+        if topic_ids:
+            # Single query to fetch all required topics
+            topics = db.query(Topic).filter(Topic.id.in_(topic_ids)).all()
+            topic_map = {str(t.id): t for t in topics}
+
+            for w in high_severity_weaknesses:
+                topic_id_str = w["topic_id"]
+                topic = topic_map.get(topic_id_str)
+                if topic and not any(r["topic_id"] == topic_id_str for r in recommendations):
                     recommendations.append({
-                        "topic_id": str(topic.id),
+                        "topic_id": topic_id_str,
                         "topic_title": topic.title,
                         "category": "WEAKNESS_INTERVENTION",
                         "priority": "HIGH",
