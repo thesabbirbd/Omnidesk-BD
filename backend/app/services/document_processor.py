@@ -5,6 +5,7 @@ import uuid
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from pypdf import PdfReader
+from fastapi import HTTPException
 from app.core.config import settings
 
 ALLOWED_MIME_TYPES = {
@@ -44,13 +45,11 @@ class DocumentProcessor:
         """
         ext = Path(filename).suffix.lower()
         if ext not in ALLOWED_EXTENSIONS:
-            raise ValueError(f"File extension '{ext}' is not supported. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+            raise HTTPException(status_code=400, detail=f"File extension {ext} not allowed")
 
-        max_size_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
-        if size_bytes > max_size_bytes:
-            raise ValueError(
-                f"File size ({size_bytes / (1024*1024):.1f}MB) exceeds limit of {settings.MAX_UPLOAD_SIZE_MB}MB."
-            )
+        # We use MAX_UPLOAD_SIZE_MB to define the limit natively in the repo, but raise the requested message.
+        if size_bytes > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File exceeds maximum allowed size (10MB)")
 
         category = "PDF" if ext == ".pdf" else "MARKDOWN" if ext == ".md" else "TXT" if ext == ".txt" else "DOCX" if ext == ".docx" else "JSON"
         return category
