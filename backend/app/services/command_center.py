@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
+from collections import defaultdict
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -78,17 +79,24 @@ class CommandCenterService:
             .all()
         )
 
+        learning_topic_ids = [t.id for t in learning_topics]
+        learning_prereqs_map = defaultdict(list)
+        if learning_topic_ids:
+            deps = (
+                db.query(TopicDependency.target_topic_id, Topic)
+                .join(Topic, TopicDependency.source_topic_id == Topic.id)
+                .filter(TopicDependency.target_topic_id.in_(learning_topic_ids))
+                .all()
+            )
+            for target_id, prereq_topic in deps:
+                learning_prereqs_map[target_id].append(prereq_topic)
+
         for topic in learning_topics:
             if any(r["topic_id"] == str(topic.id) for r in recommendations):
                 continue
 
             # Verify DAG prerequisite satisfaction
-            prereqs = (
-                db.query(Topic)
-                .join(TopicDependency, TopicDependency.source_topic_id == Topic.id)
-                .filter(TopicDependency.target_topic_id == topic.id)
-                .all()
-            )
+            prereqs = learning_prereqs_map.get(topic.id, [])
             unmet_prereqs = [p.title for p in prereqs if p.status.upper() not in ["COMPLETE", "MASTERED"]]
 
             if not unmet_prereqs:
@@ -129,16 +137,24 @@ class CommandCenterService:
                 .limit(5)
                 .all()
             )
+
+            next_topic_ids = [t.id for t in next_topics]
+            next_prereqs_map = defaultdict(list)
+            if next_topic_ids:
+                deps = (
+                    db.query(TopicDependency.target_topic_id, Topic)
+                    .join(Topic, TopicDependency.source_topic_id == Topic.id)
+                    .filter(TopicDependency.target_topic_id.in_(next_topic_ids))
+                    .all()
+                )
+                for target_id, prereq_topic in deps:
+                    next_prereqs_map[target_id].append(prereq_topic)
+
             for topic in next_topics:
                 if any(r["topic_id"] == str(topic.id) for r in recommendations):
                     continue
 
-                prereqs = (
-                    db.query(Topic)
-                    .join(TopicDependency, TopicDependency.source_topic_id == Topic.id)
-                    .filter(TopicDependency.target_topic_id == topic.id)
-                    .all()
-                )
+                prereqs = next_prereqs_map.get(topic.id, [])
                 unmet_prereqs = [p.title for p in prereqs if p.status.upper() not in ["COMPLETE", "MASTERED"]]
 
                 if not unmet_prereqs:
