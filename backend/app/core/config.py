@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
 
     # Default Database URL (PostgreSQL)
-    DATABASE_URL: str = "postgresql+psycopg2://admin:secret123@localhost:5432/studyos_db"
+    DATABASE_URL: str
 
     # JWT Authentication Security Settings
     SECRET_KEY: str
