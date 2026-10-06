@@ -17,7 +17,7 @@
     "@capacitor/core": "^8.5.2",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^3.0.0-alpha.0",
-    "@tauri-apps/plugin-dialog": "^3.0.0-alpha.0",
+    "@tauri-apps/plugin-dialog": "^3.0.0-alpha.2",
     "@tauri-apps/plugin-fs": "^3.0.0-alpha.0",
     "@tauri-apps/plugin-process": "~2.0.0-rc.0",
     "@tauri-apps/plugin-shell": "^3.0.0-alpha.0",
